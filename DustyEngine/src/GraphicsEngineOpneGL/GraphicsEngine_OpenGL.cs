@@ -5,7 +5,7 @@ namespace DustyEngine.GraphicsEngineOpneGL;
 
 public class GraphicsEngineOpenGl
 {
-    public void RunMainLoop(Action updateCallback)
+    public void RunMainLoop(Scene.Scene scene ,Action updateCallback)
     {
         Console.WriteLine("GraphicsEngineOpenGl is working");
         var nativeWindowSettings = new NativeWindowSettings()

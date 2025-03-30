@@ -5,7 +5,7 @@ using DustyEngine.Components;
 using DustyEngine.Engine.Math.Vectors;
 using DustyEngine.GraphicsEngineOpneGL;
 using DustyEngine.Json.Converters;
-using ImGuiNET;
+
 
 
 namespace DustyEngine
@@ -118,12 +118,13 @@ namespace DustyEngine
             }
 
             TestScene(loadedScene);
+   
             
             Task.Run(() => ExecuteFixedUpdateLoop(loadedScene));
             GraphicsEngineOpenGl graphicsEngineOpenGl = new GraphicsEngineOpenGl();
 
             Action updateAction = () => ExecuteUpdateLoop(loadedScene);
-            graphicsEngineOpenGl.RunMainLoop(updateAction);
+            graphicsEngineOpenGl.RunMainLoop(loadedScene ,updateAction);
         }
 
         private static void TestScene(Scene.Scene? loadedScene)

@@ -9,7 +9,7 @@
   "LogToConsole": true,
   "LogToFile": true,
   "sceneSize": {
-    "X": 400,
+    "X": 800,
     "Y": 600
   }
 }
