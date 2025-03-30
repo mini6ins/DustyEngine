@@ -2,6 +2,7 @@
 using System.Text.Json;
 using DustyEngine;
 using DustyEngine.Components;
+using DustyEngine.Engine.Math.Vectors;
 using DustyEngine.GraphicsEngineOpneGL;
 using DustyEngine.Json.Converters;
 using ImGuiNET;
@@ -32,6 +33,7 @@ namespace DustyEngine
                 LogLevel = Debug.LogLevel.Info,
                 LogToConsole = true,
                 LogToFile = true,
+                sceneSize = new Vector2(800,600)
             };
 
             SerializeProjectSettings(projectSettings);
@@ -337,4 +339,5 @@ public class ProjectSettings
     public Debug.LogLevel LogLevel { get; set; }
     public bool LogToConsole { get; set; }
     public bool LogToFile { get; set; }
+    public Vector2 sceneSize { get; set; }
 }

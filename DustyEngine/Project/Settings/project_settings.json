@@ -7,5 +7,9 @@
   "Debug": false,
   "LogLevel": 0,
   "LogToConsole": true,
-  "LogToFile": true
+  "LogToFile": true,
+  "sceneSize": {
+    "X": 400,
+    "Y": 600
+  }
 }

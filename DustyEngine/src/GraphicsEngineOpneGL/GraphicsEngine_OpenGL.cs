@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using OpenTK.Mathematics;
+﻿using OpenTK.Mathematics;
 using OpenTK.Windowing.Desktop;
 
 namespace DustyEngine.GraphicsEngineOpneGL;
@@ -8,18 +7,10 @@ public class GraphicsEngineOpenGl
 {
     public void RunMainLoop(Action updateCallback)
     {
-        Process process = Process.GetCurrentProcess();
-        int processorCount = Environment.ProcessorCount;
-        
-        TimeSpan prevCpuTime = process.TotalProcessorTime;
-        DateTime prevTime = DateTime.Now;
-        
-        
         Console.WriteLine("GraphicsEngineOpenGl is working");
-      
         var nativeWindowSettings = new NativeWindowSettings()
         {
-            Size = new Vector2i(800, 600),
+            Size = new Vector2i((int)Program.settings.sceneSize.X,(int) Program.settings.sceneSize.Y),
             Title = Program.settings.ProjectName,
         };
 
