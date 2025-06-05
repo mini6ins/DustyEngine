@@ -3,9 +3,8 @@ using System.Text.Json;
 using DustyEngine;
 using DustyEngine.Components;
 using DustyEngine.Engine.Math.Vectors;
-using DustyEngine.GraphicsEngineOpneGL;
 using DustyEngine.Json.Converters;
-
+using GraphicsEngineOpneGL;
 
 
 namespace DustyEngine
@@ -29,7 +28,7 @@ namespace DustyEngine
                 {
                     "C:\\Users\\maksym\\Documents\\GitHub\\DustyEngine\\DustyEngine\\Project\\DustyEngineTestScene.json",
                 },
-                Debug = false,
+                Debug = true,
                 LogLevel = Debug.LogLevel.Info,
                 LogToConsole = true,
                 LogToFile = true,
@@ -120,11 +119,12 @@ namespace DustyEngine
             TestScene(loadedScene);
    
             
-            Task.Run(() => ExecuteFixedUpdateLoop(loadedScene));
+            Task.Run(() => ExecuteUpdateLoop(loadedScene));
+            //Task.Run(() => ExecuteFixedUpdateLoop(loadedScene));
             GraphicsEngineOpenGl graphicsEngineOpenGl = new GraphicsEngineOpenGl();
-
+            
             Action updateAction = () => ExecuteUpdateLoop(loadedScene);
-            graphicsEngineOpenGl.RunMainLoop(loadedScene ,updateAction);
+            graphicsEngineOpenGl.RunMainLoop(loadedScene ,updateAction, projectSettings.sceneSize, projectSettings.ProjectName);
         }
 
         private static void TestScene(Scene.Scene? loadedScene)

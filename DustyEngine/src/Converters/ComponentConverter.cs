@@ -138,9 +138,26 @@ namespace DustyEngine.Json.Converters
                 MetadataReference.CreateFromFile(Assembly.Load("System.Runtime").Location),
                 MetadataReference.CreateFromFile(Assembly.Load("System.Console").Location),
                 MetadataReference.CreateFromFile(Assembly.Load("Microsoft.CSharp").Location),
-                MetadataReference.CreateFromFile(Assembly.GetExecutingAssembly().Location) // DustyEngine.dll
-            };
+                MetadataReference.CreateFromFile(Assembly.GetExecutingAssembly().Location), // DustyEngine.dll
+   
 
+            };
+            
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                var location = assembly.Location;
+                if (!string.IsNullOrWhiteSpace(location) && File.Exists(location))
+                {
+                    try
+                    {
+                        references.Add(MetadataReference.CreateFromFile(location));
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.Log($"[Warning] Could not add reference for {location}: {ex.Message}", Debug.LogLevel.Warning);
+                    }
+                }
+            }
 
             foreach (var ns in usingDirectives)
             {

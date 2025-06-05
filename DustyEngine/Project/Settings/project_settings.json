@@ -4,7 +4,7 @@
   "PathToScenes": [
     "C:\\Users\\maksym\\Documents\\GitHub\\DustyEngine\\DustyEngine\\Project\\DustyEngineTestScene.json"
   ],
-  "Debug": false,
+  "Debug": true,
   "LogLevel": 0,
   "LogToConsole": true,
   "LogToFile": true,

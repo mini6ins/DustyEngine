@@ -8,7 +8,7 @@
     </PropertyGroup>
 
     <PropertyGroup>
-        <SatelliteResourceLanguages>en</SatelliteResourceLanguages> <!-- только английский -->
+        <SatelliteResourceLanguages>en</SatelliteResourceLanguages> 
     </PropertyGroup>
 
     <ItemGroup>
@@ -17,6 +17,11 @@
       <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.13.0" />
       <PackageReference Include="OpenTK" Version="5.0.0-pre.13" />
       <PackageReference Include="Veldrid" Version="4.9.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Debug\Debug.csproj" />
+      <ProjectReference Include="..\GraphicsEngineOpneGL\GraphicsEngineOpneGL.csproj" />
     </ItemGroup>
     
 </Project>

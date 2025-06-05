@@ -24,4 +24,10 @@ public class Player : MonoBehaviour
     {
         // Debug.Log(Parent.GetComponent<Transform>());
     }
+
+    public void Update()
+    {
+        
+        // Debug.Log("TEST");
+    }
 }

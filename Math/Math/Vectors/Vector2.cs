@@ -1,5 +1,5 @@
 ﻿using System;
-using OpenTK.Mathematics; // Или просто OpenTK, в зависимости от версии
+using OpenTK.Mathematics;
 
 public class Vector2
 {
@@ -15,8 +15,7 @@ public class Vector2
         X = x;
         Y = y;
     }
-
-    // --- Операторы с другим Vector2 ---
+    
     public static Vector2 operator +(Vector2 a, Vector2 b) =>
         new Vector2(a.X + b.X, a.Y + b.Y);
 
