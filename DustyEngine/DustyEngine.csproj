@@ -21,7 +21,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Debug\Debug.csproj" />
-      <ProjectReference Include="..\GraphicsEngineOpneGL\GraphicsEngineOpneGL.csproj" />
+      <ProjectReference Include="..\GraphicsEngineOpenGL\GraphicsEngineOpenGL.csproj" />
     </ItemGroup>
     
 </Project>

@@ -26,6 +26,12 @@
                 "Z": 1
               },
               "Name": "\u003CNo GameObject\u003E"
+            },
+            {
+              "Type": "MeshRenderer",
+              "Path": "C:\\Users\\maksym\\Documents\\GitHub\\DustyEngine\\DustyEngine\\Project\\TeddyBear.obj",
+              "Enabled": true,
+              "Name": "\u003CNo GameObject\u003E"
             }
           ],
           "Name": "TestGameObject1"
@@ -58,6 +64,12 @@
           "Enabled": true,
           "Name": "\u003CNo GameObject\u003E",
           "b": 0
+        },
+        {
+          "Type": "MeshRenderer",
+          "Path": "C:\\Users\\maksym\\Documents\\GitHub\\DustyEngine\\DustyEngine\\Project\\TeddyBear.obj",
+          "Enabled": true,
+          "Name": "\u003CNo GameObject\u003E"
         },
         {
           "Type": "Player",

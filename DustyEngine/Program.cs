@@ -4,7 +4,7 @@ using DustyEngine;
 using DustyEngine.Components;
 using DustyEngine.Engine.Math.Vectors;
 using DustyEngine.Json.Converters;
-using GraphicsEngineOpneGL;
+using GraphicsEngineOpenGL;
 
 
 namespace DustyEngine
@@ -78,9 +78,15 @@ namespace DustyEngine
                         Enabled = true,
                         TestNumber = 21,
                         TestString = "TestString",
-                    }
+                    },
+                    new MeshRenderer
+                    {
+                        Path = "C:\\Users\\maksym\\Documents\\GitHub\\DustyEngine\\DustyEngine\\Project\\TeddyBear.obj",
+                    },
                 }
             };
+            
+            
 
             var playerScript = ComponentConverter.LoadOrCompileComponent(
                 "C:\\Users\\maksym\\Documents\\GitHub\\DustyEngine\\DustyEngine\\Project\\Player.cs"
@@ -97,7 +103,11 @@ namespace DustyEngine
                     new Transform
                     {
                         LocalPosition = new Vector3(0, 0, 1),
-                    }
+                    },
+                    new MeshRenderer
+                    {
+                        Path = "C:\\Users\\maksym\\Documents\\GitHub\\DustyEngine\\DustyEngine\\Project\\TeddyBear.obj",
+                    },
                 }
             };
         
@@ -107,7 +117,7 @@ namespace DustyEngine
             SaveScene(scene,
                 "C:\\Users\\maksym\\Documents\\GitHub\\DustyEngine\\DustyEngine\\Project\\DustyEngineTestScene.json");
             if (LoadScene(out var loadedScene, projectSettings.PathToScenes.FirstOrDefault())) return;
-
+            Console.WriteLine(loadedScene.GameObjects.Count);
             foreach (var method in new[] { "OnEnable", "Start" })
             {
                 foreach (var gameObject in loadedScene.GameObjects)
@@ -116,11 +126,11 @@ namespace DustyEngine
                 }
             }
 
-            TestScene(loadedScene);
+          //  TestScene(loadedScene);
    
             
-            Task.Run(() => ExecuteUpdateLoop(loadedScene));
-            //Task.Run(() => ExecuteFixedUpdateLoop(loadedScene));
+           // Task.Run(() => ExecuteUpdateLoop(loadedScene));
+            Task.Run(() => ExecuteFixedUpdateLoop(loadedScene));
             GraphicsEngineOpenGl graphicsEngineOpenGl = new GraphicsEngineOpenGl();
             
             Action updateAction = () => ExecuteUpdateLoop(loadedScene);
@@ -151,7 +161,7 @@ namespace DustyEngine
                     new TestComponent
                     {
                         Enabled = true,
-                    }
+                    },
                 }
             };
 
