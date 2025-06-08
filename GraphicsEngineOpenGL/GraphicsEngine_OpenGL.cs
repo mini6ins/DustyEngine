@@ -25,20 +25,20 @@ public class GraphicsEngineOpenGl
             CollectMeshRenderers(obj, allRenderers);
         }
 
-        
+
         Debug.Log($"Total Meshes: {allRenderers.Count}", Debug.LogLevel.Info, true);
 
-        
-        using var window = new Window(GameWindowSettings.Default, nativeWindowSettings, allRenderers, programName);
+
+        using var window = new Window(GameWindowSettings.Default, nativeWindowSettings, allRenderers, programName, FindCamera(scene),
+            true);
 
         window.UpdateFrame += (e) => { updateCallback?.Invoke(); };
         window.Run();
     }
-    
-    
+
+
     private static void CollectMeshRenderers(GameObject obj, List<MeshRenderer> renderers)
     {
-        // Добавляем все компоненты типа MeshRenderer
         foreach (var component in obj.Components)
         {
             if (component is MeshRenderer meshRenderer)
@@ -47,12 +47,39 @@ public class GraphicsEngineOpenGl
             }
         }
 
-        // Рекурсивно обрабатываем детей
         foreach (var child in obj.Children)
         {
             CollectMeshRenderers(child, renderers);
         }
     }
+    
+    private static Camera? FindCamera(Scene scene)
+    {
+        foreach (var obj in scene.GameObjects)
+        {
+            var camera = FindCameraRecursive(obj);
+            if (camera != null)
+                return camera;
+        }
+        return null;
+    }
 
+    private static Camera? FindCameraRecursive(GameObject obj)
+    {
+        foreach (var component in obj.Components)
+        {
+            if (component is Camera camera)
+                return camera;
+        }
+
+        foreach (var child in obj.Children)
+        {
+            var result = FindCameraRecursive(child);
+            if (result != null)
+                return result;
+        }
+
+        return null;
+    }
 
 }

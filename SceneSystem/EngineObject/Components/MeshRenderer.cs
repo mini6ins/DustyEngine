@@ -7,7 +7,7 @@ public class MeshRenderer : MonoBehaviour
     public string Path { get; set; }
     private Mesh _mesh;
 
-    public void OnEnable()
+    private void OnEnable()
     {
         if (OBJModelLoader.LoadModel(Path, out float[] vertices, out uint[] indices))
         {

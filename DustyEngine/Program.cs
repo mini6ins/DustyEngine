@@ -32,7 +32,7 @@ namespace DustyEngine
                 LogLevel = Debug.LogLevel.Info,
                 LogToConsole = true,
                 LogToFile = true,
-                sceneSize = new Vector2(800,600)
+                SceneSize = new Vector2(800,600)
             };
 
             SerializeProjectSettings(projectSettings);
@@ -63,7 +63,7 @@ namespace DustyEngine
             {
                 Name = "DustyEngineTestScene"
             };
-
+            
             GameObject obj0 = new GameObject
             {
                 Name = "TestGameObject0",
@@ -71,7 +71,7 @@ namespace DustyEngine
                 {
                     new Transform
                     {
-                        LocalPosition = new Vector3(0, 0, 1),
+                        LocalPosition = new Vector3(0, 0, 0),
                         LocalRotation = new Vector3(0, 0, 0),
                         LocalScale = new Vector3(1,1,1),
                     },
@@ -104,7 +104,7 @@ namespace DustyEngine
                 {
                     new Transform
                     {
-                        LocalPosition = new Vector3(0, 0, 5),
+                        LocalPosition = new Vector3(5, 0, 0),
                         LocalRotation = new Vector3(0, 0, 0),
                         LocalScale = new Vector3(0.1f, 0.1f, 0.1f),
                     },
@@ -116,12 +116,25 @@ namespace DustyEngine
             };
         
             scene.GameObjects[0].AddChild(obj1);
-
+            
+            GameObject cameraObject = new GameObject
+            {
+                Name = "Camera",
+                Components =
+                {
+                    new Transform
+                    {
+                        LocalPosition = new Vector3(0, 0, 10),
+                    },
+                    new Camera()
+                }
+            };
+            
+            scene.GameObjects.Add(cameraObject);
 
             SaveScene(scene,
                 "C:\\Users\\maksym\\Documents\\GitHub\\DustyEngine\\DustyEngine\\Project\\DustyEngineTestScene.json");
             if (LoadScene(out var loadedScene, projectSettings.PathToScenes.FirstOrDefault())) return;
-            Console.WriteLine(loadedScene.GameObjects.Count);
             foreach (var method in new[] { "OnEnable", "Start" })
             {
                 foreach (var gameObject in loadedScene.GameObjects)
@@ -138,7 +151,7 @@ namespace DustyEngine
             GraphicsEngineOpenGl graphicsEngineOpenGl = new GraphicsEngineOpenGl();
             
             Action updateAction = () => ExecuteUpdateLoop(loadedScene);
-            graphicsEngineOpenGl.RunMainLoop(loadedScene ,updateAction, projectSettings.sceneSize, projectSettings.ProjectName);
+            graphicsEngineOpenGl.RunMainLoop(loadedScene ,updateAction, projectSettings.SceneSize, projectSettings.ProjectName);
         }
 
         private static void TestScene(Scene.Scene? loadedScene)
@@ -349,10 +362,10 @@ public class ProjectSettings
 {
     public string ProjectName { get; set; }
     public float Version { get; set; }
-    public List<string> PathToScenes { get; set; }
+    public  List<string> PathToScenes { get; set; }
     public bool Debug { get; set; }
     public Debug.LogLevel LogLevel { get; set; }
     public bool LogToConsole { get; set; }
     public bool LogToFile { get; set; }
-    public Vector2 sceneSize { get; set; }
+    public Vector2 SceneSize { get; set; }
 }

@@ -25,17 +25,10 @@ public class Vector3
 
     public static Vector3 operator *(Vector3 a, Vector3 b) =>
         new Vector3(a.X * b.X, a.Y * b.Y, a.Z * b.Z);
-
     
-    public OpenTK.Mathematics.Vector3 ToOpenTK()
-    {
-        return new OpenTK.Mathematics.Vector3(X, Y, Z);
-    }
-
-    public static Vector3 FromOpenTK(OpenTK.Mathematics.Vector3 v)
-    {
-        return new Vector3(v.X, v.Y, v.Z);
-    }
+    public OpenTK.Mathematics.Vector3 ToOpenTK() =>  new OpenTK.Mathematics.Vector3(X, Y, Z);
+    
+    public static Vector3 FromOpenTK(OpenTK.Mathematics.Vector3 v) => new Vector3(v.X, v.Y, v.Z);
     
     public override string ToString() => $"({X}, {Y}, {Z})";
 }

@@ -31,12 +31,12 @@ public class Window : GameWindow
     private readonly List<RenderableObject> sceneObjects = new();
 
     public Window(GameWindowSettings gws, NativeWindowSettings nws, List<MeshRenderer> allRenderers, string windowName,
-        bool isVsync = true)
+        Camera camera, bool isVsync = true)
         : base(gws, nws)
     {
         _windowName = windowName;
         Title = _windowName;
-
+        this.camera = camera;
         Debug.Log(GL.GetString(StringName.Version), Debug.LogLevel.Info, true);
         Debug.Log(GL.GetString(StringName.Vendor), Debug.LogLevel.Info, true);
         Debug.Log(GL.GetString(StringName.Renderer), Debug.LogLevel.Info, true);
@@ -69,17 +69,29 @@ public class Window : GameWindow
         GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
         GL.Enable(EnableCap.CullFace);
         GL.CullFace(TriangleFace.Back);
+    
+        // Включить depth test
+        GL.Enable(EnableCap.DepthTest);
+        GL.DepthFunc(DepthFunction.Less); // Явно установить функцию
+    
+        // КРИТИЧНО: Установить позицию камеры подальше от объектов
+    
+        // Отладка: вывести позицию камеры
+        var camPos = camera.GetComponent<Transform>().LocalPosition;
+        Debug.Log($"Camera position: {camPos.X}, {camPos.Y}, {camPos.Z}", Debug.LogLevel.Info, true);
 
-        camera = new Camera(new Vector3(2f, 2f, 2f));
         CursorState = CursorState.Grabbed;
 
-        projection =
-            Matrix4.CreatePerspectiveFieldOfView(
-                MathHelper.DegreesToRadians(45.0f),
-                Size.X / (float)Size.Y,
-                0.1f,
-                10000.0f
-            );
+        // ИСПРАВИТЬ проекцию - увеличить near plane
+        projection = Matrix4.CreatePerspectiveFieldOfView(
+            MathHelper.DegreesToRadians(45.0f),
+            Size.X / (float)Size.Y,
+            0.1f,  // Было возможно 0.01f или меньше
+            10000.0f
+        );
+    
+        // Отладка: вывести параметры проекции
+        Debug.Log($"Projection: FOV=45°, Near=0.1, Far=10000", Debug.LogLevel.Info, true);
     }
 
     protected override void OnUpdateFrame(FrameEventArgs args)
@@ -108,12 +120,13 @@ public class Window : GameWindow
 
         if (input.IsKeyPressed(Keys.F1)) GL.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Line);
         if (input.IsKeyPressed(Keys.F2)) GL.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Fill);
-        if (KeyboardState.IsKeyDown(Keys.Escape)) Close(); 
-        
+        if (KeyboardState.IsKeyDown(Keys.Escape)) Close();
+
         if (direction.LengthSquared > 0)
         {
-            Vector3 newPosition = camera.Position + direction.Normalized() * 4 * deltaTime;
-            camera.SetPosition(newPosition);
+            Vector3 newPosition = camera.GetComponent<Transform>().LocalPosition.ToOpenTK() + direction.Normalized() * 4 * deltaTime;
+            camera.GetComponent<Transform>().LocalPosition =
+                DustyEngine.Engine.Math.Vectors.Vector3.FromOpenTK(newPosition);
         }
     }
 
@@ -138,12 +151,20 @@ public class Window : GameWindow
     {
         base.OnRenderFrame(args);
 
-        GL.ClearColor(Color4.Blue);
-        GL.Clear(ClearBufferMask.ColorBufferBit);
+        // Установить цвет очистки
+        GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
+    
+        // КРИТИЧНО: Очищать ОБА буфера!
+        GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
         shaderProgram.ActiveProgram();
-        shaderProgram.SetUniform("uView", camera.GetViewMatrix());
+    
+        // Отладка: вывести view матрицу
+        var viewMatrix = camera.GetViewMatrix();
+ 
+        shaderProgram.SetUniform("uView", viewMatrix);
         shaderProgram.SetUniform("uProjection", projection);
+        
 
         foreach (var obj in sceneObjects)
         {
@@ -158,6 +179,9 @@ public class Window : GameWindow
     {
         var transform = obj.Transform;
 
+        // Отладка: вывести позицию объекта
+        var pos = transform.GlobalPosition;
+
         Matrix4 rotation =
             Matrix4.CreateRotationX(transform.GlobalRotation.X) *
             Matrix4.CreateRotationY(transform.GlobalRotation.Y) *
@@ -169,7 +193,16 @@ public class Window : GameWindow
             Matrix4.CreateTranslation(transform.GlobalPosition.ToOpenTK());
 
         shaderProgram.SetUniform("uModel", modelMatrix);
-        vaoList[obj.VaoIndex].RenderVAO(0);
+    
+        // Отладка: проверить, что VAO существует
+        if (obj.VaoIndex < vaoList.Count)
+        {
+            vaoList[obj.VaoIndex].RenderVAO(0);
+        }
+        else
+        {
+            Debug.Log($"Invalid VAO index: {obj.VaoIndex}", Debug.LogLevel.Error, true);
+        }
     }
 
     protected override void OnUnload()
