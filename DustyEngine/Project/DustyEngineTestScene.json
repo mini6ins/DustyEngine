@@ -13,7 +13,7 @@
               "LocalPosition": {
                 "X": 0,
                 "Y": 0,
-                "Z": 1
+                "Z": 0
               },
               "LocalRotation": {
                 "X": 0,
@@ -21,9 +21,9 @@
                 "Z": 0
               },
               "LocalScale": {
-                "X": 1,
-                "Y": 1,
-                "Z": 1
+                "X": 0.1,
+                "Y": 0.1,
+                "Z": 0.1
               },
               "Name": "\u003CNo GameObject\u003E"
             },
@@ -43,7 +43,7 @@
           "LocalPosition": {
             "X": 0,
             "Y": 0,
-            "Z": 1
+            "Z": 5
           },
           "LocalRotation": {
             "X": 0,
@@ -67,7 +67,7 @@
         },
         {
           "Type": "MeshRenderer",
-          "Path": "C:\\Users\\maksym\\Documents\\GitHub\\DustyEngine\\DustyEngine\\Project\\TeddyBear.obj",
+          "Path": "C:\\Users\\maksym\\Documents\\GitHub\\DustyEngine\\DustyEngine\\Project\\cube.obj",
           "Enabled": true,
           "Name": "\u003CNo GameObject\u003E"
         },

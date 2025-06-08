@@ -72,6 +72,8 @@ namespace DustyEngine
                     new Transform
                     {
                         LocalPosition = new Vector3(0, 0, 1),
+                        LocalRotation = new Vector3(0, 0, 0),
+                        LocalScale = new Vector3(1,1,1),
                     },
                     new TestComponent
                     {
@@ -81,7 +83,7 @@ namespace DustyEngine
                     },
                     new MeshRenderer
                     {
-                        Path = "C:\\Users\\maksym\\Documents\\GitHub\\DustyEngine\\DustyEngine\\Project\\TeddyBear.obj",
+                        Path = "C:\\Users\\maksym\\Documents\\GitHub\\DustyEngine\\DustyEngine\\Project\\cube.obj",
                     },
                 }
             };
@@ -102,7 +104,9 @@ namespace DustyEngine
                 {
                     new Transform
                     {
-                        LocalPosition = new Vector3(0, 0, 1),
+                        LocalPosition = new Vector3(0, 0, 5),
+                        LocalRotation = new Vector3(0, 0, 0),
+                        LocalScale = new Vector3(0.1f, 0.1f, 0.1f),
                     },
                     new MeshRenderer
                     {

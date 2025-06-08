@@ -3,7 +3,6 @@ using DustyEngine.Components;
 using DustyEngine.Scene;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Desktop;
-using Utils;
 
 namespace GraphicsEngineOpenGL;
 
@@ -20,46 +19,40 @@ public class GraphicsEngineOpenGl
             Title = programName,
         };
 
-        List<Mesh> meshes = new List<Mesh>();
-
-        
+        List<MeshRenderer> allRenderers = new();
         foreach (var obj in scene.GameObjects)
         {
-            CollectMeshes(obj, meshes);
+            CollectMeshRenderers(obj, allRenderers);
         }
 
-        Console.WriteLine($"Total meshes: {meshes.Count}");
+        
+        Debug.Log($"Total Meshes: {allRenderers.Count}", Debug.LogLevel.Info, true);
 
-        // float[] vertices;
-        // uint[] indices;
-        // OBJModelLoader.LoadModel("C:\\Users\\maksym\\Documents\\GitHub\\DustyEngine\\GraphicsEngine_OpenGL\\TeddyBear.obj", out vertices, out indices);
-        //   
-        // meshes.Add(new Mesh(vertices, indices));
-
-        Console.WriteLine($"Meshes: {meshes.Count}");
-        using var window = new Window(GameWindowSettings.Default, nativeWindowSettings, meshes);
+        
+        using var window = new Window(GameWindowSettings.Default, nativeWindowSettings, allRenderers, programName);
 
         window.UpdateFrame += (e) => { updateCallback?.Invoke(); };
         window.Run();
     }
     
     
-    public static void CollectMeshes(GameObject obj, List<Mesh> meshes)
+    private static void CollectMeshRenderers(GameObject obj, List<MeshRenderer> renderers)
     {
+        // Добавляем все компоненты типа MeshRenderer
         foreach (var component in obj.Components)
         {
             if (component is MeshRenderer meshRenderer)
             {
-                var mesh = meshRenderer.GetMesh();
-                if (mesh != null)
-                    meshes.Add(mesh);
+                renderers.Add(meshRenderer);
             }
         }
 
+        // Рекурсивно обрабатываем детей
         foreach (var child in obj.Children)
         {
-            CollectMeshes(child, meshes);
+            CollectMeshRenderers(child, renderers);
         }
     }
+
 
 }
