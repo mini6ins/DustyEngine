@@ -2,6 +2,7 @@
 using DustyEngine.Components;
 using DustyEngine.Scene;
 using OpenTK.Mathematics;
+using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 
 namespace GraphicsEngineOpenGL;
@@ -30,7 +31,7 @@ public class GraphicsEngineOpenGl
 
 
         using var window = new Window(GameWindowSettings.Default, nativeWindowSettings, allRenderers, programName, FindCamera(scene),
-            true);
+            true, CursorState.Grabbed);
 
         window.UpdateFrame += (e) => { updateCallback?.Invoke(); };
         window.Run();

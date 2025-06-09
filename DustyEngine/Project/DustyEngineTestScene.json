@@ -13,17 +13,23 @@
               "LocalPosition": {
                 "X": 5,
                 "Y": 0,
-                "Z": 0
+                "Z": 0,
+                "Length": 5,
+                "LengthSquared": 25
               },
               "LocalRotation": {
                 "X": 0,
                 "Y": 0,
-                "Z": 0
+                "Z": 0,
+                "Length": 0,
+                "LengthSquared": 0
               },
               "LocalScale": {
                 "X": 0.1,
                 "Y": 0.1,
-                "Z": 0.1
+                "Z": 0.1,
+                "Length": 0.17320508,
+                "LengthSquared": 0.030000001
               },
               "Name": "\u003CNo GameObject\u003E"
             },
@@ -43,17 +49,23 @@
           "LocalPosition": {
             "X": 0,
             "Y": 0,
-            "Z": 0
+            "Z": 0,
+            "Length": 0,
+            "LengthSquared": 0
           },
           "LocalRotation": {
             "X": 0,
             "Y": 0,
-            "Z": 0
+            "Z": 0,
+            "Length": 0,
+            "LengthSquared": 0
           },
           "LocalScale": {
             "X": 1,
             "Y": 1,
-            "Z": 1
+            "Z": 1,
+            "Length": 1.7320508,
+            "LengthSquared": 3
           },
           "Name": "\u003CNo GameObject\u003E"
         },
@@ -70,12 +82,6 @@
           "Path": "C:\\Users\\maksym\\Documents\\GitHub\\DustyEngine\\DustyEngine\\Project\\cube.obj",
           "Enabled": true,
           "Name": "\u003CNo GameObject\u003E"
-        },
-        {
-          "Type": "Player",
-          "Message": "Hello from DLL!",
-          "Enabled": true,
-          "Name": "\u003CNo GameObject\u003E"
         }
       ],
       "Name": "TestGameObject0"
@@ -89,17 +95,23 @@
           "LocalPosition": {
             "X": 0,
             "Y": 0,
-            "Z": 10
+            "Z": 10,
+            "Length": 10,
+            "LengthSquared": 100
           },
           "LocalRotation": {
             "X": 0,
             "Y": 0,
-            "Z": 0
+            "Z": 0,
+            "Length": 0,
+            "LengthSquared": 0
           },
           "LocalScale": {
             "X": 1,
             "Y": 1,
-            "Z": 1
+            "Z": 1,
+            "Length": 1.7320508,
+            "LengthSquared": 3
           },
           "Name": "\u003CNo GameObject\u003E"
         },
@@ -111,6 +123,12 @@
           "_fieldOfView": 45,
           "_nearPlane": 0.1,
           "_farPlane": 10000
+        },
+        {
+          "Type": "Player",
+          "Message": "Hello from DLL!",
+          "Enabled": true,
+          "Name": "\u003CNo GameObject\u003E"
         }
       ],
       "Name": "Camera"

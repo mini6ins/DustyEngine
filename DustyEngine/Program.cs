@@ -90,10 +90,7 @@ namespace DustyEngine
             
             
 
-            var playerScript = ComponentConverter.LoadOrCompileComponent(
-                "C:\\Users\\maksym\\Documents\\GitHub\\DustyEngine\\DustyEngine\\Project\\Player.cs"
-            );
-            obj0.Components.Add(playerScript);
+       
 
             scene.GameObjects.Add(obj0);
 
@@ -132,6 +129,10 @@ namespace DustyEngine
                     }
                 }
             };
+            var playerScript = ComponentConverter.LoadOrCompileComponent(
+                "C:\\Users\\maksym\\Documents\\GitHub\\DustyEngine\\DustyEngine\\Project\\Player.cs"
+            );
+            cameraObject.Components.Add(playerScript);
             
             scene.GameObjects.Add(cameraObject);
 

@@ -16,7 +16,7 @@ public class Camera : MonoBehaviour
     public Matrix4 GetViewMatrix()
     {
         return Matrix4.LookAt(_transform.LocalPosition.ToOpenTK(),
-            _transform.LocalPosition.ToOpenTK() + _transform.Forward, _transform.Up);
+            _transform.LocalPosition.ToOpenTK() + _transform.Forward.ToOpenTK(), _transform.Up.ToOpenTK());
     }
 
     public Matrix4 GetProjectionMatrix()

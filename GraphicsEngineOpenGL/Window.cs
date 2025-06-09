@@ -4,7 +4,7 @@ using OpenTK.Graphics.OpenGL.Compatibility;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
-using OpenTK.Windowing.GraphicsLibraryFramework;
+using Utils;
 
 namespace GraphicsEngineOpenGL;
 
@@ -21,22 +21,22 @@ public class Window : GameWindow
     private readonly string _windowName;
 
     private Camera camera;
-    private Vector2 lastMousePos;
-    private bool firstMouseMove = true;
-
     private Matrix4 projection;
-
+    
+    private CursorState _cursorState;
+    
     private ShaderProgram shaderProgram;
     private readonly List<VAOManager> vaoList = new();
     private readonly List<RenderableObject> sceneObjects = new();
 
     public Window(GameWindowSettings gws, NativeWindowSettings nws, List<MeshRenderer> allRenderers, string windowName,
-        Camera camera, bool isVsync = true)
+        Camera camera, bool isVsync = true, CursorState cursorState = CursorState.Normal)
         : base(gws, nws)
     {
         _windowName = windowName;
         Title = _windowName;
         this.camera = camera;
+        _cursorState = cursorState;
         Debug.Log(GL.GetString(StringName.Version), Debug.LogLevel.Info, true);
         Debug.Log(GL.GetString(StringName.Vendor), Debug.LogLevel.Info, true);
         Debug.Log(GL.GetString(StringName.Renderer), Debug.LogLevel.Info, true);
@@ -65,26 +65,28 @@ public class Window : GameWindow
     protected override void OnLoad()
     {
         base.OnLoad();
-
+        Input.Update(KeyboardState);
+        
         GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
         GL.Enable(EnableCap.CullFace);
         GL.CullFace(TriangleFace.Back);
         GL.FrontFace(FrontFaceDirection.Ccw);
-        
+
         GL.Enable(EnableCap.DepthTest);
         GL.DepthFunc(DepthFunction.Less);
-        
-        CursorState = CursorState.Grabbed;
-        
+
+        CursorState = _cursorState;
+
         projection = camera.GetProjectionMatrix();
     }
 
     protected override void OnUpdateFrame(FrameEventArgs args)
     {
         base.OnUpdateFrame(args);
-        var input = KeyboardState;
-
-        frameTime += (float)args.Time;
+        
+        float deltaTime = (float)args.Time;
+        
+        frameTime += deltaTime;
         fps++;
         if (frameTime >= 1.0f)
         {
@@ -92,71 +94,34 @@ public class Window : GameWindow
             frameTime = 0.0f;
             fps = 0;
         }
-
-        float deltaTime = (float)args.Time;
-
-        Vector3 direction = Vector3.Zero;
-        var t = camera.GetComponent<Transform>();
-        if (input.IsKeyDown(Keys.W)) direction += t.Forward;
-        if (input.IsKeyDown(Keys.S)) direction -= t.Forward;
-        if (input.IsKeyDown(Keys.A)) direction -= t.Right;
-        if (input.IsKeyDown(Keys.D)) direction += t.Right;
-        if (input.IsKeyDown(Keys.Space)) direction += t.Up;
-        if (input.IsKeyDown(Keys.LeftShift)) direction -= t.Up;
-
-            
-        if (input.IsKeyPressed(Keys.F1)) GL.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Line);
-        if (input.IsKeyPressed(Keys.F2)) GL.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Fill);
-        if (KeyboardState.IsKeyDown(Keys.Escape)) Close();
-
-        if (direction.LengthSquared > 0)
-        {
-            direction = direction.Normalized();
-            var movement = DustyEngine.Engine.Math.Vectors.Vector3.FromOpenTK(direction * 4 * deltaTime);
-            t.LocalPosition += movement;
-
-        }
-
+        
+        //Debug
+       if (Input.IsKeyDown(KeyCode.F1)) GL.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Line);
+       if (Input.IsKeyDown(KeyCode.F2)) GL.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Fill);
+       if (Input.IsKeyDown(KeyCode.Escape)) Close();
     }
 
     protected override void OnMouseMove(MouseMoveEventArgs e)
     {
         base.OnMouseMove(e);
-
-        if (firstMouseMove)
-        {
-            lastMousePos = new Vector2(e.X, e.Y);
-            firstMouseMove = false;
-            return;
-        }
-
-        var delta = new Vector2(e.X, e.Y) - lastMousePos;
-        lastMousePos = new Vector2(e.X, e.Y);
-        
-        var t = camera.GetComponent<Transform>();
-        var rotation = t.LocalRotation;
-        rotation.Y += delta.X * 0.1f;
-        rotation.X -= delta.Y * 0.1f;
-        rotation.X = Math.Math.Clamp(rotation.X, -89f, 89f);
-        t.LocalRotation = rotation;
+        Input.UpdateMouse(e.X, e.Y);
     }
-
-
+    
     protected override void OnRenderFrame(FrameEventArgs args)
     {
         base.OnRenderFrame(args);
-        
+
         GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
-        
+
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
         shaderProgram.ActiveProgram();
-        
+
         var viewMatrix = camera.GetViewMatrix();
- 
+
         shaderProgram.SetUniform("uView", viewMatrix);
         shaderProgram.SetUniform("uProjection", projection);
-        
+
 
         foreach (var obj in sceneObjects)
         {
@@ -171,9 +136,6 @@ public class Window : GameWindow
     {
         var transform = obj.Transform;
 
-        // Отладка: вывести позицию объекта
-        var pos = transform.GlobalPosition;
-
         Matrix4 rotation =
             Matrix4.CreateRotationX(transform.GlobalRotation.X) *
             Matrix4.CreateRotationY(transform.GlobalRotation.Y) *
@@ -185,8 +147,8 @@ public class Window : GameWindow
             Matrix4.CreateTranslation(transform.GlobalPosition.ToOpenTK());
 
         shaderProgram.SetUniform("uModel", modelMatrix);
-    
-    
+
+
         if (obj.VaoIndex < vaoList.Count)
         {
             vaoList[obj.VaoIndex].RenderVAO(0);

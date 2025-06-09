@@ -72,31 +72,23 @@ namespace DustyEngine.Components
             }
         }
 
-        [JsonIgnore]
-        public OpenTK.Mathematics.Vector3 Forward
+        [JsonIgnore] public Vector3 Forward
         {
             get
             {
                 var yaw = MathHelper.DegreesToRadians(LocalRotation.Y - 90);
                 var pitch = MathHelper.DegreesToRadians(LocalRotation.X);
 
-                OpenTK.Mathematics.Vector3 front;
+                Vector3 front = new Vector3();
                 front.X = MathF.Cos(yaw) * MathF.Cos(pitch);
                 front.Y = MathF.Sin(pitch);
                 front.Z = MathF.Sin(yaw) * MathF.Cos(pitch);
 
-                return OpenTK.Mathematics.Vector3.Normalize(front);
+                return front;
             }
         }
-
-        [JsonIgnore]
-        public OpenTK.Mathematics.Vector3 Right =>
-            OpenTK.Mathematics.Vector3.Normalize(
-                OpenTK.Mathematics.Vector3.Cross(Forward, new OpenTK.Mathematics.Vector3(0, 1, 0)));
-
-        [JsonIgnore]
-        public OpenTK.Mathematics.Vector3 Up =>
-            OpenTK.Mathematics.Vector3.Normalize(OpenTK.Mathematics.Vector3.Cross(Right, Forward));
+        [JsonIgnore] public Vector3 Right => Vector3.Normalize(Vector3.Cross(Forward, new Vector3(0, 1, 0)));
+        [JsonIgnore] public Vector3 Up => Vector3.Normalize(Vector3.Cross(Right, Forward));
 
 
         public override string ToString()
