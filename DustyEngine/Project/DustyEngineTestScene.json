@@ -105,8 +105,12 @@
         },
         {
           "Type": "Camera",
+          "AspectRatio": 1.3333334,
           "Enabled": true,
-          "Name": "\u003CNo GameObject\u003E"
+          "Name": "\u003CNo GameObject\u003E",
+          "_fieldOfView": 45,
+          "_nearPlane": 0.1,
+          "_farPlane": 10000
         }
       ],
       "Name": "Camera"

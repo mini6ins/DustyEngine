@@ -8,7 +8,7 @@
   "LogLevel": 0,
   "LogToConsole": true,
   "LogToFile": true,
-  "SceneSize": {
+  "ScreenSize": {
     "X": 800,
     "Y": 600
   }

@@ -1,5 +1,6 @@
 ﻿using System.Text.Json.Serialization;
-using DustyEngine.Engine.Math.Vectors;
+using OpenTK.Mathematics;
+using Vector3 = DustyEngine.Engine.Math.Vectors.Vector3;
 
 namespace DustyEngine.Components
 {
@@ -10,22 +11,25 @@ namespace DustyEngine.Components
             get => _localPosition;
             set { _localPosition = value; }
         }
+
         public Vector3 LocalRotation
         {
             get => _localRotation;
             set { _localRotation = value; }
         }
+
         public Vector3 LocalScale
         {
             get => _localScale;
             set { _localScale = value; }
         }
-        
+
         [JsonIgnore] private Vector3 _localPosition = new Vector3(0, 0, 0);
         [JsonIgnore] private Vector3 _localRotation = new Vector3(0, 0, 0);
         [JsonIgnore] private Vector3 _localScale = new Vector3(1, 1, 1);
-        
-        [JsonIgnore]public Vector3 GlobalPosition
+
+        [JsonIgnore]
+        public Vector3 GlobalPosition
         {
             get
             {
@@ -36,7 +40,9 @@ namespace DustyEngine.Components
                 return parentTransform != null ? parentTransform.GlobalPosition + _localPosition : _localPosition;
             }
         }
-        [JsonIgnore] public Vector3 GlobalRotation
+
+        [JsonIgnore]
+        public Vector3 GlobalRotation
         {
             get
             {
@@ -47,7 +53,9 @@ namespace DustyEngine.Components
                 return parentTransform != null ? parentTransform.GlobalRotation + _localRotation : _localRotation;
             }
         }
-        [JsonIgnore] public Vector3 GlobalScale
+
+        [JsonIgnore]
+        public Vector3 GlobalScale
         {
             get
             {
@@ -64,6 +72,33 @@ namespace DustyEngine.Components
             }
         }
 
+        [JsonIgnore]
+        public OpenTK.Mathematics.Vector3 Forward
+        {
+            get
+            {
+                var yaw = MathHelper.DegreesToRadians(LocalRotation.Y - 90);
+                var pitch = MathHelper.DegreesToRadians(LocalRotation.X);
+
+                OpenTK.Mathematics.Vector3 front;
+                front.X = MathF.Cos(yaw) * MathF.Cos(pitch);
+                front.Y = MathF.Sin(pitch);
+                front.Z = MathF.Sin(yaw) * MathF.Cos(pitch);
+
+                return OpenTK.Mathematics.Vector3.Normalize(front);
+            }
+        }
+
+        [JsonIgnore]
+        public OpenTK.Mathematics.Vector3 Right =>
+            OpenTK.Mathematics.Vector3.Normalize(
+                OpenTK.Mathematics.Vector3.Cross(Forward, new OpenTK.Mathematics.Vector3(0, 1, 0)));
+
+        [JsonIgnore]
+        public OpenTK.Mathematics.Vector3 Up =>
+            OpenTK.Mathematics.Vector3.Normalize(OpenTK.Mathematics.Vector3.Cross(Right, Forward));
+
+
         public override string ToString()
         {
             return $"Local: {LocalPosition}, Rotation: {LocalRotation}, Scale: {LocalScale}, " +
@@ -71,4 +106,3 @@ namespace DustyEngine.Components
         }
     }
 }
-

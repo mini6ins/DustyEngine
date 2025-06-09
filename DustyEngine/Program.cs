@@ -32,7 +32,7 @@ namespace DustyEngine
                 LogLevel = Debug.LogLevel.Info,
                 LogToConsole = true,
                 LogToFile = true,
-                SceneSize = new Vector2(800,600)
+                ScreenSize = new Vector2(800,600)
             };
 
             SerializeProjectSettings(projectSettings);
@@ -126,7 +126,10 @@ namespace DustyEngine
                     {
                         LocalPosition = new Vector3(0, 0, 10),
                     },
-                    new Camera()
+                    new Camera
+                    {
+                        AspectRatio = projectSettings.ScreenSize.X / (float)projectSettings.ScreenSize.Y,
+                    }
                 }
             };
             
@@ -151,7 +154,7 @@ namespace DustyEngine
             GraphicsEngineOpenGl graphicsEngineOpenGl = new GraphicsEngineOpenGl();
             
             Action updateAction = () => ExecuteUpdateLoop(loadedScene);
-            graphicsEngineOpenGl.RunMainLoop(loadedScene ,updateAction, projectSettings.SceneSize, projectSettings.ProjectName);
+            graphicsEngineOpenGl.RunMainLoop(loadedScene ,updateAction, projectSettings.ScreenSize, projectSettings.ProjectName);
         }
 
         private static void TestScene(Scene.Scene? loadedScene)
@@ -367,5 +370,5 @@ public class ProjectSettings
     public Debug.LogLevel LogLevel { get; set; }
     public bool LogToConsole { get; set; }
     public bool LogToFile { get; set; }
-    public Vector2 SceneSize { get; set; }
+    public Vector2 ScreenSize { get; set; }
 }

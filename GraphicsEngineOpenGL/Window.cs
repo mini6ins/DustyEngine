@@ -69,29 +69,14 @@ public class Window : GameWindow
         GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
         GL.Enable(EnableCap.CullFace);
         GL.CullFace(TriangleFace.Back);
-    
-        // Включить depth test
+        GL.FrontFace(FrontFaceDirection.Ccw);
+        
         GL.Enable(EnableCap.DepthTest);
-        GL.DepthFunc(DepthFunction.Less); // Явно установить функцию
-    
-        // КРИТИЧНО: Установить позицию камеры подальше от объектов
-    
-        // Отладка: вывести позицию камеры
-        var camPos = camera.GetComponent<Transform>().LocalPosition;
-        Debug.Log($"Camera position: {camPos.X}, {camPos.Y}, {camPos.Z}", Debug.LogLevel.Info, true);
-
+        GL.DepthFunc(DepthFunction.Less);
+        
         CursorState = CursorState.Grabbed;
-
-        // ИСПРАВИТЬ проекцию - увеличить near plane
-        projection = Matrix4.CreatePerspectiveFieldOfView(
-            MathHelper.DegreesToRadians(45.0f),
-            Size.X / (float)Size.Y,
-            0.1f,  // Было возможно 0.01f или меньше
-            10000.0f
-        );
-    
-        // Отладка: вывести параметры проекции
-        Debug.Log($"Projection: FOV=45°, Near=0.1, Far=10000", Debug.LogLevel.Info, true);
+        
+        projection = camera.GetProjectionMatrix();
     }
 
     protected override void OnUpdateFrame(FrameEventArgs args)
@@ -111,23 +96,27 @@ public class Window : GameWindow
         float deltaTime = (float)args.Time;
 
         Vector3 direction = Vector3.Zero;
-        if (input.IsKeyDown(Keys.W)) direction += camera.Front;
-        if (input.IsKeyDown(Keys.S)) direction -= camera.Front;
-        if (input.IsKeyDown(Keys.A)) direction -= camera.Right;
-        if (input.IsKeyDown(Keys.D)) direction += camera.Right;
-        if (input.IsKeyDown(Keys.Space)) direction += camera.Up;
-        if (input.IsKeyDown(Keys.LeftShift)) direction -= camera.Up;
+        var t = camera.GetComponent<Transform>();
+        if (input.IsKeyDown(Keys.W)) direction += t.Forward;
+        if (input.IsKeyDown(Keys.S)) direction -= t.Forward;
+        if (input.IsKeyDown(Keys.A)) direction -= t.Right;
+        if (input.IsKeyDown(Keys.D)) direction += t.Right;
+        if (input.IsKeyDown(Keys.Space)) direction += t.Up;
+        if (input.IsKeyDown(Keys.LeftShift)) direction -= t.Up;
 
+            
         if (input.IsKeyPressed(Keys.F1)) GL.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Line);
         if (input.IsKeyPressed(Keys.F2)) GL.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Fill);
         if (KeyboardState.IsKeyDown(Keys.Escape)) Close();
 
         if (direction.LengthSquared > 0)
         {
-            Vector3 newPosition = camera.GetComponent<Transform>().LocalPosition.ToOpenTK() + direction.Normalized() * 4 * deltaTime;
-            camera.GetComponent<Transform>().LocalPosition =
-                DustyEngine.Engine.Math.Vectors.Vector3.FromOpenTK(newPosition);
+            direction = direction.Normalized();
+            var movement = DustyEngine.Engine.Math.Vectors.Vector3.FromOpenTK(direction * 4 * deltaTime);
+            t.LocalPosition += movement;
+
         }
+
     }
 
     protected override void OnMouseMove(MouseMoveEventArgs e)
@@ -143,23 +132,26 @@ public class Window : GameWindow
 
         var delta = new Vector2(e.X, e.Y) - lastMousePos;
         lastMousePos = new Vector2(e.X, e.Y);
-
-        camera.UpdateRotation(delta.X * 0.1f, delta.Y * 0.1f);
+        
+        var t = camera.GetComponent<Transform>();
+        var rotation = t.LocalRotation;
+        rotation.Y += delta.X * 0.1f;
+        rotation.X -= delta.Y * 0.1f;
+        rotation.X = Math.Math.Clamp(rotation.X, -89f, 89f);
+        t.LocalRotation = rotation;
     }
+
 
     protected override void OnRenderFrame(FrameEventArgs args)
     {
         base.OnRenderFrame(args);
-
-        // Установить цвет очистки
+        
         GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
-    
-        // КРИТИЧНО: Очищать ОБА буфера!
+        
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
         shaderProgram.ActiveProgram();
-    
-        // Отладка: вывести view матрицу
+        
         var viewMatrix = camera.GetViewMatrix();
  
         shaderProgram.SetUniform("uView", viewMatrix);
@@ -194,7 +186,7 @@ public class Window : GameWindow
 
         shaderProgram.SetUniform("uModel", modelMatrix);
     
-        // Отладка: проверить, что VAO существует
+    
         if (obj.VaoIndex < vaoList.Count)
         {
             vaoList[obj.VaoIndex].RenderVAO(0);
