@@ -83,7 +83,7 @@ public class Window : GameWindow
     protected override void OnUpdateFrame(FrameEventArgs args)
     {
         base.OnUpdateFrame(args);
-        
+        Input.Update(KeyboardState);
         float deltaTime = (float)args.Time;
         
         frameTime += deltaTime;

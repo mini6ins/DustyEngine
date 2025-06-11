@@ -9,8 +9,10 @@ namespace GraphicsEngineOpenGL;
 
 public class GraphicsEngineOpenGl
 {
-    public void RunMainLoop(Scene scene, Action updateCallback, Vector2 resolution,
-        string programName)
+
+
+    // Основной метод с Action callback
+    public void RunMainLoop(Scene scene, Action updateCallback, Vector2 resolution, string programName)
     {
         Debug.Log("GraphicsEngineOpenGl is working", Debug.LogLevel.Info, true);
 
@@ -26,17 +28,20 @@ public class GraphicsEngineOpenGl
             CollectMeshRenderers(obj, allRenderers);
         }
 
-
         Debug.Log($"Total Meshes: {allRenderers.Count}", Debug.LogLevel.Info, true);
-
 
         using var window = new Window(GameWindowSettings.Default, nativeWindowSettings, allRenderers, programName, FindCamera(scene),
             true, CursorState.Grabbed);
 
-        window.UpdateFrame += (e) => { updateCallback?.Invoke(); };
+        window.UpdateFrame += (e) => 
+        { 
+            // Выполняем переданный callback
+            updateCallback?.Invoke();
+        };
+        
+        
         window.Run();
     }
-
 
     private static void CollectMeshRenderers(GameObject obj, List<MeshRenderer> renderers)
     {
@@ -82,5 +87,4 @@ public class GraphicsEngineOpenGl
 
         return null;
     }
-
 }

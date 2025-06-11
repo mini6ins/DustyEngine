@@ -32,7 +32,7 @@ namespace DustyEngine
                 LogLevel = Debug.LogLevel.Info,
                 LogToConsole = true,
                 LogToFile = true,
-                ScreenSize = new Vector2(800,600)
+                ScreenSize = new Vector2(800, 600)
             };
 
             SerializeProjectSettings(projectSettings);
@@ -63,7 +63,7 @@ namespace DustyEngine
             {
                 Name = "DustyEngineTestScene"
             };
-            
+
             GameObject obj0 = new GameObject
             {
                 Name = "TestGameObject0",
@@ -73,7 +73,7 @@ namespace DustyEngine
                     {
                         LocalPosition = new Vector3(0, 0, 0),
                         LocalRotation = new Vector3(0, 0, 0),
-                        LocalScale = new Vector3(1,1,1),
+                        LocalScale = new Vector3(1, 1, 1),
                     },
                     new TestComponent
                     {
@@ -87,10 +87,7 @@ namespace DustyEngine
                     },
                 }
             };
-            
-            
 
-       
 
             scene.GameObjects.Add(obj0);
 
@@ -111,9 +108,9 @@ namespace DustyEngine
                     },
                 }
             };
-        
+
             scene.GameObjects[0].AddChild(obj1);
-            
+
             GameObject cameraObject = new GameObject
             {
                 Name = "Camera",
@@ -133,7 +130,7 @@ namespace DustyEngine
                 "C:\\Users\\maksym\\Documents\\GitHub\\DustyEngine\\DustyEngine\\Project\\Player.cs"
             );
             cameraObject.Components.Add(playerScript);
-            
+
             scene.GameObjects.Add(cameraObject);
 
             SaveScene(scene,
@@ -147,15 +144,20 @@ namespace DustyEngine
                 }
             }
 
-          //  TestScene(loadedScene);
-   
-            
-           // Task.Run(() => ExecuteUpdateLoop(loadedScene));
-            Task.Run(() => ExecuteFixedUpdateLoop(loadedScene));
+
+            GameLoop.Initialize(loadedScene);
+            Time.Init();
             GraphicsEngineOpenGl graphicsEngineOpenGl = new GraphicsEngineOpenGl();
             
-            Action updateAction = () => ExecuteUpdateLoop(loadedScene);
-            graphicsEngineOpenGl.RunMainLoop(loadedScene ,updateAction, projectSettings.ScreenSize, projectSettings.ProjectName);
+            Action gameLoopAction = () =>
+            {
+                GameLoop.ExecuteFrame(loadedScene);
+                Time.Tick();
+            };
+
+
+            graphicsEngineOpenGl.RunMainLoop(loadedScene, gameLoopAction,
+                projectSettings.ScreenSize, projectSettings.ProjectName);
         }
 
         private static void TestScene(Scene.Scene? loadedScene)
@@ -328,6 +330,8 @@ namespace DustyEngine
 
             while (true)
             {
+                Console.WriteLine($"[Fixed]");
+
                 var currentTime = DateTime.Now;
                 var frameTime = currentTime - previousTime;
                 previousTime = currentTime;
@@ -344,10 +348,16 @@ namespace DustyEngine
                             {
                                 if (component is MonoBehaviour monoBehaviour)
                                 {
+                                    Console.WriteLine($"[Fixed] {monoBehaviour.GetType().Name}");
+
                                     if (!monoBehaviour.Enabled) continue;
 
-                                    var fixedUpdateMethod1 = monoBehaviour.GetType().GetMethod("FixedUpdate");
-                                    fixedUpdateMethod1?.Invoke(component, null);
+                                    var fixedUpdateMethod = monoBehaviour.GetType()
+                                        .GetMethod("FixedUpdate",
+                                            BindingFlags.Instance |
+                                            BindingFlags.Public |
+                                            BindingFlags.NonPublic);
+                                    fixedUpdateMethod?.Invoke(component, null);
                                 }
                             }
                         }
@@ -366,7 +376,7 @@ public class ProjectSettings
 {
     public string ProjectName { get; set; }
     public float Version { get; set; }
-    public  List<string> PathToScenes { get; set; }
+    public List<string> PathToScenes { get; set; }
     public bool Debug { get; set; }
     public Debug.LogLevel LogLevel { get; set; }
     public bool LogToConsole { get; set; }

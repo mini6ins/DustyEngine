@@ -72,23 +72,15 @@ namespace DustyEngine.Components
             }
         }
 
-        [JsonIgnore] public Vector3 Forward
-        {
-            get
-            {
-                var yaw = MathHelper.DegreesToRadians(LocalRotation.Y - 90);
-                var pitch = MathHelper.DegreesToRadians(LocalRotation.X);
 
-                Vector3 front = new Vector3();
-                front.X = MathF.Cos(yaw) * MathF.Cos(pitch);
-                front.Y = MathF.Sin(pitch);
-                front.Z = MathF.Sin(yaw) * MathF.Cos(pitch);
+        [JsonIgnore] public Quaternion LocalRotationQuat { get; set; } = new Quaternion(0, 0, 0, 1);
 
-                return front;
-            }
-        }
-        [JsonIgnore] public Vector3 Right => Vector3.Normalize(Vector3.Cross(Forward, new Vector3(0, 1, 0)));
-        [JsonIgnore] public Vector3 Up => Vector3.Normalize(Vector3.Cross(Right, Forward));
+        [JsonIgnore] public Vector3 Forward => LocalRotationQuat.Rotate(new Vector3(0, 0, -1)).Normalized();
+
+        [JsonIgnore] public Vector3 Right   => LocalRotationQuat.Rotate(new Vector3(1, 0, 0)).Normalized();
+
+        [JsonIgnore] public Vector3 Up      => LocalRotationQuat.Rotate(new Vector3(0, 1, 0)).Normalized();
+
 
 
         public override string ToString()

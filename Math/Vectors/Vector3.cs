@@ -16,6 +16,8 @@ public class Vector3
         Y = y;
         Z = z;
     }
+    public static Vector3 Zero = new Vector3(0, 0, 0);
+    public static Vector3 Up = new Vector3(0, 1, 0);
 
     public static Vector3 operator +(Vector3 a, Vector3 b) =>
         new Vector3(a.X + b.X, a.Y + b.Y, a.Z + b.Z);
@@ -60,6 +62,64 @@ public class Vector3
         if (length == 0)
             return new Vector3(0, 0, 0);
         return new Vector3(X / length, Y / length, Z / length);
+    }
+    
+    public static float Dot(Vector3 a, Vector3 b)
+        => a.X*b.X + a.Y*b.Y + a.Z*b.Z;
+    
+    
+    public static Vector3 ClampMagnitude(Vector3 v, float maxLength)
+    {
+        var sqrMag = v.X*v.X + v.Y*v.Y + v.Z*v.Z;
+        if (sqrMag > maxLength * maxLength)
+        {
+            var mag    = MathF.Sqrt(sqrMag);
+            var factor = maxLength / mag;
+            return new Vector3(v.X * factor, v.Y * factor, v.Z * factor);
+        }
+        return v;
+    }
+    
+    public static Vector3 SmoothDamp(
+        Vector3 current,
+        Vector3 target,
+        ref Vector3 currentVelocity,
+        float smoothTime,
+        float maxSpeed,
+        float deltaTime
+    )
+    {
+        // защитимся от деления на ноль
+        smoothTime = MathF.Max(0.0001f, smoothTime);
+
+        float omega = 2f / smoothTime;
+        float x     = omega * deltaTime;
+        float exp   = 1f / (1f + x + 0.48f*x*x + 0.235f*x*x*x);
+
+        // ограничиваем максимальное изменение за кадр
+        var change    = current - target;
+        var originalTo = target;
+        var maxChange = maxSpeed * smoothTime;
+        change        = ClampMagnitude(change, maxChange);
+        target        = current - change;
+
+        // вычисляем временный вектор скорости
+        var temp = (currentVelocity + omega * change) * deltaTime;
+        currentVelocity = (currentVelocity - omega * temp) * exp;
+
+        // итоговое значение
+        var output = target + (change + temp) * exp;
+
+        // если мы «перешли» через target, скорректируем
+        var origMinusCurrent = originalTo - current;
+        var outMinusOrig     = output - originalTo;
+        if (Dot(origMinusCurrent, outMinusOrig) > 0)
+        {
+            output = originalTo;
+            currentVelocity = (output - originalTo) / deltaTime;
+        }
+
+        return output;
     }
 
     public OpenTK.Mathematics.Vector3 ToOpenTK() => new (X, Y, Z);

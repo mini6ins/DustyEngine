@@ -126,7 +126,6 @@
         },
         {
           "Type": "Player",
-          "Message": "Hello from DLL!",
           "Enabled": true,
           "Name": "\u003CNo GameObject\u003E"
         }

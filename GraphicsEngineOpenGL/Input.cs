@@ -1,5 +1,4 @@
-﻿
-namespace Utils
+﻿namespace Utils
 {
     public enum KeyCode
     {
@@ -128,26 +127,33 @@ namespace Utils
 
     public static class Input
     {
-        private static OpenTK.Windowing.GraphicsLibraryFramework.KeyboardState _keyboardState;
+        private static OpenTK.Windowing.GraphicsLibraryFramework.KeyboardState? keyboardState;
+        private static OpenTK.Windowing.GraphicsLibraryFramework.KeyboardState? previousKeyboardState;
 
-        public static void Update(OpenTK.Windowing.GraphicsLibraryFramework.KeyboardState keyboardState)
+        public static void Update(OpenTK.Windowing.GraphicsLibraryFramework.KeyboardState newKeyboardState)
         {
-            _keyboardState = keyboardState;
+            previousKeyboardState = keyboardState;
+            keyboardState = newKeyboardState;
         }
 
         public static bool IsKeyDown(KeyCode keyCode)
         {
-            return _keyboardState.IsKeyDown(ConvertKey(keyCode));
+            if (keyboardState == null) return false;
+            return keyboardState.IsKeyDown(ConvertKey(keyCode));
         }
 
         public static bool IsKeyPressed(KeyCode keyCode)
         {
-            return _keyboardState.IsKeyPressed(ConvertKey(keyCode));
+            if (keyboardState == null || previousKeyboardState == null) return false;
+            var key = ConvertKey(keyCode);
+            return keyboardState.IsKeyDown(key) && !previousKeyboardState.IsKeyDown(key);
         }
 
         public static bool IsKeyReleased(KeyCode keyCode)
         {
-            return _keyboardState.IsKeyReleased(ConvertKey(keyCode));
+            if (keyboardState == null || previousKeyboardState == null) return false;
+            var key = ConvertKey(keyCode);
+            return !keyboardState.IsKeyDown(key) && previousKeyboardState.IsKeyDown(key);
         }
 
         private static OpenTK.Windowing.GraphicsLibraryFramework.Keys ConvertKey(KeyCode keyCode)
@@ -157,31 +163,51 @@ namespace Utils
                 : OpenTK.Windowing.GraphicsLibraryFramework.Keys.Unknown;
         }
 
-        // --- Mouse Input ---
-        private static bool _firstMove = true;
-        private static float _lastX;
-        private static float _lastY;
-        public static (float X, float Y) Delta { get; private set; } = (0, 0);
+ 
+        
+        private static bool firstMove = true;
+        private static float lastX;
+        private static float lastY;
+        private static (float X, float Y) currentDelta = (0, 0);
+
+        public static (float X, float Y) Delta => currentDelta;
 
         public static void UpdateMouse(float x, float y)
         {
-            if (_firstMove)
+            if (firstMove)
             {
-                _lastX = x;
-                _lastY = y;
-                _firstMove = false;
-                Delta = (0, 0);
+                lastX = x;
+                lastY = y;
+                firstMove = false;
+                currentDelta = (0, 0);
                 return;
             }
 
-            Delta = (x - _lastX, y - _lastY);
-            _lastX = x;
-            _lastY = y;
+            currentDelta = (x - lastX, y - lastY);
+            
+            lastX = x;
+            lastY = y;
         }
-
+        
         public static void ResetMouse()
         {
-            _firstMove = true;
+            currentDelta = (0, 0);
+        }
+        
+        public static void FullResetMouse()
+        {
+            firstMove = true;
+            currentDelta = (0, 0);
+        }
+        
+        public static bool HasMouseMoved()
+        {
+            return Math.Abs(currentDelta.X) > 0.001f || Math.Abs(currentDelta.Y) > 0.001f;
+        }
+
+        public static float GetMouseSensitivityAdjustedDelta(float sensitivity)
+        {
+            return Math.Sqrt(currentDelta.X * currentDelta.X + currentDelta.Y * currentDelta.Y) * sensitivity;
         }
     }
 }
