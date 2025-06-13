@@ -45,8 +45,8 @@ public class Window : GameWindow
         VSync = isVsync ? VSyncMode.On : VSyncMode.Off;
 
         shaderProgram = new ShaderProgram(
-            "C:\\Users\\maksym\\Documents\\GitHub\\DustyEngine\\DustyEngine\\Project\\shaders\\shader.vert",
-            "C:\\Users\\maksym\\Documents\\GitHub\\DustyEngine\\DustyEngine\\Project\\shaders\\shader.frag");
+            "C:\\Users\\maksym\\Desktop\\GameTestEngine\\Assets\\shaders\\shader.vert",
+            "C:\\Users\\maksym\\Desktop\\GameTestEngine\\Assets\\shaders\\shader.frag");
 
         foreach (var meshRenderer in allRenderers)
         {

@@ -18,7 +18,7 @@ namespace DustyEngine
         {
             Debug.ClearLogs();
 
-            ProjectFolderPath = "C:\\Users\\maksym\\Documents\\GitHub\\DustyEngine\\DustyEngine\\Project";
+            ProjectFolderPath = "C:\\Users\\maksym\\Desktop\\GameTestEngine";
 
             ProjectSettings projectSettings = new ProjectSettings
             {
@@ -26,7 +26,7 @@ namespace DustyEngine
                 Version = 1.0f,
                 PathToScenes = new List<String>
                 {
-                    "C:\\Users\\maksym\\Documents\\GitHub\\DustyEngine\\DustyEngine\\Project\\DustyEngineTestScene.json",
+                    "C:\\Users\\maksym\\Desktop\\GameTestEngine\\Assets\\DustyEngineTestScene.json",
                 },
                 Debug = true,
                 LogLevel = Debug.LogLevel.Info,
@@ -83,7 +83,7 @@ namespace DustyEngine
                     },
                     new MeshRenderer
                     {
-                        Path = "C:\\Users\\maksym\\Documents\\GitHub\\DustyEngine\\DustyEngine\\Project\\cube.obj",
+                        Path = "C:\\Users\\maksym\\Desktop\\GameTestEngine\\Assets\\cube.obj",
                     },
                 }
             };
@@ -104,7 +104,7 @@ namespace DustyEngine
                     },
                     new MeshRenderer
                     {
-                        Path = "C:\\Users\\maksym\\Documents\\GitHub\\DustyEngine\\DustyEngine\\Project\\TeddyBear.obj",
+                        Path = "C:\\Users\\maksym\\Desktop\\GameTestEngine\\Assets\\TeddyBear.obj",
                     },
                 }
             };
@@ -126,15 +126,31 @@ namespace DustyEngine
                     }
                 }
             };
-            var playerScript = ComponentConverter.LoadOrCompileComponent(
-                "C:\\Users\\maksym\\Documents\\GitHub\\DustyEngine\\DustyEngine\\Project\\Player.cs"
-            );
-            cameraObject.Components.Add(playerScript);
+            try
+            {
+                var playerScript = ComponentConverter.LoadOrCompileComponent(
+                    "C:\\Users\\maksym\\Desktop\\GameTestEngine\\Assets\\Player.cs"
+                );
+                if (playerScript != null)
+                {
+                    cameraObject.Components.Add(playerScript);
+                    Debug.Log("Player component loaded successfully", Debug.LogLevel.Info, true);
+                }
+                else
+                {
+                    Debug.Log("Player component could not be loaded, continuing without it", Debug.LogLevel.Warning, true);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.Log($"Failed to load Player component: {ex.Message}", Debug.LogLevel.Warning, true);
+                Debug.Log("Continuing without Player component", Debug.LogLevel.Info, true);
+            }
 
             scene.GameObjects.Add(cameraObject);
 
             SaveScene(scene,
-                "C:\\Users\\maksym\\Documents\\GitHub\\DustyEngine\\DustyEngine\\Project\\DustyEngineTestScene.json");
+                "C:\\Users\\maksym\\Desktop\\GameTestEngine\\Assets\\DustyEngineTestScene.json");
             if (LoadScene(out var loadedScene, projectSettings.PathToScenes.FirstOrDefault())) return;
             foreach (var method in new[] { "OnEnable", "Start" })
             {
@@ -300,73 +316,6 @@ namespace DustyEngine
             foreach (var child in gameObject.Children)
             {
                 InvokeRecursive(child, methodName);
-            }
-        }
-
-        private static void ExecuteUpdateLoop(Scene.Scene scene)
-        {
-            foreach (var gameObject in scene.GameObjects ?? Enumerable.Empty<GameObject>())
-            {
-                if (!gameObject.IsActive) continue;
-                foreach (var component in gameObject.Components ?? Enumerable.Empty<Component>())
-                {
-                    if (component is MonoBehaviour monoBehaviour)
-                    {
-                        if (!monoBehaviour.Enabled) continue;
-
-                        var updateMethod = component.GetType().GetMethod("Update",
-                            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                        updateMethod?.Invoke(component, null);
-                    }
-                }
-            }
-        }
-
-        private static void ExecuteFixedUpdateLoop(Scene.Scene scene)
-        {
-            var targetElapsedTime = TimeSpan.FromMilliseconds(1);
-            var accumulator = TimeSpan.Zero;
-            var previousTime = DateTime.Now;
-
-            while (true)
-            {
-                Console.WriteLine($"[Fixed]");
-
-                var currentTime = DateTime.Now;
-                var frameTime = currentTime - previousTime;
-                previousTime = currentTime;
-
-                accumulator += frameTime;
-
-                while (accumulator >= targetElapsedTime)
-                {
-                    foreach (var gameObject in scene.GameObjects)
-                    {
-                        if (gameObject.IsActive)
-                        {
-                            foreach (var component in gameObject.Components)
-                            {
-                                if (component is MonoBehaviour monoBehaviour)
-                                {
-                                    Console.WriteLine($"[Fixed] {monoBehaviour.GetType().Name}");
-
-                                    if (!monoBehaviour.Enabled) continue;
-
-                                    var fixedUpdateMethod = monoBehaviour.GetType()
-                                        .GetMethod("FixedUpdate",
-                                            BindingFlags.Instance |
-                                            BindingFlags.Public |
-                                            BindingFlags.NonPublic);
-                                    fixedUpdateMethod?.Invoke(component, null);
-                                }
-                            }
-                        }
-                    }
-
-                    accumulator -= targetElapsedTime;
-                }
-
-                Thread.Sleep(0);
             }
         }
     }

@@ -11,6 +11,7 @@ namespace DustyEngine.Json.Converters
     public class ComponentConverter : JsonConverter<Component>
     {
         private static readonly Dictionary<string, Type> ComponentTypes;
+        private static readonly Dictionary<Type, string> ComponentSourcePaths = new();
 
         static ComponentConverter()
         {
@@ -31,7 +32,7 @@ namespace DustyEngine.Json.Converters
                 if (!ComponentTypes.TryGetValue(typeName, out Type componentType))
                     Debug.Log($"Unknown component: {typeName}", Debug.LogLevel.Error, true);
 
-                if (doc.RootElement.TryGetProperty("sourcePath", out JsonElement externalSourcePath))
+                if (doc.RootElement.TryGetProperty("SourcePath", out JsonElement externalSourcePath))
                 {
                     string sourcePath = externalSourcePath.GetString();
                     Debug.Log($"Source Path: {sourcePath}", Debug.LogLevel.Info, true);
@@ -40,6 +41,8 @@ namespace DustyEngine.Json.Converters
                     if (externalComponent != null)
                     {
                         componentType = externalComponent.GetType();
+                        // Сохраняем путь к исходному коду для этого типа
+                        ComponentSourcePaths[componentType] = sourcePath;
                     }
                 }
 
@@ -55,23 +58,31 @@ namespace DustyEngine.Json.Converters
         public static Component? LoadOrCompileComponent(string path)
         {
             string typeName = Path.GetFileNameWithoutExtension(path);
+            Component? component = null;
+            
             if (Path.GetExtension(path).Equals(".dll", StringComparison.OrdinalIgnoreCase))
             {
                 Debug.Log($"Loading component from DLL: {path}", Debug.LogLevel.Info, true);
-                return LoadComponentFromDll(path, typeName);
+                component = LoadComponentFromDll(path, typeName);
             }
             else if (Path.GetExtension(path).Equals(".cs", StringComparison.OrdinalIgnoreCase))
             {
                 Debug.Log($"Compiling component from source: {path}", Debug.LogLevel.Info, true);
                 string dllPath = CompileSourceToDll(path);
-                return LoadComponentFromDll(dllPath, typeName);
+                component = LoadComponentFromDll(dllPath, typeName);
             }
             else
             {
                 Debug.Log($"Unsupported file type: {path}", Debug.LogLevel.Error, true);
             }
 
-            return null;
+            // Если компонент успешно загружен, сохраняем путь к исходному коду
+            if (component != null)
+            {
+                ComponentSourcePaths[component.GetType()] = path;
+            }
+
+            return component;
         }
         
         private static Component? LoadComponentFromDll(string dllPath, string typeName)
@@ -79,16 +90,22 @@ namespace DustyEngine.Json.Converters
             try
             {
                 var assembly = Assembly.LoadFrom(dllPath);
-                var type = assembly.GetType(typeName);
+                
+                var type = assembly.GetTypes().FirstOrDefault(t => t.Name == typeName);
+
                 if (type == null)
                 {
                     Debug.Log($"Type '{typeName}' not found in '{dllPath}'", Debug.LogLevel.Error);
                     return null;
                 }
 
-                Debug.Log($"Compiling source: {dllPath}, detected typeName: {typeName}", Debug.LogLevel.Info, true);
+                if (!typeof(Component).IsAssignableFrom(type))
+                {
+                    Debug.Log($"Type '{typeName}' does not inherit from Component", Debug.LogLevel.Error);
+                    return null;
+                }
 
-                Debug.Log($"Loading component from assembly: {assembly.FullName}", Debug.LogLevel.Info, true);
+                Debug.Log($"Successfully loaded component type: {type.FullName}", Debug.LogLevel.Info, true);
 
                 return (Component)Activator.CreateInstance(type);
             }
@@ -98,6 +115,7 @@ namespace DustyEngine.Json.Converters
                 throw;
             }
         }
+
         
         private static string CompileSourceToDll(string sourcePath)
         {
@@ -200,6 +218,12 @@ namespace DustyEngine.Json.Converters
         {
             writer.WriteStartObject();
             writer.WriteString("Type", value.GetType().Name);
+
+            // Добавляем путь к исходному коду, если он есть
+            if (ComponentSourcePaths.TryGetValue(value.GetType(), out string sourcePath))
+            {
+                writer.WriteString("SourcePath", sourcePath);
+            }
 
             var type = value.GetType();
             var members = type.GetMembers(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
