@@ -1,6 +1,5 @@
-﻿using DustyEngine;
-using DustyEngine.Components;
-using OpenTK.Mathematics;
+﻿using OpenTK.Mathematics;
+using SceneSystem.Attributes;
 
 namespace DustyEngine.Components;
 
@@ -12,7 +11,7 @@ public class Camera : MonoBehaviour
 
     public float AspectRatio { get; set; } = 16f / 9f;
     private Transform _transform => GameObject.GetComponent<Transform>();
-    
+
     public Matrix4 GetViewMatrix()
     {
         return Matrix4.LookAt(_transform.LocalPosition.ToOpenTK(),

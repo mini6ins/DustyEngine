@@ -1,6 +1,6 @@
-﻿namespace DustyEngine;
+﻿using System.Diagnostics;
 
-using System.Diagnostics;
+namespace DustyEngine;
 
 public static class Time
 {
@@ -15,11 +15,11 @@ public static class Time
         lastTimestamp = Stopwatch.GetTimestamp();
         DeltaTime = 0f;
     }
-    
+
     public static void Tick()
     {
         var now = Stopwatch.GetTimestamp();
-        
+
         DeltaTime = (float)((now - lastTimestamp) * timestampToSeconds);
         lastTimestamp = now;
     }

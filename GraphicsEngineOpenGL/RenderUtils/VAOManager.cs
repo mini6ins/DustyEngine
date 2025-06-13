@@ -1,20 +1,18 @@
-﻿using OpenTK.Graphics.OpenGL;
+﻿using DustyEngine;
+using OpenTK.Graphics.OpenGL;
 
-namespace GraphicsEngineOpenGL;
+namespace GraphicsEngineOpenGL.RenderUtils;
 
-public class VAOManager : IDisposable
+public sealed class VAOManager(ShaderProgram shaderProgram) : IDisposable
 {
-    private ShaderProgram shaderProgram;
-    private List<int> vaoIds = new();
-    private List<int> indexCounts = new();
-    private List<int> vboIds = new();
-    private List<int> eboIds = new();
-    private bool disposed = false;
-
-    public VAOManager(ShaderProgram shaderProgram)
-    {
-        this.shaderProgram = shaderProgram ?? throw new ArgumentNullException(nameof(shaderProgram));
-    }
+    private readonly ShaderProgram _shaderProgram = shaderProgram ?? throw new ArgumentNullException(nameof(shaderProgram));
+    
+    private readonly List<int> _vaoIds = [];
+    private readonly List<int> _vboIds = [];
+    private readonly List<int> _eboIds = [];
+    private readonly List<int> _indexCounts = [];
+    
+    private bool _disposed;
 
     public void CreateVAO(float[] vertices, uint[] indices)
     {
@@ -24,16 +22,16 @@ public class VAOManager : IDisposable
         int vbo = CreateVertexBuffer(vertices);
         int ebo = CreateIndexBuffer(indices);
 
-        const int STRIDE = 7 * sizeof(float); // position(3) + color(4)
-        SetupVertexAttributes(STRIDE);
+        const int stride = 7 * sizeof(float); // position(3) + color(4)
+        SetupVertexAttributes(stride);
 
         GL.BindVertexArray(0);
         GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
 
-        vaoIds.Add(vaoId);
-        indexCounts.Add(indices.Length);
-        vboIds.Add(vbo);
-        eboIds.Add(ebo);
+        _vaoIds.Add(vaoId);
+        _indexCounts.Add(indices.Length);
+        _vboIds.Add(vbo);
+        _eboIds.Add(ebo);
     }
 
     private int CreateVertexBuffer(float[] data)
@@ -60,59 +58,59 @@ public class VAOManager : IDisposable
 
     private void SetupVertexAttribPointer(string attribName, int size, int offset, int stride)
     {
-        int location = shaderProgram.GetAttribLocation(attribName);
+        int location = _shaderProgram.GetAttribLocation(attribName);
         GL.EnableVertexAttribArray((uint)location);
         GL.VertexAttribPointer((uint)location, size, VertexAttribPointerType.Float, false, stride, offset);
     }
 
     public void RenderVAO(int index)
     {
-        if (index < 0 || index >= vaoIds.Count) return;
-        GL.BindVertexArray(vaoIds[index]);
-        GL.DrawElements(PrimitiveType.Triangles, indexCounts[index], DrawElementsType.UnsignedInt, 0);
+        if (index < 0 || index >= _vaoIds.Count) return;
+        GL.BindVertexArray(_vaoIds[index]);
+        GL.DrawElements(PrimitiveType.Triangles, _indexCounts[index], DrawElementsType.UnsignedInt, 0);
         GL.BindVertexArray(0);
     }
 
     public void DeleteVAOs()
     {
-        foreach (var vao in vaoIds) GL.DeleteVertexArray(vao);
-        foreach (var vbo in vboIds) GL.DeleteBuffer(vbo);
-        foreach (var ebo in eboIds) GL.DeleteBuffer(ebo);
+        foreach (var vao in _vaoIds) GL.DeleteVertexArray(vao);
+        foreach (var vbo in _vboIds) GL.DeleteBuffer(vbo);
+        foreach (var ebo in _eboIds) GL.DeleteBuffer(ebo);
 
-        vaoIds.Clear();
-        vboIds.Clear();
-        eboIds.Clear();
-        indexCounts.Clear();
+        _vaoIds.Clear();
+        _vboIds.Clear();
+        _eboIds.Clear();
+        _indexCounts.Clear();
     }
 
     public void DeleteVAO(int index)
     {
-        if (index < 0 || index >= vaoIds.Count)
+        if (index < 0 || index >= _vaoIds.Count)
         {
             Console.WriteLine($"Index {index} is out of bounds for VAOs.");
             return;
         }
 
-        GL.DeleteVertexArray(vaoIds[index]);
-        GL.DeleteBuffer(vboIds[index]);
-        GL.DeleteBuffer(eboIds[index]);
+        GL.DeleteVertexArray(_vaoIds[index]);
+        GL.DeleteBuffer(_vboIds[index]);
+        GL.DeleteBuffer(_eboIds[index]);
 
-        vaoIds.RemoveAt(index);
-        vboIds.RemoveAt(index);
-        eboIds.RemoveAt(index);
-        indexCounts.RemoveAt(index);
+        _vaoIds.RemoveAt(index);
+        _vboIds.RemoveAt(index);
+        _eboIds.RemoveAt(index);
+        _indexCounts.RemoveAt(index);
     }
 
-    protected virtual void Dispose(bool disposing)
+    private void Dispose(bool disposing)
     {
-        if (!disposed)
+        if (!_disposed)
         {
             if (disposing)
             {
                 DeleteVAOs();
             }
 
-            disposed = true;
+            _disposed = true;
         }
     }
 

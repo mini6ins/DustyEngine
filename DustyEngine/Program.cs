@@ -2,8 +2,8 @@
 using System.Text.Json;
 using DustyEngine;
 using DustyEngine.Components;
+using DustyEngine.Core.Converters;
 using DustyEngine.Engine.Math.Vectors;
-using DustyEngine.Json.Converters;
 using GraphicsEngineOpenGL;
 
 
@@ -28,11 +28,14 @@ namespace DustyEngine
                 {
                     "C:\\Users\\maksym\\Desktop\\GameTestEngine\\Assets\\DustyEngineTestScene.json",
                 },
+                PathToVertShader = "C:\\Users\\maksym\\Desktop\\GameTestEngine\\Assets\\shaders\\shader.vert",
+                PathToFragShader = "C:\\Users\\maksym\\Desktop\\GameTestEngine\\Assets\\shaders\\shader.frag",
                 Debug = true,
                 LogLevel = Debug.LogLevel.Info,
                 LogToConsole = true,
                 LogToFile = true,
-                ScreenSize = new Vector2(800, 600)
+                ScreenSize = new Vector2(800, 600),
+                Vsync = true,
             };
 
             SerializeProjectSettings(projectSettings);
@@ -74,12 +77,6 @@ namespace DustyEngine
                         LocalPosition = new Vector3(0, 0, 0),
                         LocalRotation = new Vector3(0, 0, 0),
                         LocalScale = new Vector3(1, 1, 1),
-                    },
-                    new TestComponent
-                    {
-                        Enabled = true,
-                        TestNumber = 21,
-                        TestString = "TestString",
                     },
                     new MeshRenderer
                     {
@@ -173,46 +170,9 @@ namespace DustyEngine
 
 
             graphicsEngineOpenGl.RunMainLoop(loadedScene, gameLoopAction,
-                projectSettings.ScreenSize, projectSettings.ProjectName);
+                projectSettings.ScreenSize, projectSettings.ProjectName, projectSettings.PathToVertShader, projectSettings.PathToFragShader, projectSettings.Vsync);
         }
 
-        private static void TestScene(Scene.Scene? loadedScene)
-        {
-            // loadedScene.GameObjects[0].SeActive(false);
-            // loadedScene.GameObjects[0].Components[0].SetActive(true);
-            // loadedScene.GameObjects[0].SeActive(true);
-
-            GameObject test = new GameObject
-            {
-                Name = "TestGameObject3", IsActive = true, Components =
-                {
-                    new TestComponent
-                    {
-                        Enabled = true,
-                    }
-                }
-            };
-
-            GameObject test2 = new GameObject
-            {
-                Name = "TestGameObject4", IsActive = true, Components =
-                {
-                    new TestComponent
-                    {
-                        Enabled = true,
-                    },
-                }
-            };
-
-
-            Transform transform = new Transform();
-
-            loadedScene.Instantiate(test, loadedScene.GameObjects[0]);
-            loadedScene.Instantiate(test2, test);
-            // test.AddComponent(transform);
-            // loadedScene.Destroy(test);
-            //    Debug.ShowLogs();
-        }
 
         private static void DeserializeProjectSettings()
         {
@@ -326,9 +286,12 @@ public class ProjectSettings
     public string ProjectName { get; set; }
     public float Version { get; set; }
     public List<string> PathToScenes { get; set; }
+    public string PathToFragShader { get; set; }
+    public string PathToVertShader { get; set; }
     public bool Debug { get; set; }
     public Debug.LogLevel LogLevel { get; set; }
     public bool LogToConsole { get; set; }
     public bool LogToFile { get; set; }
     public Vector2 ScreenSize { get; set; }
+    public bool Vsync { get; set; }
 }

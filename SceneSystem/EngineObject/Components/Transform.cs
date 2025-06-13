@@ -1,5 +1,4 @@
 ﻿using System.Text.Json.Serialization;
-using OpenTK.Mathematics;
 using Vector3 = DustyEngine.Engine.Math.Vectors.Vector3;
 
 namespace DustyEngine.Components
@@ -77,10 +76,9 @@ namespace DustyEngine.Components
 
         [JsonIgnore] public Vector3 Forward => LocalRotationQuat.Rotate(new Vector3(0, 0, -1)).Normalized();
 
-        [JsonIgnore] public Vector3 Right   => LocalRotationQuat.Rotate(new Vector3(1, 0, 0)).Normalized();
+        [JsonIgnore] public Vector3 Right => LocalRotationQuat.Rotate(new Vector3(1, 0, 0)).Normalized();
 
-        [JsonIgnore] public Vector3 Up      => LocalRotationQuat.Rotate(new Vector3(0, 1, 0)).Normalized();
-
+        [JsonIgnore] public Vector3 Up => LocalRotationQuat.Rotate(new Vector3(0, 1, 0)).Normalized();
 
 
         public override string ToString()

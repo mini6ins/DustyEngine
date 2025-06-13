@@ -5,8 +5,9 @@ using DustyEngine.Components;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using SceneSystem.Attributes;
 
-namespace DustyEngine.Json.Converters
+namespace DustyEngine.Core.Converters
 {
     public class ComponentConverter : JsonConverter<Component>
     {
@@ -29,8 +30,7 @@ namespace DustyEngine.Json.Converters
             {
                 string typeName = doc.RootElement.GetProperty("Type").GetString();
 
-                if (!ComponentTypes.TryGetValue(typeName, out Type componentType))
-                    Debug.Log($"Unknown component: {typeName}", Debug.LogLevel.Error, true);
+                ComponentTypes.TryGetValue(typeName, out Type componentType);
 
                 if (doc.RootElement.TryGetProperty("SourcePath", out JsonElement externalSourcePath))
                 {
@@ -41,7 +41,6 @@ namespace DustyEngine.Json.Converters
                     if (externalComponent != null)
                     {
                         componentType = externalComponent.GetType();
-                        // Сохраняем путь к исходному коду для этого типа
                         ComponentSourcePaths[componentType] = sourcePath;
                     }
                 }
@@ -54,12 +53,12 @@ namespace DustyEngine.Json.Converters
                 return (Component)JsonSerializer.Deserialize(doc.RootElement.GetRawText(), componentType, newOptions)!;
             }
         }
-        
+
         public static Component? LoadOrCompileComponent(string path)
         {
             string typeName = Path.GetFileNameWithoutExtension(path);
             Component? component = null;
-            
+
             if (Path.GetExtension(path).Equals(".dll", StringComparison.OrdinalIgnoreCase))
             {
                 Debug.Log($"Loading component from DLL: {path}", Debug.LogLevel.Info, true);
@@ -76,7 +75,6 @@ namespace DustyEngine.Json.Converters
                 Debug.Log($"Unsupported file type: {path}", Debug.LogLevel.Error, true);
             }
 
-            // Если компонент успешно загружен, сохраняем путь к исходному коду
             if (component != null)
             {
                 ComponentSourcePaths[component.GetType()] = path;
@@ -84,13 +82,13 @@ namespace DustyEngine.Json.Converters
 
             return component;
         }
-        
+
         private static Component? LoadComponentFromDll(string dllPath, string typeName)
         {
             try
             {
                 var assembly = Assembly.LoadFrom(dllPath);
-                
+
                 var type = assembly.GetTypes().FirstOrDefault(t => t.Name == typeName);
 
                 if (type == null)
@@ -116,7 +114,7 @@ namespace DustyEngine.Json.Converters
             }
         }
 
-        
+
         private static string CompileSourceToDll(string sourcePath)
         {
             string outputDirectory = Path.Combine(Program.ProjectFolderPath, "Settings/Dlls");
@@ -157,10 +155,8 @@ namespace DustyEngine.Json.Converters
                 MetadataReference.CreateFromFile(Assembly.Load("System.Console").Location),
                 MetadataReference.CreateFromFile(Assembly.Load("Microsoft.CSharp").Location),
                 MetadataReference.CreateFromFile(Assembly.GetExecutingAssembly().Location), // DustyEngine.dll
-   
-
             };
-            
+
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
                 var location = assembly.Location;
@@ -172,7 +168,8 @@ namespace DustyEngine.Json.Converters
                     }
                     catch (Exception ex)
                     {
-                        Debug.Log($"[Warning] Could not add reference for {location}: {ex.Message}", Debug.LogLevel.Warning);
+                        Debug.Log($"[Warning] Could not add reference for {location}: {ex.Message}",
+                            Debug.LogLevel.Warning);
                     }
                 }
             }
@@ -219,7 +216,6 @@ namespace DustyEngine.Json.Converters
             writer.WriteStartObject();
             writer.WriteString("Type", value.GetType().Name);
 
-            // Добавляем путь к исходному коду, если он есть
             if (ComponentSourcePaths.TryGetValue(value.GetType(), out string sourcePath))
             {
                 writer.WriteString("SourcePath", sourcePath);
@@ -246,7 +242,7 @@ namespace DustyEngine.Json.Converters
                 {
                     if (prop.CanRead && prop.GetMethod?.IsPublic == true)
                         shouldSerialize = true;
-                    
+
                     if (prop.GetCustomAttribute<SerializeFieldAttribute>() != null && prop.CanRead)
                         shouldSerialize = true;
                 }

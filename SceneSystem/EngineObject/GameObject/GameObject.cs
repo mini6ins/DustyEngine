@@ -1,19 +1,20 @@
 ﻿using System.Reflection;
 using System.Text.Json.Serialization;
-using DustyEngine;
 using DustyEngine.Components;
 
-public class GameObject : EngineObject
+namespace DustyEngine;
+
+public sealed class GameObject : EngineObject
 {
     public bool IsActive { get; set; } = true;
 
-    public List<GameObject> Children { get; set; } = new List<GameObject>();
-    public List<Component> Components { get; set; } = new List<Component>();
+    public List<GameObject> Children { get; set; } = [];
+    public List<Component> Components { get; set; } = [];
 
     [JsonIgnore] public GameObject Parent { get; set; }
 
     public GameObject(string name = "New GameObject") => Name = name;
-    
+
     public void SetActive(bool isActive)
     {
         InvokeMethodInComponents(isActive ? "OnEnable" : "OnDisable");
@@ -29,11 +30,13 @@ public class GameObject : EngineObject
         component.Parent = this;
         Debug.Log($"Added component [{component.GetType().Name}] to GameObject [{Name}]", Debug.LogLevel.Info, true);
     }
+
     public void AddChild(GameObject child)
     {
         child.Parent = this;
         Children.Add(child);
     }
+
     public void Destroy()
     {
         InvokeMethodInComponents("OnDestroy");
@@ -42,7 +45,7 @@ public class GameObject : EngineObject
 
     public T? GetComponent<T>() where T : Component
     {
-        if (Components == null || Components.Count == 0)
+        if (Components.Count == 0)
             return null;
 
         return Components.OfType<T>().FirstOrDefault();
@@ -57,8 +60,8 @@ public class GameObject : EngineObject
             Debug.Log($"[{Name}] has no components. Skipping {methodName} execution.", Debug.LogLevel.Warning, true);
             return;
         }
-        
-        foreach (Component component in Components)
+
+        foreach (var component in Components)
         {
             component.Parent = this;
 
@@ -81,13 +84,14 @@ public class GameObject : EngineObject
                 if (method == null)
                     continue;
 
-             
-                bool isLifecycleMethod = methodName is "OnEnable" or "OnDisable" or "OnDestroy";
-                
+
+                var isLifecycleMethod = methodName is "OnEnable" or "OnDisable" or "OnDestroy";
+
                 if ((isLifecycleMethod && component is Behaviour) ||
                     (!isLifecycleMethod && component is MonoBehaviour))
                 {
-                    Debug.Log($"Executing [{component.GetType().Name}.{methodName}] on [{Name}]", Debug.LogLevel.Info, true);
+                    Debug.Log($"Executing [{component.GetType().Name}.{methodName}] on [{Name}]", Debug.LogLevel.Info,
+                        true);
                     method.Invoke(component, null);
                 }
             }

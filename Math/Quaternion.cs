@@ -1,19 +1,16 @@
 ﻿using DustyEngine.Engine.Math.Vectors;
 
-public struct Quaternion
+public struct Quaternion(float x, float y, float z, float w)
 {
-    public float X, Y, Z, W;
-
-    public Quaternion(float x, float y, float z, float w)
-        => (X, Y, Z, W) = (x, y, z, w);
+    public float X = x, Y = y, Z = z, W = w;
 
     public static Quaternion FromAxisAngle(Vector3 axis, float angleRad)
     {
         var n = axis.Normalized();
-        float half = angleRad * 0.5f;
-        
-        float s = MathF.Sin(half);
-        float c = MathF.Cos(half);
+        var half = angleRad * 0.5f;
+
+        var s = MathF.Sin(half);
+        var c = MathF.Cos(half);
         return new Quaternion(
             n.X * s,
             n.Y * s,
@@ -21,35 +18,31 @@ public struct Quaternion
             c
         );
     }
-    
+
     public Vector3 ToEulerAngles()
     {
-        float sinr_cosp = 2f * (W * X + Y * Z);
-        float cosr_cosp = 1f - 2f * (X * X + Y * Y);
-        float pitch = MathF.Atan2(sinr_cosp, cosr_cosp);
+        var sinr_cosp = 2f * (W * X + Y * Z);
+        var cosr_cosp = 1f - 2f * (X * X + Y * Y);
+        var pitch = MathF.Atan2(sinr_cosp, cosr_cosp);
 
-        float sinp = 2f * (W * Y - Z * X);
-        float yaw;
-        if (MathF.Abs(sinp) >= 1f)
-            yaw = MathF.CopySign(MathF.PI / 2f, sinp); 
-        else
-            yaw = MathF.Asin(sinp);
+        var sinp = 2f * (W * Y - Z * X);
+        var yaw = MathF.Abs(sinp) >= 1f ? MathF.CopySign(MathF.PI / 2f, sinp) : MathF.Asin(sinp);
 
-        float siny_cosp = 2f * (W * Z + X * Y);
-        float cosy_cosp = 1f - 2f * (Y * Y + Z * Z);
-        float roll = MathF.Atan2(siny_cosp, cosy_cosp);
+        var siny_cosp = 2f * (W * Z + X * Y);
+        var cosy_cosp = 1f - 2f * (Y * Y + Z * Z);
+        var roll = MathF.Atan2(siny_cosp, cosy_cosp);
 
         return new Vector3(pitch, yaw, roll);
     }
-    
+
     public static Quaternion FromEuler(float pitch, float yaw, float roll)
     {
-        float cy = MathF.Cos(yaw * 0.5f);
-        float sy = MathF.Sin(yaw * 0.5f);
-        float cp = MathF.Cos(pitch * 0.5f);
-        float sp = MathF.Sin(pitch * 0.5f);
-        float cr = MathF.Cos(roll * 0.5f);
-        float sr = MathF.Sin(roll * 0.5f);
+        var cy = MathF.Cos(yaw * 0.5f);
+        var sy = MathF.Sin(yaw * 0.5f);
+        var cp = MathF.Cos(pitch * 0.5f);
+        var sp = MathF.Sin(pitch * 0.5f);
+        var cr = MathF.Cos(roll * 0.5f);
+        var sr = MathF.Sin(roll * 0.5f);
 
         return new Quaternion(
             sr * cp * cy - cr * sp * sy, // X
@@ -67,8 +60,7 @@ public struct Quaternion
             a.W * b.W - a.X * b.X - a.Y * b.Y - a.Z * b.Z
         );
 
-    public Quaternion Inverted()
-        => new Quaternion(-X, -Y, -Z, W);
+    public Quaternion Inverted() => new Quaternion(-X, -Y, -Z, W);
 
     public Vector3 Rotate(Vector3 v)
     {

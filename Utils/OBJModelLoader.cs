@@ -17,7 +17,7 @@ public class OBJModelLoader
         var mesh = scene.Meshes[0];
 
         var vertList = new List<float>();
-        for (int i = 0; i < mesh.Vertices.Count; i++)
+        for (var i = 0; i < mesh.Vertices.Count; i++)
         {
             var v = mesh.Vertices[i];
             vertList.Add(v.X);
@@ -42,13 +42,8 @@ public class OBJModelLoader
             }
         }
 
-        var idxList = new List<uint>();
-        foreach (var face in mesh.Faces)
-        foreach (var i in face.Indices)
-            idxList.Add((uint)i);
-
         vertices = vertList.ToArray();
-        indices = idxList.ToArray();
+        indices = (from face in mesh.Faces from i in face.Indices select (uint)i).ToArray();
         return true;
     }
 }

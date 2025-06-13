@@ -5,8 +5,8 @@ namespace DustyEngine.Scene;
 public class Scene
 {
     public string Name { get; set; }
-    public List<GameObject> GameObjects { get; set; } = new List<GameObject>();
-    public List<Component> Components { get; set; } = new List<Component>();
+    public List<GameObject> GameObjects { get; set; } = [];
+    public List<Component> Components { get; set; } = [];
 
     public void Instantiate(GameObject gameObject)
     {
@@ -21,7 +21,7 @@ public class Scene
     {
         Debug.Log($"[Scene: {Name}] Before Instantiate: GameObjects={GetTotalObjectsCount()}", Debug.LogLevel.Info, true);
 
-        Transform targetTransform = gameObject.GetComponent<Transform>();
+        var targetTransform = gameObject.GetComponent<Transform>();
         if (targetTransform != null)
         {
             targetTransform.LocalPosition = transform.LocalPosition;
@@ -105,6 +105,51 @@ public class Scene
         }
     }
 
+    public static Camera? FindCamera(Scene scene)
+    {
+        foreach (var obj in scene.GameObjects)
+        {
+            var camera = FindCameraRecursive(obj);
+            if (camera != null)
+                return camera;
+        }
+        return null;
+    }
+
+    public static Camera? FindCameraRecursive(GameObject obj)
+    {
+        foreach (var component in obj.Components)
+        {
+            if (component is Camera camera)
+                return camera;
+        }
+
+        foreach (var child in obj.Children)
+        {
+            var result = FindCameraRecursive(child);
+            if (result != null)
+                return result;
+        }
+
+        return null;
+    }
+    
+    public static void CollectMeshRenderers(GameObject obj, List<MeshRenderer> renderers)
+    {
+        foreach (var component in obj.Components)
+        {
+            if (component is MeshRenderer meshRenderer)
+            {
+                renderers.Add(meshRenderer);
+            }
+        }
+
+        foreach (var child in obj.Children)
+        {
+            CollectMeshRenderers(child, renderers);
+        }
+    }
+    
     private int GetTotalObjectsCount()
     {
         int count = 0;

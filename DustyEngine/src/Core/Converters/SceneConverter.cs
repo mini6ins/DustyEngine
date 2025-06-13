@@ -2,33 +2,31 @@
 using System.Text.Json.Serialization;
 using DustyEngine.Components;
 
-namespace DustyEngine.Json.Converters;
+namespace DustyEngine.Core.Converters;
 
 public class SceneConverter : JsonConverter<Scene.Scene>
 {
     public override Scene.Scene Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        using (JsonDocument doc = JsonDocument.ParseValue(ref reader))
+        using JsonDocument doc = JsonDocument.ParseValue(ref reader);
+        var scene = new Scene.Scene();
+
+        if (doc.RootElement.TryGetProperty("Name", out var nameElement))
         {
-            var scene = new Scene.Scene();
-
-            if (doc.RootElement.TryGetProperty("Name", out var nameElement))
-            {
-                scene.Name = nameElement.GetString();
-            }
-
-            if (doc.RootElement.TryGetProperty("GameObjects", out var gameObjectsElement))
-            {
-                scene.GameObjects = DeserializeGameObjects(gameObjectsElement, null, options);
-            }
-
-            if (doc.RootElement.TryGetProperty("Components", out var componentsElement))
-            {
-                scene.Components = JsonSerializer.Deserialize<List<Component>>(componentsElement.GetRawText(), options);
-            }
-
-            return scene;
+            scene.Name = nameElement.GetString();
         }
+
+        if (doc.RootElement.TryGetProperty("GameObjects", out var gameObjectsElement))
+        {
+            scene.GameObjects = DeserializeGameObjects(gameObjectsElement, null, options);
+        }
+
+        if (doc.RootElement.TryGetProperty("Components", out var componentsElement))
+        {
+            scene.Components = JsonSerializer.Deserialize<List<Component>>(componentsElement.GetRawText(), options);
+        }
+
+        return scene;
     }
 
     private List<GameObject> DeserializeGameObjects(JsonElement element, GameObject parent,

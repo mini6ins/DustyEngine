@@ -1,6 +1,6 @@
 ﻿public static class Math
 {
-    public const float PI = 3.14159265f;
+    public const float Pi = 3.14159265f;
 
     public static float Clamp(float value, float min, float max)
     {
@@ -18,18 +18,19 @@
     {
         return a > b ? a : b;
     }
+
     public static float DegreesToRadians(float degrees)
     {
         return degrees * (MathF.PI / 180f);
     }
-    
+
     public static float RadiansToDegrees(float radians)
     {
         return radians * (180f / MathF.PI);
     }
-    
+
     public static float Sqrt(float value)
     {
-        return System.MathF.Sqrt(value);
+        return MathF.Sqrt(value);
     }
 }

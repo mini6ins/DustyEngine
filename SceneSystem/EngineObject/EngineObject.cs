@@ -2,5 +2,5 @@
 
 public class EngineObject
 {
-    public virtual string Name { get; set; }
+    public virtual string Name { get; set; } = null!;
 }
