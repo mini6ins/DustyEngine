@@ -135,7 +135,7 @@ public class Window : GameWindow
     private void RenderObject(RenderableObject obj)
     {
         var transform = obj.Transform;
-
+        
         Matrix4 rotation =
             Matrix4.CreateRotationX(transform.GlobalRotation.X) *
             Matrix4.CreateRotationY(transform.GlobalRotation.Y) *

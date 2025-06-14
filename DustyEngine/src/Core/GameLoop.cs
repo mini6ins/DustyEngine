@@ -11,10 +11,23 @@ public static class GameLoop
 
     private static readonly Dictionary<Type, MethodInfo> UpdateMethodCache = new();
     private static readonly Dictionary<Type, MethodInfo> FixedUpdateMethodCache = new();
+    
+    private static IEnumerable<GameObject> TraverseGameObjects(IEnumerable<GameObject> rootObjects)
+    {
+        foreach (var obj in rootObjects ?? Enumerable.Empty<GameObject>())
+        {
+            yield return obj;
+
+            foreach (var child in TraverseGameObjects(obj.Children))
+            {
+                yield return child;
+            }
+        }
+    }
 
     private static void ExecuteUpdateLoop(Scene.Scene scene)
     {
-        foreach (var gameObject in scene.GameObjects ?? Enumerable.Empty<GameObject>())
+        foreach (var gameObject in TraverseGameObjects(scene.GameObjects))
         {
             if (!gameObject.IsActive) continue;
 
@@ -47,7 +60,7 @@ public static class GameLoop
 
         while (accumulator >= TargetElapsedTime)
         {
-            foreach (var gameObject in scene.GameObjects ?? Enumerable.Empty<GameObject>())
+            foreach (var gameObject in TraverseGameObjects(scene.GameObjects))
             {
                 if (!gameObject.IsActive) continue;
 
@@ -64,10 +77,7 @@ public static class GameLoop
                             FixedUpdateMethodCache[componentType] = fixedUpdateMethod;
                         }
 
-                        if (fixedUpdateMethod != null)
-                        {
-                            fixedUpdateMethod.Invoke(component, null);
-                        }
+                        fixedUpdateMethod?.Invoke(component, null);
                     }
                 }
             }

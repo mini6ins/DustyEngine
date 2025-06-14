@@ -84,7 +84,7 @@ namespace DustyEngine
                     },
                 }
             };
-
+     
 
             scene.GameObjects.Add(obj0);
 
@@ -105,7 +105,26 @@ namespace DustyEngine
                     },
                 }
             };
-
+            try
+            {
+                var moveBoxScript = ComponentConverter.LoadOrCompileComponent(
+                    "C:\\Users\\maksym\\Desktop\\GameTestEngine\\Assets\\MoveBoxCode.cs"
+                );
+                if (moveBoxScript != null)
+                {
+                    obj1.Components.Add(moveBoxScript);
+                    Debug.Log("moveBoxScript component loaded successfully", Debug.LogLevel.Info, true);
+                }
+                else
+                {
+                    Debug.Log("moveBoxScript component could not be loaded, continuing without it", Debug.LogLevel.Warning, true);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.Log($"Failed to load moveBoxScript component: {ex.Message}", Debug.LogLevel.Warning, true);
+                Debug.Log("Continuing without moveBoxScript component", Debug.LogLevel.Info, true);
+            }
             scene.GameObjects[0].AddChild(obj1);
 
             GameObject cameraObject = new GameObject
