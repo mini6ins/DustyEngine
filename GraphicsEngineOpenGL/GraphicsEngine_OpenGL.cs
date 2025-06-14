@@ -23,13 +23,13 @@ public class GraphicsEngineOpenGl
         List<MeshRenderer> allRenderers = new();
         foreach (var obj in scene.GameObjects)
         {
-            Scene.CollectMeshRenderers(obj, allRenderers);
+            SceneManager.CollectMeshRenderers(obj, allRenderers);
         }
 
         Debug.Log($"Total Meshes: {allRenderers.Count}", Debug.LogLevel.Info, true);
 
         using var window = new Window(GameWindowSettings.Default, nativeWindowSettings, allRenderers, vertShaderPath,
-            fragShaderPath, programName, Scene.FindCamera(scene),
+            fragShaderPath, programName, SceneManager.FindCamera(scene),
             vsync, CursorState.Grabbed);
 
         window.UpdateFrame += (e) => updateCallback?.Invoke();
