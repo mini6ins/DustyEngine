@@ -19,6 +19,7 @@ public class Vector3
 
     public static Vector3 Zero = new Vector3(0, 0, 0);
     public static Vector3 Up = new Vector3(0, 1, 0);
+    public static Vector3 One = new Vector3(1, 1, 1);
 
     public static Vector3 operator +(Vector3 a, Vector3 b) =>
         new Vector3(a.X + b.X, a.Y + b.Y, a.Z + b.Z);

@@ -13,6 +13,7 @@ public class RenderableObject
 {
     public int VaoIndex;
     public Transform Transform = new();
+    public MeshRenderer MeshRenderer; 
 }
 
 public class Window : GameWindow
@@ -47,21 +48,65 @@ public class Window : GameWindow
         VSync = isVsync ? VSyncMode.On : VSyncMode.Off;
 
         _shaderProgram = new ShaderProgram(vertShaderPath, fragShaderPath);
-
+        
         foreach (var meshRenderer in allRenderers)
         {
-            var vao = new VAOManager(_shaderProgram);
-            vao.CreateVAO(meshRenderer.GetMesh().Vertices, meshRenderer.GetMesh().Indices);
-            _vaoList.Add(vao);
-
-            _sceneObjects.Add(new RenderableObject
-            {
-                VaoIndex = _vaoList.Count - 1,
-                Transform = meshRenderer.Parent.GetComponent<Transform>()
-            });
+            AddRenderer(meshRenderer);
         }
     }
+    
+    public int AddRenderer(MeshRenderer meshRenderer)
+    {
+        var vao = new VAOManager(_shaderProgram);
+        vao.CreateVAO(meshRenderer.GetMesh().Vertices, meshRenderer.GetMesh().Indices);
+        _vaoList.Add(vao);
 
+        var renderableObject = new RenderableObject
+        {
+            VaoIndex = _vaoList.Count - 1,
+            Transform = meshRenderer.Parent.GetComponent<Transform>(),
+            MeshRenderer = meshRenderer,
+        };
+
+        _sceneObjects.Add(renderableObject);
+        
+        Debug.Log($"Added new renderer. Total objects: {_sceneObjects.Count}", Debug.LogLevel.Info, true);
+        
+        return _sceneObjects.Count - 1;
+    }
+    
+    public bool RemoveRenderer(int objectId)
+    {
+        if (objectId < 0 || objectId >= _sceneObjects.Count)
+        {
+            Debug.Log($"Invalid object ID: {objectId}", Debug.LogLevel.Warning, true);
+            return false;
+        }
+
+        var obj = _sceneObjects[objectId];
+        
+        // Удаляем VAO
+        if (obj.VaoIndex < _vaoList.Count)
+        {
+            _vaoList[obj.VaoIndex].Dispose();
+            _vaoList.RemoveAt(obj.VaoIndex);
+            
+            for (int i = 0; i < _sceneObjects.Count; i++)
+            {
+                if (_sceneObjects[i].VaoIndex > obj.VaoIndex)
+                {
+                    _sceneObjects[i].VaoIndex--;
+                }
+            }
+        }
+
+        _sceneObjects.RemoveAt(objectId);
+        
+        Debug.Log($"Removed renderer. Total objects: {_sceneObjects.Count}", Debug.LogLevel.Info, true);
+        
+        return true;
+    }
+    
     protected override void OnLoad()
     {
         base.OnLoad();
@@ -90,7 +135,7 @@ public class Window : GameWindow
         _fps++;
         if (_frameTime >= 1.0f)
         {
-            Title = $"{_windowName} : FPS - {_fps}";
+            Title = $"{_windowName} : FPS - {_fps} | Objects: {_sceneObjects.Count}";
             _frameTime = 0.0f;
             _fps = 0;
         }
@@ -121,11 +166,13 @@ public class Window : GameWindow
 
         _shaderProgram.SetUniform("uView", viewMatrix);
         _shaderProgram.SetUniform("uProjection", _projection);
-
-
+        
         foreach (var obj in _sceneObjects)
         {
-            RenderObject(obj);
+            if (obj.MeshRenderer.IsActiveAndEnabled)
+            {
+                RenderObject(obj);
+            }
         }
 
         _shaderProgram.DeactiveProgram();
@@ -147,7 +194,6 @@ public class Window : GameWindow
             Matrix4.CreateTranslation(transform.GlobalPosition.ToOpenTK());
 
         _shaderProgram.SetUniform("uModel", modelMatrix);
-
 
         if (obj.VaoIndex < _vaoList.Count)
         {

@@ -81,6 +81,16 @@ namespace DustyEngine.Components
         [JsonIgnore] public Vector3 Up => LocalRotationQuat.Rotate(new Vector3(0, 1, 0)).Normalized();
 
 
+        public Transform(Vector3? localPosition = null, Vector3? localRotation = null, 
+            Vector3? localScale = null, Quaternion? localRotationQuat = null)
+        {
+            _localPosition = localPosition ?? Vector3.Zero;
+            _localRotation = localRotation ?? Vector3.Zero;
+            _localScale = localScale ?? Vector3.One;
+            LocalRotationQuat = localRotationQuat ?? Quaternion.Identity;
+        }
+
+        public Transform() : this(Vector3.Zero, Vector3.Zero, Vector3.One, Quaternion.Identity) { }
         public override string ToString()
         {
             return $"Local: {LocalPosition}, Rotation: {LocalRotation}, Scale: {LocalScale}, " +

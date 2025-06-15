@@ -12,26 +12,37 @@ public static class GameLoop
     private static readonly Dictionary<Type, MethodInfo> UpdateMethodCache = new();
     private static readonly Dictionary<Type, MethodInfo> FixedUpdateMethodCache = new();
     
-    private static IEnumerable<GameObject> TraverseGameObjects(IEnumerable<GameObject> rootObjects)
+    private static List<GameObject> TraverseGameObjects(IEnumerable<GameObject> rootObjects)
     {
-        foreach (var obj in rootObjects ?? Enumerable.Empty<GameObject>())
-        {
-            yield return obj;
+        var result = new List<GameObject>();
+        TraverseGameObjectsRecursive(rootObjects, result);
+        return result;
+    }
 
-            foreach (var child in TraverseGameObjects(obj.Children))
-            {
-                yield return child;
-            }
+    private static void TraverseGameObjectsRecursive(IEnumerable<GameObject> objects, List<GameObject> result)
+    {
+        if (objects == null) return;
+
+        foreach (var obj in objects)
+        {
+            result.Add(obj);
+            
+            var children = obj.Children?.ToList() ?? new List<GameObject>();
+            TraverseGameObjectsRecursive(children, result);
         }
     }
 
     private static void ExecuteUpdateLoop(Scene.Scene scene)
     {
-        foreach (var gameObject in TraverseGameObjects(scene.GameObjects))
+        var gameObjectsSnapshot = TraverseGameObjects(scene.GameObjects?.ToList() ?? new List<GameObject>());
+        
+        foreach (var gameObject in gameObjectsSnapshot)
         {
             if (!gameObject.IsActive) continue;
-
-            foreach (var component in gameObject.Components ?? Enumerable.Empty<Component>())
+            
+            var componentsSnapshot = gameObject.Components?.ToList() ?? new List<Component>();
+            
+            foreach (var component in componentsSnapshot)
             {
                 if (component is MonoBehaviour monoBehaviour && monoBehaviour.Enabled)
                 {
@@ -44,7 +55,14 @@ public static class GameLoop
                         UpdateMethodCache[componentType] = updateMethod;
                     }
 
-                    updateMethod?.Invoke(component, null);
+                    try
+                    {
+                        updateMethod?.Invoke(component, null);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.Log($"[GameLoop] Error in Update for {componentType.Name}: {ex.Message}", Debug.LogLevel.Error, false);
+                    }
                 }
             }
         }
@@ -60,11 +78,15 @@ public static class GameLoop
 
         while (accumulator >= TargetElapsedTime)
         {
-            foreach (var gameObject in TraverseGameObjects(scene.GameObjects))
+            var gameObjectsSnapshot = TraverseGameObjects(scene.GameObjects?.ToList() ?? new List<GameObject>());
+            
+            foreach (var gameObject in gameObjectsSnapshot)
             {
                 if (!gameObject.IsActive) continue;
-
-                foreach (var component in gameObject.Components ?? Enumerable.Empty<Component>())
+                
+                var componentsSnapshot = gameObject.Components?.ToList() ?? new List<Component>();
+                
+                foreach (var component in componentsSnapshot)
                 {
                     if (component is MonoBehaviour monoBehaviour && monoBehaviour.Enabled)
                     {
@@ -77,7 +99,14 @@ public static class GameLoop
                             FixedUpdateMethodCache[componentType] = fixedUpdateMethod;
                         }
 
-                        fixedUpdateMethod?.Invoke(component, null);
+                        try
+                        {
+                            fixedUpdateMethod?.Invoke(component, null);
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.Log($"[GameLoop] Error in FixedUpdate for {componentType.Name}: {ex.Message}", Debug.LogLevel.Error, false);
+                        }
                     }
                 }
             }

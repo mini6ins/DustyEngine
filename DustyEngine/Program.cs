@@ -1,9 +1,9 @@
-﻿using System.Reflection;
-using System.Text.Json;
+﻿using System.Text.Json;
 using DustyEngine;
 using DustyEngine.Components;
 using DustyEngine.Core.Converters;
 using DustyEngine.Engine.Math.Vectors;
+using DustyEngine.Scene;
 using GraphicsEngineOpenGL;
 
 
@@ -13,6 +13,11 @@ namespace DustyEngine
     {
         public static string ProjectFolderPath { get; set; }
         public static ProjectSettings settings = new ProjectSettings();
+        private static GraphicsEngineOpenGL.GraphicsEngineOpenGl graphicsEngineOpenGl;
+
+        public static Action<MeshRenderer> AddRenderer = (renderer) => { graphicsEngineOpenGl.AddRenderer(renderer); };
+     
+
 
         static void Main(string[] args)
         {
@@ -84,7 +89,7 @@ namespace DustyEngine
                     },
                 }
             };
-     
+
 
             scene.GameObjects.Add(obj0);
 
@@ -117,7 +122,8 @@ namespace DustyEngine
                 }
                 else
                 {
-                    Debug.Log("moveBoxScript component could not be loaded, continuing without it", Debug.LogLevel.Warning, true);
+                    Debug.Log("moveBoxScript component could not be loaded, continuing without it",
+                        Debug.LogLevel.Warning, true);
                 }
             }
             catch (Exception ex)
@@ -125,6 +131,7 @@ namespace DustyEngine
                 Debug.Log($"Failed to load moveBoxScript component: {ex.Message}", Debug.LogLevel.Warning, true);
                 Debug.Log("Continuing without moveBoxScript component", Debug.LogLevel.Info, true);
             }
+
             scene.GameObjects[0].AddChild(obj1);
 
             GameObject cameraObject = new GameObject
@@ -154,7 +161,8 @@ namespace DustyEngine
                 }
                 else
                 {
-                    Debug.Log("Player component could not be loaded, continuing without it", Debug.LogLevel.Warning, true);
+                    Debug.Log("Player component could not be loaded, continuing without it", Debug.LogLevel.Warning,
+                        true);
                 }
             }
             catch (Exception ex)
@@ -179,7 +187,9 @@ namespace DustyEngine
 
             GameLoop.Initialize(loadedScene);
             Time.Init();
-            GraphicsEngineOpenGl graphicsEngineOpenGl = new GraphicsEngineOpenGl();
+            graphicsEngineOpenGl = new GraphicsEngineOpenGl();
+            
+            SceneManager.AddRenderer2 += AddRenderer;
             
             Action gameLoopAction = () =>
             {
@@ -189,7 +199,8 @@ namespace DustyEngine
 
 
             graphicsEngineOpenGl.RunMainLoop(loadedScene, gameLoopAction,
-                projectSettings.ScreenSize, projectSettings.ProjectName, projectSettings.PathToVertShader, projectSettings.PathToFragShader, projectSettings.Vsync);
+                projectSettings.ScreenSize, projectSettings.ProjectName, projectSettings.PathToVertShader,
+                projectSettings.PathToFragShader, projectSettings.Vsync);
         }
 
 
@@ -252,6 +263,7 @@ namespace DustyEngine
                 Debug.Log($"Error loading scene: {ex.Message}", Debug.LogLevel.FatalError, false);
             }
 
+            SceneManager.AddScene(loadedScene);
             return false;
         }
 

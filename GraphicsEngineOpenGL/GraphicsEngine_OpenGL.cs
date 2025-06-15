@@ -9,6 +9,9 @@ namespace GraphicsEngineOpenGL;
 
 public class GraphicsEngineOpenGl
 {
+    private List<MeshRenderer> _allRenderers = [];
+    private Window? _window;
+
     public void RunMainLoop(Scene scene, Action updateCallback, Vector2 resolution, string programName,
         string vertShaderPath, string fragShaderPath, bool vsync)
     {
@@ -20,20 +23,21 @@ public class GraphicsEngineOpenGl
             Title = programName,
         };
 
-        List<MeshRenderer> allRenderers = new();
         foreach (var obj in scene.GameObjects)
         {
-            SceneManager.CollectMeshRenderers(obj, allRenderers);
+            SceneManager.CollectMeshRenderers(obj, _allRenderers);
         }
 
-        Debug.Log($"Total Meshes: {allRenderers.Count}", Debug.LogLevel.Info, true);
+        Debug.Log($"Total Meshes: {_allRenderers.Count}", Debug.LogLevel.Info, true);
 
-        using var window = new Window(GameWindowSettings.Default, nativeWindowSettings, allRenderers, vertShaderPath,
+        _window = new Window(GameWindowSettings.Default, nativeWindowSettings, _allRenderers, vertShaderPath,
             fragShaderPath, programName, SceneManager.FindCamera(scene),
             vsync, CursorState.Grabbed);
 
-        window.UpdateFrame += (e) => updateCallback?.Invoke();
+        _window.UpdateFrame += (e) => updateCallback?.Invoke();
 
-        window.Run();
+        _window.Run();
     }
+
+    public void AddRenderer(MeshRenderer meshRenderer) => _window.AddRenderer(meshRenderer);
 }

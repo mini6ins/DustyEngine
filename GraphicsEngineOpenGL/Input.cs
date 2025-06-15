@@ -129,7 +129,7 @@
     {
         private static OpenTK.Windowing.GraphicsLibraryFramework.KeyboardState? keyboardState;
         private static OpenTK.Windowing.GraphicsLibraryFramework.KeyboardState? previousKeyboardState;
-
+        private static readonly HashSet<KeyCode> TriggeredKeys = [];
         public static void Update(OpenTK.Windowing.GraphicsLibraryFramework.KeyboardState newKeyboardState)
         {
             previousKeyboardState = keyboardState;
@@ -155,6 +155,30 @@
             var key = ConvertKey(keyCode);
             return !keyboardState.IsKeyDown(key) && previousKeyboardState.IsKeyDown(key);
         }
+        
+        public static bool IsKeyJustActivatedOnce(KeyCode keyCode)
+        {
+            if (keyboardState == null) return false;
+
+            var key = ConvertKey(keyCode);
+    
+            if (keyboardState.IsKeyDown(key))
+            {
+                if (!TriggeredKeys.Contains(keyCode))
+                {
+                    TriggeredKeys.Add(keyCode);
+                    return true;
+                }
+            }
+            else
+            {
+            
+                TriggeredKeys.Remove(keyCode);
+            }
+
+            return false;
+        }
+        
 
         private static OpenTK.Windowing.GraphicsLibraryFramework.Keys ConvertKey(KeyCode keyCode)
         {
