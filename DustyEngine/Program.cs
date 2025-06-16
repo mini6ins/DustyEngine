@@ -12,12 +12,65 @@ namespace DustyEngine
     internal static class Program
     {
         public static string ProjectFolderPath { get; set; }
-        public static ProjectSettings settings = new ProjectSettings();
+        private static ProjectSettings settings = new ProjectSettings();
         private static GraphicsEngineOpenGL.GraphicsEngineOpenGl graphicsEngineOpenGl;
 
-        public static Action<MeshRenderer> AddRenderer = (renderer) => { graphicsEngineOpenGl.AddRenderer(renderer); };
-     
+        private static Action<MeshRenderer> AddRenderer = (renderer) => { graphicsEngineOpenGl.AddRenderer(renderer); };
 
+        public static void StartEngine(string[] args)
+        {
+            Debug.ClearLogs();
+
+            if (args.Length == 0)
+            {
+                Debug.Log("No project path provided", Debug.LogLevel.FatalError, true);
+                return;
+            }
+
+            ProjectFolderPath = args[0];
+
+            ProjectSettings.DeserializeProjectSettings(ProjectFolderPath);
+
+            Debug.EnableDebugMode(settings.Debug);
+            Debug.SetLogLevel(settings.LogLevel);
+            Debug.EnableConsoleLogging(settings.LogToConsole);
+            Debug.EnableFileLogging(settings.LogToFile);
+
+            Debug.Log("Project settings loaded", Debug.LogLevel.Info, false);
+
+            Debug.Log($"Initial currentLogLevel:  {Debug.GetLogLevel()}", Debug.LogLevel.Info, true);
+            Debug.Log("Test INFO", Debug.LogLevel.Info, true);
+            Debug.Log("Test WARNING", Debug.LogLevel.Warning, true);
+            Debug.Log("Test ERROR", Debug.LogLevel.Error, true);
+            Debug.Log("Test FATAL", Debug.LogLevel.FatalError, true);
+
+            if (LoadScene(out var loadedScene, settings.PathToScenes.FirstOrDefault())) return;
+            foreach (var method in new[] { "OnEnable", "Start" })
+            {
+                foreach (var gameObject in loadedScene.GameObjects)
+                {
+                    InvokeRecursive(gameObject, method);
+                }
+            }
+
+
+            GameLoop.Initialize(loadedScene);
+            Time.Init();
+            graphicsEngineOpenGl = new GraphicsEngineOpenGl();
+
+            SceneManager.AddRenderer2 += AddRenderer;
+
+            Action gameLoopAction = () =>
+            {
+                GameLoop.ExecuteFrame(loadedScene);
+                Time.Tick();
+            };
+
+
+            graphicsEngineOpenGl.RunMainLoop(loadedScene, gameLoopAction,
+                settings.ScreenSize, settings.ProjectName, settings.PathToVertShader,
+                settings.PathToFragShader, settings.Vsync);
+        }
 
         static void Main(string[] args)
         {
@@ -25,7 +78,7 @@ namespace DustyEngine
 
             ProjectFolderPath = "C:\\Users\\maksym\\Desktop\\GameTestEngine";
 
-            ProjectSettings projectSettings = new ProjectSettings
+            settings = new ProjectSettings
             {
                 ProjectName = "My Game",
                 Version = 1.0f,
@@ -43,7 +96,7 @@ namespace DustyEngine
                 Vsync = true,
             };
 
-            SerializeProjectSettings(projectSettings);
+            ProjectSettings.SerializeProjectSettings(settings, ProjectFolderPath);
 
             Debug.Log("Starting Dusty Engine", Debug.LogLevel.Info, false);
 
@@ -52,7 +105,7 @@ namespace DustyEngine
             else
                 Debug.Log("Project folder path is null", Debug.LogLevel.FatalError, false);
 
-            DeserializeProjectSettings();
+            ProjectSettings.DeserializeProjectSettings(ProjectFolderPath);
 
             Debug.EnableDebugMode(settings.Debug);
             Debug.SetLogLevel(settings.LogLevel);
@@ -145,7 +198,7 @@ namespace DustyEngine
                     },
                     new Camera
                     {
-                        AspectRatio = projectSettings.ScreenSize.X / (float)projectSettings.ScreenSize.Y,
+                        AspectRatio = settings.ScreenSize.X / (float)settings.ScreenSize.Y,
                     }
                 }
             };
@@ -175,7 +228,7 @@ namespace DustyEngine
 
             SaveScene(scene,
                 "C:\\Users\\maksym\\Desktop\\GameTestEngine\\Assets\\DustyEngineTestScene.json");
-            if (LoadScene(out var loadedScene, projectSettings.PathToScenes.FirstOrDefault())) return;
+            if (LoadScene(out var loadedScene, settings.PathToScenes.FirstOrDefault())) return;
             foreach (var method in new[] { "OnEnable", "Start" })
             {
                 foreach (var gameObject in loadedScene.GameObjects)
@@ -188,9 +241,9 @@ namespace DustyEngine
             GameLoop.Initialize(loadedScene);
             Time.Init();
             graphicsEngineOpenGl = new GraphicsEngineOpenGl();
-            
+
             SceneManager.AddRenderer2 += AddRenderer;
-            
+
             Action gameLoopAction = () =>
             {
                 GameLoop.ExecuteFrame(loadedScene);
@@ -199,36 +252,14 @@ namespace DustyEngine
 
 
             graphicsEngineOpenGl.RunMainLoop(loadedScene, gameLoopAction,
-                projectSettings.ScreenSize, projectSettings.ProjectName, projectSettings.PathToVertShader,
-                projectSettings.PathToFragShader, projectSettings.Vsync);
+                settings.ScreenSize, settings.ProjectName, settings.PathToVertShader,
+                settings.PathToFragShader, settings.Vsync);
         }
 
 
-        private static void DeserializeProjectSettings()
-        {
-            string filePath = Path.Combine(ProjectFolderPath, "Settings/project_settings.json");
 
-            if (!File.Exists(filePath))
-            {
-                Debug.Log("Project settings file not found", Debug.LogLevel.FatalError, true);
-            }
-            else
-            {
-                string fileContent = File.ReadAllText(filePath);
-                settings = JsonSerializer.Deserialize<ProjectSettings>(fileContent);
 
-                if (settings == null)
-                {
-                    Debug.Log("Project settings could not be loaded", Debug.LogLevel.FatalError, true);
-                }
-            }
-        }
 
-        private static void SerializeProjectSettings(ProjectSettings projectSettings)
-        {
-            string json = JsonSerializer.Serialize(projectSettings, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(Path.Combine(ProjectFolderPath, "Settings/project_settings.json"), json);
-        }
 
         private static bool LoadScene(out Scene.Scene? loadedScene, string scenePath)
         {
@@ -310,19 +341,4 @@ namespace DustyEngine
             }
         }
     }
-}
-
-public class ProjectSettings
-{
-    public string ProjectName { get; set; }
-    public float Version { get; set; }
-    public List<string> PathToScenes { get; set; }
-    public string PathToFragShader { get; set; }
-    public string PathToVertShader { get; set; }
-    public bool Debug { get; set; }
-    public Debug.LogLevel LogLevel { get; set; }
-    public bool LogToConsole { get; set; }
-    public bool LogToFile { get; set; }
-    public Vector2 ScreenSize { get; set; }
-    public bool Vsync { get; set; }
 }
