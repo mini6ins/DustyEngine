@@ -1,11 +1,8 @@
-﻿using System.Text.Json;
-using DustyEngine;
-using DustyEngine.Components;
+﻿using DustyEngine.Components;
 using DustyEngine.Core.Converters;
 using DustyEngine.Engine.Math.Vectors;
 using DustyEngine.Scene;
 using GraphicsEngineOpenGL;
-
 
 namespace DustyEngine
 {
@@ -13,7 +10,7 @@ namespace DustyEngine
     {
         public static string ProjectFolderPath { get; set; }
         private static ProjectSettings settings = new ProjectSettings();
-        private static GraphicsEngineOpenGL.GraphicsEngineOpenGl graphicsEngineOpenGl;
+        private static GraphicsEngineOpenGl graphicsEngineOpenGl;
 
         private static Action<MeshRenderer> AddRenderer = (renderer) => { graphicsEngineOpenGl.AddRenderer(renderer); };
 
@@ -44,12 +41,12 @@ namespace DustyEngine
             Debug.Log("Test ERROR", Debug.LogLevel.Error, true);
             Debug.Log("Test FATAL", Debug.LogLevel.FatalError, true);
 
-            if (LoadScene(out var loadedScene, settings.PathToScenes.FirstOrDefault())) return;
+            if (SceneSerializer.LoadScene(out var loadedScene, settings.PathToScenes.FirstOrDefault())) return;
             foreach (var method in new[] { "OnEnable", "Start" })
             {
                 foreach (var gameObject in loadedScene.GameObjects)
                 {
-                    InvokeRecursive(gameObject, method);
+                    SceneManager.InvokeRecursive(gameObject, method);
                 }
             }
 
@@ -72,7 +69,7 @@ namespace DustyEngine
                 settings.PathToFragShader, settings.Vsync);
         }
 
-        static void Main(string[] args)
+       private static void Main(string[] args)
         {
             Debug.ClearLogs();
 
@@ -226,14 +223,14 @@ namespace DustyEngine
 
             scene.GameObjects.Add(cameraObject);
 
-            SaveScene(scene,
+            SceneSerializer.SaveScene(scene,
                 "C:\\Users\\maksym\\Desktop\\GameTestEngine\\Assets\\DustyEngineTestScene.json");
-            if (LoadScene(out var loadedScene, settings.PathToScenes.FirstOrDefault())) return;
+            if (SceneSerializer.LoadScene(out var loadedScene, settings.PathToScenes.FirstOrDefault())) return;
             foreach (var method in new[] { "OnEnable", "Start" })
             {
                 foreach (var gameObject in loadedScene.GameObjects)
                 {
-                    InvokeRecursive(gameObject, method);
+                    SceneManager.InvokeRecursive(gameObject, method);
                 }
             }
 
@@ -254,91 +251,6 @@ namespace DustyEngine
             graphicsEngineOpenGl.RunMainLoop(loadedScene, gameLoopAction,
                 settings.ScreenSize, settings.ProjectName, settings.PathToVertShader,
                 settings.PathToFragShader, settings.Vsync);
-        }
-
-
-
-
-
-
-        private static bool LoadScene(out Scene.Scene? loadedScene, string scenePath)
-        {
-            loadedScene = new Scene.Scene();
-            try
-            {
-                Debug.Log($"Starting scene loading from: {scenePath}", Debug.LogLevel.Info, true);
-
-                if (!File.Exists(scenePath))
-                {
-                    Debug.Log($"Scene file not found: {scenePath}", Debug.LogLevel.FatalError, false);
-                    return true;
-                }
-
-                loadedScene = JsonSerializer.Deserialize<Scene.Scene>(
-                    File.ReadAllText(scenePath),
-                    new JsonSerializerOptions
-                    {
-                        WriteIndented = true,
-                        IncludeFields = true,
-                        Converters =
-                        {
-                            new ComponentConverter(),
-                            new SceneConverter()
-                        }
-                    });
-
-                Debug.Log("Scene successfully loaded!", Debug.LogLevel.Info, false);
-            }
-            catch (Exception ex)
-            {
-                Debug.Log($"Error loading scene: {ex.Message}", Debug.LogLevel.FatalError, false);
-            }
-
-            SceneManager.AddScene(loadedScene);
-            return false;
-        }
-
-        private static bool SaveScene(Scene.Scene sceneToSave, string scenePath)
-        {
-            try
-            {
-                Debug.Log($"Saving scene to: {scenePath}", Debug.LogLevel.Info, true);
-
-                var options = new JsonSerializerOptions
-                {
-                    WriteIndented = true,
-                    IncludeFields = true,
-                    Converters =
-                    {
-                        new ComponentConverter(),
-                        new SceneConverter()
-                    }
-                };
-
-                string json = JsonSerializer.Serialize(sceneToSave, options);
-                File.WriteAllText(scenePath, json);
-
-                Debug.Log("Scene successfully saved!", Debug.LogLevel.Info, false);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Debug.Log($"Error saving scene: {ex.Message}", Debug.LogLevel.FatalError, false);
-                return false;
-            }
-        }
-
-        private static void InvokeRecursive(GameObject gameObject, string methodName)
-        {
-            if (gameObject.IsActive)
-            {
-                gameObject.InvokeMethodInComponents(methodName);
-            }
-
-            foreach (var child in gameObject.Children)
-            {
-                InvokeRecursive(child, methodName);
-            }
         }
     }
 }

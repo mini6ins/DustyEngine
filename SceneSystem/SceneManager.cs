@@ -257,4 +257,17 @@ public static class SceneManager
     }
 
     public static IReadOnlyList<Scene> GetAllScenes() => sceneList.AsReadOnly();
+    
+    public static void InvokeRecursive(GameObject gameObject, string methodName)
+    {
+        if (gameObject.IsActive)
+        {
+            gameObject.InvokeMethodInComponents(methodName);
+        }
+
+        foreach (var child in gameObject.Children)
+        {
+            InvokeRecursive(child, methodName);
+        }
+    }
 }
