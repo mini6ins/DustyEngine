@@ -29,7 +29,7 @@ public class ProjectSettings
 
         if (!File.Exists(filePath))
         {
-            DustyEngine.Debug.Log("Project settings file not found", DustyEngine.Debug.LogLevel.FatalError, true);
+            global::DustyEngine.Debug.Log("Project settings file not found", global::DustyEngine.Debug.LogLevel.FatalError, true);
             
             return null!;
         }
@@ -39,7 +39,7 @@ public class ProjectSettings
 
         if (settings == null)
         {
-            DustyEngine.Debug.Log("Project settings could not be loaded", DustyEngine.Debug.LogLevel.FatalError, true);
+            global::DustyEngine.Debug.Log("Project settings could not be loaded", global::DustyEngine.Debug.LogLevel.FatalError, true);
             return null!;
         }
 

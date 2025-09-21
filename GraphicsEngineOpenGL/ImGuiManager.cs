@@ -13,7 +13,6 @@ public class ImGuiManager
     private bool _initialized = false;
     private GameWindow _window;
     
-    // Callbacks для получения данных от Window
     public Func<int> GetSceneObjectCount { get; set; } = () => 0;
     public Func<int> GetFPS { get; set; } = () => 0;
     public Func<int> GetSceneTexture { get; set; } = () => 0;
@@ -60,8 +59,7 @@ public class ImGuiManager
         if (!_initialized) return;
 
         ImGui.DockSpaceOverViewport();
-
-        // Settings Panel
+        
         ImGui.SetNextWindowSize(new System.Numerics.Vector2(400, 150), ImGuiCond.FirstUseEver);
         ImGui.SetNextWindowPos(new System.Numerics.Vector2(10, 10), ImGuiCond.FirstUseEver);
         if (ImGui.Begin("Settings Panel"))
@@ -70,8 +68,7 @@ public class ImGuiManager
             ImGui.Text($"FPS: {GetFPS?.Invoke() ?? 0}");
         }
         ImGui.End();
-
-        // Main Scene Viewport Panel
+        
         RenderSceneViewport();
     }
 
@@ -105,7 +102,6 @@ public class ImGuiManager
             int targetWidth = (int)imageSize.X;
             int targetHeight = (int)imageSize.Y;
             
-            // Уведомляем Window о необходимости изменить размер
             var currentSize = GetSceneSize?.Invoke() ?? (800, 600);
             if (Math.Abs(targetWidth - currentSize.width) > currentSize.width * 0.1f ||
                 Math.Abs(targetHeight - currentSize.height) > currentSize.height * 0.1f)
@@ -113,13 +109,11 @@ public class ImGuiManager
                 OnSceneResize?.Invoke(targetWidth, targetHeight);
             }
             
-            // Центрируем изображение
             var cursor = ImGui.GetCursorPos();
             cursor.X += (availableSize.X - imageSize.X) * 0.5f;
             cursor.Y += (availableSize.Y - imageSize.Y) * 0.5f;
             ImGui.SetCursorPos(cursor);
             
-            // Отображаем изображение
             int textureId = GetSceneTexture?.Invoke() ?? 0;
             ImGui.Image(new IntPtr(textureId), imageSize, 
                 new System.Numerics.Vector2(0, 1), new System.Numerics.Vector2(1, 0));

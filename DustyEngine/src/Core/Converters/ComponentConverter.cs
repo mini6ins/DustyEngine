@@ -136,10 +136,10 @@ namespace DustyEngine.Core.Converters
         private static string CompileSourceToDll(string sourcePath)
         {
             // Убедимся, что путь проекта абсолютный
-            if (!string.IsNullOrEmpty(Program.ProjectFolderPath))
-                Program.ProjectFolderPath = Path.GetFullPath(Program.ProjectFolderPath);
+            if (!string.IsNullOrEmpty(DustyEngine.ProjectFolderPath))
+                DustyEngine.ProjectFolderPath = Path.GetFullPath(DustyEngine.ProjectFolderPath);
 
-            string outputDirectory = Path.Combine(Program.ProjectFolderPath, "Settings", "Dlls");
+            string outputDirectory = Path.Combine(DustyEngine.ProjectFolderPath, "Settings", "Dlls");
 
             if (!Directory.Exists(outputDirectory))
             {
@@ -247,9 +247,9 @@ namespace DustyEngine.Core.Converters
             // Сохраняем SourcePath (стараемся записать относительный к ProjectFolderPath — переносимее)
             if (ComponentSourcePaths.TryGetValue(value.GetType(), out string absSourcePath))
             {
-                string projectRoot = string.IsNullOrEmpty(Program.ProjectFolderPath)
+                string projectRoot = string.IsNullOrEmpty(DustyEngine.ProjectFolderPath)
                     ? Directory.GetCurrentDirectory()
-                    : Path.GetFullPath(Program.ProjectFolderPath);
+                    : Path.GetFullPath(DustyEngine.ProjectFolderPath);
 
                 string toWrite = absSourcePath;
                 try
@@ -380,8 +380,8 @@ namespace DustyEngine.Core.Converters
             if (Path.IsPathRooted(rawPath))
                 return Path.GetFullPath(rawPath);
 
-            string baseDir = !string.IsNullOrEmpty(Program.ProjectFolderPath)
-                ? Path.GetFullPath(Program.ProjectFolderPath)
+            string baseDir = !string.IsNullOrEmpty(DustyEngine.ProjectFolderPath)
+                ? Path.GetFullPath(DustyEngine.ProjectFolderPath)
                 : Directory.GetCurrentDirectory();
 
             string combined = Path.Combine(baseDir, rawPath);

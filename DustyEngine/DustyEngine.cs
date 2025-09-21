@@ -6,7 +6,7 @@ using GraphicsEngineOpenGL;
 
 namespace DustyEngine
 {
-    internal static class Program
+    public class DustyEngine
     {
         public static string ProjectFolderPath { get; set; }
         private static ProjectSettings settings = new ProjectSettings();
@@ -14,19 +14,19 @@ namespace DustyEngine
 
         private static Action<MeshRenderer> AddRenderer = (renderer) => { graphicsEngineOpenGl.AddRenderer(renderer); };
 
-        public static void StartEngine(string[] args)
+        public void StartEngine(string path)
         {
             Debug.ClearLogs();
 
-            if (args.Length == 0)
+            if (path.Length == 0)
             {
                 Debug.Log("No project path provided", Debug.LogLevel.FatalError, true);
                 return;
             }
 
-            ProjectFolderPath = args[0];
+            ProjectFolderPath = path;
 
-            ProjectSettings.DeserializeProjectSettings(ProjectFolderPath);
+            settings =  ProjectSettings.DeserializeProjectSettings(ProjectFolderPath);
 
             Debug.EnableDebugMode(settings.Debug);
             Debug.SetLogLevel(settings.LogLevel);
@@ -66,10 +66,10 @@ namespace DustyEngine
 
             graphicsEngineOpenGl.RunMainLoop(loadedScene, gameLoopAction,
                 settings.ScreenSize, settings.ProjectName, settings.PathToVertShader,
-                settings.PathToFragShader, settings.Vsync);
+                settings.PathToFragShader, settings.Vsync, true);
         }
 
-       private static void Main(string[] args)
+        private static void Main(string[] args)
         {
             Debug.ClearLogs();
 
@@ -182,8 +182,8 @@ namespace DustyEngine
                 Debug.Log("Continuing without moveBoxScript component", Debug.LogLevel.Info, true);
             }
 
-        //    scene.GameObjects[0].AddChild(obj1);
-scene.GameObjects.Add(obj1);
+            //    scene.GameObjects[0].AddChild(obj1);
+            scene.GameObjects.Add(obj1);
             GameObject cameraObject = new GameObject
             {
                 Name = "Camera",
