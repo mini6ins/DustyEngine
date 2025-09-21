@@ -250,7 +250,7 @@ scene.GameObjects.Add(obj1);
 
             graphicsEngineOpenGl.RunMainLoop(loadedScene, gameLoopAction,
                 settings.ScreenSize, settings.ProjectName, settings.PathToVertShader,
-                settings.PathToFragShader, settings.Vsync);
+                settings.PathToFragShader, settings.Vsync, true);
         }
     }
 }
