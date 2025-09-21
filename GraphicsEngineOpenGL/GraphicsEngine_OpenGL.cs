@@ -15,6 +15,12 @@ public class GraphicsEngineOpenGl
     public void RunMainLoop(Scene scene, Action updateCallback, Vector2 resolution, string programName,
         string vertShaderPath, string fragShaderPath, bool vsync)
     {
+        
+        GLFWProvider.SetErrorCallback((code, desc) =>
+        {
+            Console.WriteLine($"GLFW error {code}: {desc}");
+        });
+        
         Debug.Log("GraphicsEngineOpenGl is working", Debug.LogLevel.Info, true);
 
         var nativeWindowSettings = new NativeWindowSettings()

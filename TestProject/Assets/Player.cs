@@ -65,31 +65,31 @@ public class Player : MonoBehaviour
 
     private void RotateCamera()
     {
-        const float deadZone = 0.01f;
-        if (Math.Abs(deltaX) < deadZone && Math.Abs(deltaY) < deadZone)
-            return;
-
-        yaw -= deltaX * mouseSensitivity;
-        pitch -= deltaY * mouseSensitivity;
-
-        pitch = Math.Clamp(pitch, -89f, 89f);
-
-        float pitchRad = Math.DegreesToRadians(pitch);
-        float yawRad = Math.DegreesToRadians(yaw);
-
-        var currentRight = cameraTransform.LocalRotationQuat.Rotate(new Vector3(1f, 0f, 0f));
-        var qPitch = Quaternion.FromAxisAngle(currentRight, pitchRad);
-
-        var localUp = qPitch.Rotate(new Vector3(0f, 1f, 0f));
-        var qYaw = Quaternion.FromAxisAngle(localUp, yawRad);
-
-        cameraTransform.LocalRotationQuat = qYaw * qPitch;
-
-        var euler = cameraTransform.LocalRotationQuat.ToEulerAngles();
-        cameraTransform.LocalRotation = new Vector3(
-            Math.RadiansToDegrees(euler.X),
-            Math.RadiansToDegrees(euler.Y),
-            Math.RadiansToDegrees(euler.Z)
-        );
+        // const float deadZone = 0.01f;
+        // if (Math.Abs(deltaX) < deadZone && Math.Abs(deltaY) < deadZone)
+        //     return;
+        //
+        // yaw -= deltaX * mouseSensitivity;
+        // pitch -= deltaY * mouseSensitivity;
+        //
+        // pitch = Math.Clamp(pitch, -89f, 89f);
+        //
+        // float pitchRad = Math.DegreesToRadians(pitch);
+        // float yawRad = Math.DegreesToRadians(yaw);
+        //
+        // var currentRight = cameraTransform.LocalRotationQuat.Rotate(new Vector3(1f, 0f, 0f));
+        // var qPitch = Quaternion.FromAxisAngle(currentRight, pitchRad);
+        //
+        // var localUp = qPitch.Rotate(new Vector3(0f, 1f, 0f));
+        // var qYaw = Quaternion.FromAxisAngle(localUp, yawRad);
+        //
+        // cameraTransform.LocalRotationQuat = qYaw * qPitch;
+        //
+        // var euler = cameraTransform.LocalRotationQuat.ToEulerAngles();
+        // cameraTransform.LocalRotation = new Vector3(
+        //     Math.RadiansToDegrees(euler.X),
+        //     Math.RadiansToDegrees(euler.Y),
+        //     Math.RadiansToDegrees(euler.Z)
+        // );
     }
 }

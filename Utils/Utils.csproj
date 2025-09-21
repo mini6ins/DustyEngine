@@ -8,7 +8,7 @@
 
     <ItemGroup>
       <PackageReference Include="AssimpNet" Version="5.0.0-beta1" />
-      <PackageReference Include="OpenTK" Version="4.9.4" />
+      <PackageReference Include="OpenTK" Version="5.0.0-pre.15" />
     </ItemGroup>
 
 </Project>
