@@ -1,0 +1,37 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+
+    <ItemGroup>
+        <Reference Include="Debug">
+            <HintPath>C:\Users\maksym\Documents\GitHub\DustyEngine\DustyEngine\bin\Debug\DustyLIB\Debug.dll</HintPath>
+        </Reference>
+        <Reference Include="DustyEngine">
+            <HintPath>C:\Users\maksym\Documents\GitHub\DustyEngine\DustyEngine\bin\Debug\DustyLIB\DustyEngine.dll</HintPath>
+        </Reference>
+        <Reference Include="GraphicsEngineOpenGL">
+            <HintPath>C:\Users\maksym\Documents\GitHub\DustyEngine\DustyEngine\bin\Debug\DustyLIB\GraphicsEngineOpenGL.dll</HintPath>
+        </Reference>
+        <Reference Include="Math">
+            <HintPath>C:\Users\maksym\Documents\GitHub\DustyEngine\DustyEngine\bin\Debug\DustyLIB\Math.dll</HintPath>
+        </Reference>
+        <Reference Include="SceneSystem">
+            <HintPath>C:\Users\maksym\Documents\GitHub\DustyEngine\DustyEngine\bin\Debug\DustyLIB\SceneSystem.dll</HintPath>
+        </Reference>
+        <Reference Include="Utils">
+            <HintPath>C:\Users\maksym\Documents\GitHub\DustyEngine\DustyEngine\bin\Debug\DustyLIB\Utils.dll</HintPath>
+        </Reference>
+    </ItemGroup>
+
+
+    <ItemGroup>
+      <ProjectReference Include="..\DustyEngine\DustyEngine.csproj" />
+    </ItemGroup>
+
+
+</Project>

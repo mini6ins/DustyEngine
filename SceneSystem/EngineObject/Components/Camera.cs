@@ -6,8 +6,9 @@ namespace DustyEngine.Components;
 public class Camera : MonoBehaviour
 {
     [SerializeField] private float _fieldOfView = 45.0f;
-    [SerializeField] private float _nearPlane = 0.1f;
-    [SerializeField] private float _farPlane = 10000.0f;
+    [SerializeField] private float _nearPlane = 0.5f; 
+    [SerializeField] private float _farPlane  = 200.0f;
+
 
     public float AspectRatio { get; set; } = 16f / 9f;
     private Transform _transform => GameObject.GetComponent<Transform>();

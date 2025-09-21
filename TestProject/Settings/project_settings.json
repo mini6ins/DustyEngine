@@ -1,0 +1,18 @@
+{
+  "ProjectName": "My Game",
+  "Version": 1,
+  "PathToScenes": [
+    "/home/maksym/github/DustyEngine/TestProject/Assets/DustyEngineTestScene.json"
+  ],
+  "PathToFragShader": "/home/maksym/github/DustyEngine/TestProject/Assets/shaders/shader.frag",
+  "PathToVertShader": "/home/maksym/github/DustyEngine/TestProject/Assets/shaders/shader.vert",
+  "Debug": true,
+  "LogLevel": 0,
+  "LogToConsole": true,
+  "LogToFile": true,
+  "ScreenSize": {
+    "X": 800,
+    "Y": 600
+  },
+  "Vsync": true
+}

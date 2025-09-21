@@ -57,8 +57,27 @@ public class Window : GameWindow
     
     public int AddRenderer(MeshRenderer meshRenderer)
     {
+        if (meshRenderer == null)
+        {
+            Debug.Log("Cannot add null MeshRenderer", Debug.LogLevel.Error, true);
+            return -1;
+        }
+
+        var mesh = meshRenderer.GetMesh();
+        if (mesh == null)
+        {
+            Debug.Log($"MeshRenderer has no valid mesh data, skipping renderer for {meshRenderer.Parent?.Name ?? "unknown object"}", Debug.LogLevel.Warning, true);
+            return -1;
+        }
+
+        if (mesh.Vertices == null || mesh.Indices == null)
+        {
+            Debug.Log($"Mesh has null vertices or indices, skipping renderer for {meshRenderer.Parent?.Name ?? "unknown object"}", Debug.LogLevel.Warning, true);
+            return -1;
+        }
+
         var vao = new VAOManager(_shaderProgram);
-        vao.CreateVAO(meshRenderer.GetMesh().Vertices, meshRenderer.GetMesh().Indices);
+        vao.CreateVAO(mesh.Vertices, mesh.Indices);
         _vaoList.Add(vao);
 
         var renderableObject = new RenderableObject
@@ -69,9 +88,9 @@ public class Window : GameWindow
         };
 
         _sceneObjects.Add(renderableObject);
-        
+    
         Debug.Log($"Added new renderer. Total objects: {_sceneObjects.Count}", Debug.LogLevel.Info, true);
-        
+    
         return _sceneObjects.Count - 1;
     }
     
@@ -84,8 +103,7 @@ public class Window : GameWindow
         }
 
         var obj = _sceneObjects[objectId];
-        
-        // Удаляем VAO
+ 
         if (obj.VaoIndex < _vaoList.Count)
         {
             _vaoList[obj.VaoIndex].Dispose();
@@ -107,23 +125,26 @@ public class Window : GameWindow
         return true;
     }
     
-    protected override void OnLoad()
-    {
-        base.OnLoad();
-        Input.Update(KeyboardState);
+  protected override void OnLoad()
+{
+    base.OnLoad();
+    Input.Update(KeyboardState);
 
-        GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
-        GL.Enable(EnableCap.CullFace);
-        GL.CullFace(TriangleFace.Back);
-        GL.FrontFace(FrontFaceDirection.Ccw);
+    GL.ClearColor(173/255f, 216/255f, 230/255f, 1.0f);
+    GL.Enable(EnableCap.CullFace);
+    GL.CullFace(TriangleFace.Back);
+    GL.FrontFace(FrontFaceDirection.Ccw);
+    GL.Enable(EnableCap.DepthTest);
+    GL.DepthFunc(DepthFunction.Less);
 
-        GL.Enable(EnableCap.DepthTest);
-        GL.DepthFunc(DepthFunction.Less);
+    CursorState = _cursorState;
+    
+    GL.Viewport(0, 0, FramebufferSize.X, FramebufferSize.Y);
+    
+    _camera.AspectRatio = Size.X / (float)Size.Y; 
+    _projection = _camera.GetProjectionMatrix();
+}
 
-        CursorState = _cursorState;
-
-        _projection = _camera.GetProjectionMatrix();
-    }
 
     protected override void OnUpdateFrame(FrameEventArgs args)
     {

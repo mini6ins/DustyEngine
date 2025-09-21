@@ -9,6 +9,12 @@ using SceneSystem.Attributes;
 
 namespace DustyEngine.Core.Converters
 {
+    /// <summary>
+    /// JSON-конвертер для компонентов. Поддерживает:
+    /// - загрузку типа по имени (Type)
+    /// - загрузку/компиляцию компонента из SourcePath (.cs или .dll)
+    /// - запись SourcePath (относительно папки проекта)
+    /// </summary>
     public class ComponentConverter : JsonConverter<Component>
     {
         private static readonly Dictionary<string, Type> ComponentTypes;
@@ -19,22 +25,25 @@ namespace DustyEngine.Core.Converters
             var assemblies = AppDomain.CurrentDomain.GetAssemblies();
 
             ComponentTypes = assemblies
-                .SelectMany(a => a.GetTypes())
+                .SelectMany(a => SafeGetTypes(a))
                 .Where(t => t.IsClass && !t.IsAbstract && t.IsSubclassOf(typeof(Component)))
-                .ToDictionary(t => t.Name, t => t);
+                .GroupBy(t => t.Name)
+                .ToDictionary(g => g.Key, g => g.First()); // если имён-дубликатов несколько – берём первый
         }
 
         public override Component Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             using (JsonDocument doc = JsonDocument.ParseValue(ref reader))
             {
-                string typeName = doc.RootElement.GetProperty("Type").GetString();
+                string typeName = doc.RootElement.GetProperty("Type").GetString() ?? "";
 
-                ComponentTypes.TryGetValue(typeName, out Type componentType);
+                ComponentTypes.TryGetValue(typeName, out Type? componentType);
 
-                if (doc.RootElement.TryGetProperty("SourcePath", out JsonElement externalSourcePath))
+                // Если указан внешний путь к исходнику/сборке – пробуем загрузить/скомпилировать
+                if (doc.RootElement.TryGetProperty("SourcePath", out JsonElement externalSourcePathEl))
                 {
-                    string sourcePath = externalSourcePath.GetString();
+                    string raw = externalSourcePathEl.GetString() ?? string.Empty;
+                    string sourcePath = ResolvePath(raw);
                     Debug.Log($"Source Path: {sourcePath}", Debug.LogLevel.Info, true);
 
                     Component? externalComponent = LoadOrCompileComponent(sourcePath);
@@ -43,6 +52,11 @@ namespace DustyEngine.Core.Converters
                         componentType = externalComponent.GetType();
                         ComponentSourcePaths[componentType] = sourcePath;
                     }
+                }
+
+                if (componentType == null)
+                {
+                    throw new JsonException($"Unknown component type '{typeName}'.");
                 }
 
                 var newOptions = new JsonSerializerOptions(options)
@@ -54,30 +68,35 @@ namespace DustyEngine.Core.Converters
             }
         }
 
+        /// <summary>
+        /// Загрузка компонента из .dll или компиляция из .cs, с учётом абсолютного пути.
+        /// </summary>
         public static Component? LoadOrCompileComponent(string path)
         {
-            string typeName = Path.GetFileNameWithoutExtension(path);
+            string absPath = ResolvePath(path);
+            string typeName = Path.GetFileNameWithoutExtension(absPath);
             Component? component = null;
 
-            if (Path.GetExtension(path).Equals(".dll", StringComparison.OrdinalIgnoreCase))
+            string ext = Path.GetExtension(absPath);
+            if (ext.Equals(".dll", StringComparison.OrdinalIgnoreCase))
             {
-                Debug.Log($"Loading component from DLL: {path}", Debug.LogLevel.Info, true);
-                component = LoadComponentFromDll(path, typeName);
+                Debug.Log($"Loading component from DLL: {absPath}", Debug.LogLevel.Info, true);
+                component = LoadComponentFromDll(absPath, typeName);
             }
-            else if (Path.GetExtension(path).Equals(".cs", StringComparison.OrdinalIgnoreCase))
+            else if (ext.Equals(".cs", StringComparison.OrdinalIgnoreCase))
             {
-                Debug.Log($"Compiling component from source: {path}", Debug.LogLevel.Info, true);
-                string dllPath = CompileSourceToDll(path);
+                Debug.Log($"Compiling component from source: {absPath}", Debug.LogLevel.Info, true);
+                string dllPath = CompileSourceToDll(absPath);
                 component = LoadComponentFromDll(dllPath, typeName);
             }
             else
             {
-                Debug.Log($"Unsupported file type: {path}", Debug.LogLevel.Error, true);
+                Debug.Log($"Unsupported file type: {absPath}", Debug.LogLevel.Error, true);
             }
 
             if (component != null)
             {
-                ComponentSourcePaths[component.GetType()] = path;
+                ComponentSourcePaths[component.GetType()] = absPath;
             }
 
             return component;
@@ -89,7 +108,7 @@ namespace DustyEngine.Core.Converters
             {
                 var assembly = Assembly.LoadFrom(dllPath);
 
-                var type = assembly.GetTypes().FirstOrDefault(t => t.Name == typeName);
+                var type = SafeGetTypes(assembly).FirstOrDefault(t => t.Name == typeName);
 
                 if (type == null)
                 {
@@ -105,7 +124,7 @@ namespace DustyEngine.Core.Converters
 
                 Debug.Log($"Successfully loaded component type: {type.FullName}", Debug.LogLevel.Info, true);
 
-                return (Component)Activator.CreateInstance(type);
+                return (Component)Activator.CreateInstance(type)!;
             }
             catch (Exception ex)
             {
@@ -114,22 +133,29 @@ namespace DustyEngine.Core.Converters
             }
         }
 
-
         private static string CompileSourceToDll(string sourcePath)
         {
-            string outputDirectory = Path.Combine(Program.ProjectFolderPath, "Settings/Dlls");
+            // Убедимся, что путь проекта абсолютный
+            if (!string.IsNullOrEmpty(Program.ProjectFolderPath))
+                Program.ProjectFolderPath = Path.GetFullPath(Program.ProjectFolderPath);
+
+            string outputDirectory = Path.Combine(Program.ProjectFolderPath, "Settings", "Dlls");
 
             if (!Directory.Exists(outputDirectory))
             {
                 Directory.CreateDirectory(outputDirectory);
             }
 
-            string outputDllPath = Path.Combine(outputDirectory, Path.GetFileNameWithoutExtension(sourcePath) + ".dll");
+            string outputDllPath = Path.Combine(
+                outputDirectory,
+                Path.GetFileNameWithoutExtension(sourcePath) + ".dll"
+            );
 
+            // Кэш: если .dll свежее исходника — используем её
             if (File.Exists(outputDllPath))
             {
-                DateTime sourceLastModified = File.GetLastWriteTime(sourcePath);
-                DateTime dllLastModified = File.GetLastWriteTime(outputDllPath);
+                DateTime sourceLastModified = File.GetLastWriteTimeUtc(sourcePath);
+                DateTime dllLastModified = File.GetLastWriteTimeUtc(outputDllPath);
 
                 if (sourceLastModified <= dllLastModified)
                 {
@@ -157,9 +183,9 @@ namespace DustyEngine.Core.Converters
                 MetadataReference.CreateFromFile(Assembly.GetExecutingAssembly().Location), // DustyEngine.dll
             };
 
-            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
             {
-                var location = assembly.Location;
+                var location = SafeAssemblyLocation(asm);
                 if (!string.IsNullOrWhiteSpace(location) && File.Exists(location))
                 {
                     try
@@ -176,12 +202,14 @@ namespace DustyEngine.Core.Converters
 
             foreach (var ns in usingDirectives)
             {
-                var assembly = AppDomain.CurrentDomain.GetAssemblies()
-                    .FirstOrDefault(a => a.GetTypes().Any(t => t.Namespace == ns));
+                var asm = AppDomain.CurrentDomain.GetAssemblies()
+                    .FirstOrDefault(a => SafeGetTypes(a).Any(t => t.Namespace == ns));
 
-                if (assembly != null && !references.Any(r => r.Display == assembly.Location))
+                var loc = SafeAssemblyLocation(asm);
+                if (asm != null && !string.IsNullOrWhiteSpace(loc) && File.Exists(loc) &&
+                    !references.Any(r => string.Equals(r.Display, loc, StringComparison.OrdinalIgnoreCase)))
                 {
-                    references.Add(MetadataReference.CreateFromFile(assembly.Location));
+                    references.Add(MetadataReference.CreateFromFile(loc));
                 }
             }
 
@@ -192,7 +220,7 @@ namespace DustyEngine.Core.Converters
                 new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
             );
 
-            using (var fileStream = new FileStream(outputDllPath, FileMode.Create))
+            using (var fileStream = new FileStream(outputDllPath, FileMode.Create, FileAccess.Write))
             {
                 var result = compilation.Emit(fileStream);
 
@@ -203,7 +231,7 @@ namespace DustyEngine.Core.Converters
                         Debug.Log($"Compilation error: {diagnostic.GetMessage()}", Debug.LogLevel.Error);
                     }
 
-                    throw new Exception();
+                    throw new Exception("Roslyn compilation failed.");
                 }
             }
 
@@ -216,9 +244,27 @@ namespace DustyEngine.Core.Converters
             writer.WriteStartObject();
             writer.WriteString("Type", value.GetType().Name);
 
-            if (ComponentSourcePaths.TryGetValue(value.GetType(), out string sourcePath))
+            // Сохраняем SourcePath (стараемся записать относительный к ProjectFolderPath — переносимее)
+            if (ComponentSourcePaths.TryGetValue(value.GetType(), out string absSourcePath))
             {
-                writer.WriteString("SourcePath", sourcePath);
+                string projectRoot = string.IsNullOrEmpty(Program.ProjectFolderPath)
+                    ? Directory.GetCurrentDirectory()
+                    : Path.GetFullPath(Program.ProjectFolderPath);
+
+                string toWrite = absSourcePath;
+                try
+                {
+                    if (Path.IsPathRooted(absSourcePath))
+                    {
+                        toWrite = Path.GetRelativePath(projectRoot, absSourcePath);
+                    }
+                }
+                catch
+                {
+                    // на всякий случай оставим исходный путь
+                }
+
+                writer.WriteString("SourcePath", toWrite);
             }
 
             var type = value.GetType();
@@ -309,6 +355,61 @@ namespace DustyEngine.Core.Converters
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Превращает путь в абсолютный:
+        /// - разворачивает '~' и переменные среды
+        /// - относительные пути делает относительными к Program.ProjectFolderPath (если задан) или к текущему каталогу
+        /// </summary>
+        private static string ResolvePath(string rawPath)
+        {
+            if (string.IsNullOrWhiteSpace(rawPath))
+                return rawPath;
+
+            // ~ → $HOME
+            if (rawPath.StartsWith("~"))
+            {
+                string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                rawPath = Path.Combine(home, rawPath.TrimStart('~').TrimStart('/', '\\'));
+            }
+
+            // Переменные окружения
+            rawPath = Environment.ExpandEnvironmentVariables(rawPath);
+
+            if (Path.IsPathRooted(rawPath))
+                return Path.GetFullPath(rawPath);
+
+            string baseDir = !string.IsNullOrEmpty(Program.ProjectFolderPath)
+                ? Path.GetFullPath(Program.ProjectFolderPath)
+                : Directory.GetCurrentDirectory();
+
+            string combined = Path.Combine(baseDir, rawPath);
+            return Path.GetFullPath(combined);
+        }
+
+        private static IEnumerable<Type> SafeGetTypes(Assembly asm)
+        {
+            try
+            {
+                return asm.GetTypes();
+            }
+            catch
+            {
+                return Enumerable.Empty<Type>();
+            }
+        }
+
+        private static string SafeAssemblyLocation(Assembly? asm)
+        {
+            try
+            {
+                return asm?.Location ?? string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
         }
     }
 }

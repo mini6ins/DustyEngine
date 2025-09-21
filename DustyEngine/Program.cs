@@ -73,7 +73,7 @@ namespace DustyEngine
         {
             Debug.ClearLogs();
 
-            ProjectFolderPath = "C:\\Users\\maksym\\Desktop\\GameTestEngine";
+            ProjectFolderPath = "/home/maksym/github/DustyEngine/TestProject";
 
             settings = new ProjectSettings
             {
@@ -81,10 +81,10 @@ namespace DustyEngine
                 Version = 1.0f,
                 PathToScenes = new List<String>
                 {
-                    "C:\\Users\\maksym\\Desktop\\GameTestEngine\\Assets\\DustyEngineTestScene.json",
+                    "/home/maksym/github/DustyEngine/TestProject/Assets/DustyEngineTestScene.json",
                 },
-                PathToVertShader = "C:\\Users\\maksym\\Desktop\\GameTestEngine\\Assets\\shaders\\shader.vert",
-                PathToFragShader = "C:\\Users\\maksym\\Desktop\\GameTestEngine\\Assets\\shaders\\shader.frag",
+                PathToVertShader = "/home/maksym/github/DustyEngine/TestProject/Assets/shaders/shader.vert",
+                PathToFragShader = "/home/maksym/github/DustyEngine/TestProject/Assets/shaders/shader.frag",
                 Debug = true,
                 LogLevel = Debug.LogLevel.Info,
                 LogToConsole = true,
@@ -135,7 +135,7 @@ namespace DustyEngine
                     },
                     new MeshRenderer
                     {
-                        Path = "C:\\Users\\maksym\\Desktop\\GameTestEngine\\Assets\\cube.obj",
+                        Path = "/home/maksym/github/DustyEngine/TestProject/Assets/cube.obj",
                     },
                 }
             };
@@ -152,22 +152,22 @@ namespace DustyEngine
                     {
                         LocalPosition = new Vector3(5, 0, 0),
                         LocalRotation = new Vector3(0, 0, 0),
-                        LocalScale = new Vector3(0.1f, 0.1f, 0.1f),
+                        LocalScale = new Vector3(5f, 5f, 5f),
                     },
                     new MeshRenderer
                     {
-                        Path = "C:\\Users\\maksym\\Desktop\\GameTestEngine\\Assets\\TeddyBear.obj",
+                        Path = "/home/maksym/github/DustyEngine/TestProject/Assets/TeddyBear.obj",
                     },
                 }
             };
             try
             {
                 var moveBoxScript = ComponentConverter.LoadOrCompileComponent(
-                    "C:\\Users\\maksym\\Desktop\\GameTestEngine\\Assets\\MoveBoxCode.cs"
+                    "/home/maksym/github/DustyEngine/TestProject/Assets/MoveBoxCode.cs"
                 );
                 if (moveBoxScript != null)
                 {
-                    obj1.Components.Add(moveBoxScript);
+                    obj0.Components.Add(moveBoxScript);
                     Debug.Log("moveBoxScript component loaded successfully", Debug.LogLevel.Info, true);
                 }
                 else
@@ -182,8 +182,8 @@ namespace DustyEngine
                 Debug.Log("Continuing without moveBoxScript component", Debug.LogLevel.Info, true);
             }
 
-            scene.GameObjects[0].AddChild(obj1);
-
+        //    scene.GameObjects[0].AddChild(obj1);
+scene.GameObjects.Add(obj1);
             GameObject cameraObject = new GameObject
             {
                 Name = "Camera",
@@ -202,7 +202,7 @@ namespace DustyEngine
             try
             {
                 var playerScript = ComponentConverter.LoadOrCompileComponent(
-                    "C:\\Users\\maksym\\Desktop\\GameTestEngine\\Assets\\Player.cs"
+                    "/home/maksym/github/DustyEngine/TestProject/Assets/Player.cs"
                 );
                 if (playerScript != null)
                 {
@@ -224,7 +224,7 @@ namespace DustyEngine
             scene.GameObjects.Add(cameraObject);
 
             SceneSerializer.SaveScene(scene,
-                "C:\\Users\\maksym\\Desktop\\GameTestEngine\\Assets\\DustyEngineTestScene.json");
+                "/home/maksym/github/DustyEngine/TestProject/Assets/DustyEngineTestScene.json");
             if (SceneSerializer.LoadScene(out var loadedScene, settings.PathToScenes.FirstOrDefault())) return;
             foreach (var method in new[] { "OnEnable", "Start" })
             {
