@@ -13,7 +13,7 @@ public class GraphicsEngineOpenGl
     private Window? _window;
 
     public void RunMainLoop(Scene scene, Action updateCallback, Vector2 resolution, string programName,
-        string vertShaderPath, string fragShaderPath, bool vsync, bool runInEditor = false)
+        string vertShaderPath, string fragShaderPath, bool vsync)
     {
         Debug.Log("GraphicsEngineOpenGl is working", Debug.LogLevel.Info, true);
 
@@ -30,23 +30,18 @@ public class GraphicsEngineOpenGl
 
         Debug.Log($"Total Meshes: {_allRenderers.Count}", Debug.LogLevel.Info, true);
         
-        var cursorState = runInEditor ? CursorState.Normal : CursorState.Grabbed;
+        //var cursorState = runInEditor ? CursorState.Normal : CursorState.Grabbed;
 
         _window = new Window(GameWindowSettings.Default, nativeWindowSettings, _allRenderers, vertShaderPath,
             fragShaderPath, programName, SceneManager.FindCamera(scene),
-            vsync, cursorState, runInEditor);
+            vsync, CursorState.Normal, RenderMode.Context);
 
         _window.UpdateFrame += (e) => updateCallback?.Invoke();
 
         _window.Run();
     }
 
-
-    public void RunMainLoop(Scene scene, Action updateCallback, Vector2 resolution, string programName,
-        string vertShaderPath, string fragShaderPath, bool vsync)
-    {
-        RunMainLoop(scene, updateCallback, resolution, programName, vertShaderPath, fragShaderPath, vsync, false);
-    }
+    
 
     public void AddRenderer(MeshRenderer meshRenderer) => _window?.AddRenderer(meshRenderer);
     

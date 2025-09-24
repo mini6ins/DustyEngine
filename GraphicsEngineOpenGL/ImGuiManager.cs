@@ -8,7 +8,7 @@ using DustyEngine;
 
 namespace GraphicsEngineOpenGL;
 
-public class ImGuiManager
+public class ImGuiManagers
 {
     private bool _initialized = false;
     private GameWindow _window;

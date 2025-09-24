@@ -1,5 +1,4 @@
 ﻿using System.Runtime.CompilerServices;
-using ImGuiNET;
 using OpenTK.Graphics.OpenGL.Compatibility;
 using System.Runtime.InteropServices;
 using DustyEngine;
@@ -24,6 +23,12 @@ public class RenderableObject
     public MeshRenderer MeshRenderer; 
 }
 
+public enum RenderMode
+{
+    Standalone,    // Рендер напрямую в окно
+    Context        // Рендер в framebuffer для использования в другом контексте
+}
+
 public class Window : GameWindow
 {
     private float _frameTime;
@@ -33,35 +38,36 @@ public class Window : GameWindow
     private Camera _camera;
     private Matrix4 _projection;
     private CursorState _cursorState;
+    private RenderMode _renderMode;
 
     // Основная сцена
     private ShaderProgram _shaderProgram;
     private readonly List<VAOManager> _vaoList = new();
     private readonly List<RenderableObject> _sceneObjects = new();
 
-    // Framebuffer для основной сцены
-    private int sceneFramebuffer;
-    private int sceneColorTexture;
-    private int sceneDepthTexture;
-    private int sceneFramebufferWidth = 800;
-    private int sceneFramebufferHeight = 600;
+    // Framebuffer для context mode
+    private int _contextFramebuffer;
+    private int _contextColorTexture;
+    private int _contextDepthTexture;
+    private int _contextFramebufferWidth = 800;
+    private int _contextFramebufferHeight = 600;
 
-    // ImGui Manager (опционально)
-    private ImGuiManager _imguiManager;
-    private bool _useImGui = false;
+    private bool _initialized = false;
 
-    private bool initialized = false;
+    // События для context mode
+    public event Action<int>? OnFramebufferTextureChanged;
 
     public Window(GameWindowSettings gws, NativeWindowSettings nws, List<MeshRenderer> allRenderers,
         string vertShaderPath, string fragShaderPath, string windowName,
-        Camera camera, bool isVsync = true, CursorState cursorState = CursorState.Normal, bool useImGui = false)
+        Camera camera, bool isVsync = true, CursorState cursorState = CursorState.Normal, 
+        RenderMode renderMode = RenderMode.Standalone)
         : base(gws, nws)
     {
         _windowName = windowName;
         Title = _windowName;
         this._camera = camera;
         _cursorState = cursorState;
-        _useImGui = useImGui;
+        _renderMode = renderMode;
         
         Debug.Log(GL.GetString(StringName.Version), Debug.LogLevel.Info, true);
         Debug.Log(GL.GetString(StringName.Vendor), Debug.LogLevel.Info, true);
@@ -75,11 +81,6 @@ public class Window : GameWindow
         foreach (var meshRenderer in allRenderers)
         {
             AddRenderer(meshRenderer);
-        }
-
-        if (_useImGui)
-        {
-            InitializeImGui();
         }
     }
 
@@ -153,6 +154,42 @@ public class Window : GameWindow
         return true;
     }
 
+    // Методы для context mode
+    public int GetContextTexture() => _contextColorTexture;
+    public (int width, int height) GetContextSize() => (_contextFramebufferWidth, _contextFramebufferHeight);
+    
+    public void ResizeContext(int width, int height)
+    {
+        if (_renderMode != RenderMode.Context) return;
+        
+        int newWidth = (int)Math.Max(64, width); 
+        int newHeight = (int)Math.Max(64, height);
+        
+        float widthDiff = Math.Abs(newWidth - _contextFramebufferWidth) / (float)_contextFramebufferWidth;
+        float heightDiff = Math.Abs(newHeight - _contextFramebufferHeight) / (float)_contextFramebufferHeight;
+        
+        if (widthDiff > 0.1f || heightDiff > 0.1f)
+        {
+            _contextFramebufferWidth = newWidth;
+            _contextFramebufferHeight = newHeight;
+
+            GL.BindTexture(TextureTarget.Texture2d, _contextColorTexture);
+            GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba8,
+                newWidth, newHeight, 0, PixelFormat.Rgba, PixelType.UnsignedByte, IntPtr.Zero);
+
+            GL.BindTexture(TextureTarget.Texture2d, _contextDepthTexture);
+            GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.DepthComponent24,
+                newWidth, newHeight, 0, PixelFormat.DepthComponent, PixelType.Float, IntPtr.Zero);
+                
+            _camera.AspectRatio = (float)newWidth / newHeight;
+            _projection = _camera.GetProjectionMatrix();
+                
+            Debug.Log($"Resized context framebuffer to {newWidth}x{newHeight}", Debug.LogLevel.Info, true);
+            
+            OnFramebufferTextureChanged?.Invoke(_contextColorTexture);
+        }
+    }
+
     protected override void OnLoad()
     {
         base.OnLoad();
@@ -172,85 +209,47 @@ public class Window : GameWindow
         _camera.AspectRatio = Size.X / (float)Size.Y; 
         _projection = _camera.GetProjectionMatrix();
 
-        if (_useImGui)
+        if (_renderMode == RenderMode.Context)
         {
-            SetupFramebuffer();
+            SetupContextFramebuffer();
         }
         
-        initialized = true;
+        _initialized = true;
     }
 
-    private void InitializeImGui()
+    private void SetupContextFramebuffer()
     {
-        _imguiManager = new ImGuiManager();
-        
-        // Настраиваем callbacks для передачи данных в ImGui
-        _imguiManager.GetSceneObjectCount = () => _sceneObjects.Count;
-        _imguiManager.GetFPS = () => _fps;
-        _imguiManager.GetSceneTexture = () => sceneColorTexture;
-        _imguiManager.GetSceneSize = () => (sceneFramebufferWidth, sceneFramebufferHeight);
-        _imguiManager.OnSceneResize = (width, height) => ResizeFramebuffer(width, height);
-        
-        _imguiManager.Initialize(this);
-    }
+        _contextFramebuffer = GL.GenFramebuffer();
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, _contextFramebuffer);
 
-    private void SetupFramebuffer()
-    {
-        sceneFramebuffer = GL.GenFramebuffer();
-        GL.BindFramebuffer(FramebufferTarget.Framebuffer, sceneFramebuffer);
-
-        sceneColorTexture = GL.GenTexture();
-        GL.BindTexture(TextureTarget.Texture2d, sceneColorTexture);
+        _contextColorTexture = GL.GenTexture();
+        GL.BindTexture(TextureTarget.Texture2d, _contextColorTexture);
         GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba8, 
-            sceneFramebufferWidth, sceneFramebufferHeight, 0, PixelFormat.Rgba, PixelType.UnsignedByte, IntPtr.Zero);
+            _contextFramebufferWidth, _contextFramebufferHeight, 0, PixelFormat.Rgba, PixelType.UnsignedByte, IntPtr.Zero);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
         GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0,
-            TextureTarget.Texture2d, sceneColorTexture, 0);
+            TextureTarget.Texture2d, _contextColorTexture, 0);
 
-        sceneDepthTexture = GL.GenTexture();
-        GL.BindTexture(TextureTarget.Texture2d, sceneDepthTexture);
+        _contextDepthTexture = GL.GenTexture();
+        GL.BindTexture(TextureTarget.Texture2d, _contextDepthTexture);
         GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.DepthComponent24,
-            sceneFramebufferWidth, sceneFramebufferHeight, 0, PixelFormat.DepthComponent, PixelType.Float, IntPtr.Zero);
+            _contextFramebufferWidth, _contextFramebufferHeight, 0, PixelFormat.DepthComponent, PixelType.Float, IntPtr.Zero);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
         GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment,
-            TextureTarget.Texture2d, sceneDepthTexture, 0);
+            TextureTarget.Texture2d, _contextDepthTexture, 0);
 
         if (GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer) != FramebufferStatus.FramebufferComplete)
         {
-            throw new Exception("Framebuffer не готов!");
+            throw new Exception("Context framebuffer не готов!");
         }
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-    }
-
-    private void ResizeFramebuffer(int width, int height)
-    {
-        int newWidth = (int)Math.Max(64, width); 
-        int newHeight = (int)Math.Max(64, height);
         
-        float widthDiff = Math.Abs(newWidth - sceneFramebufferWidth) / (float)sceneFramebufferWidth;
-        float heightDiff = Math.Abs(newHeight - sceneFramebufferHeight) / (float)sceneFramebufferHeight;
+        OnFramebufferTextureChanged?.Invoke(_contextColorTexture);
         
-        if (widthDiff > 0.1f || heightDiff > 0.1f)
-        {
-            sceneFramebufferWidth = newWidth;
-            sceneFramebufferHeight = newHeight;
-
-            GL.BindTexture(TextureTarget.Texture2d, sceneColorTexture);
-            GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba8,
-                newWidth, newHeight, 0, PixelFormat.Rgba, PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.BindTexture(TextureTarget.Texture2d, sceneDepthTexture);
-            GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.DepthComponent24,
-                newWidth, newHeight, 0, PixelFormat.DepthComponent, PixelType.Float, IntPtr.Zero);
-                
-            _camera.AspectRatio = (float)newWidth / newHeight;
-            _projection = _camera.GetProjectionMatrix();
-                
-            Debug.Log($"Resized framebuffer to {newWidth}x{newHeight}", Debug.LogLevel.Info, true);
-        }
+        Debug.Log($"Context framebuffer setup complete: {_contextFramebufferWidth}x{_contextFramebufferHeight}", Debug.LogLevel.Info, true);
     }
 
     protected override void OnUpdateFrame(FrameEventArgs args)
@@ -263,7 +262,7 @@ public class Window : GameWindow
         _fps++;
         if (_frameTime >= 1.0f)
         {
-            Title = $"{_windowName} : FPS - {_fps} | Objects: {_sceneObjects.Count}";
+            Title = $"{_windowName} : FPS - {_fps} | Objects: {_sceneObjects.Count} | Mode: {_renderMode}";
             _frameTime = 0.0f;
             _fps = 0;
         }
@@ -283,31 +282,37 @@ public class Window : GameWindow
     {
         base.OnRenderFrame(args);
 
-        if (_useImGui)
+        if (_renderMode == RenderMode.Context)
         {
-            RenderSceneToFramebuffer();
-            RenderImGuiInterface();
+            RenderToContext();
         }
         else
         {
-            RenderSceneDirect();
+            RenderStandalone();
         }
 
         SwapBuffers();
     }
 
-    private void RenderSceneToFramebuffer()
+    private void RenderToContext()
     {
-        GL.BindFramebuffer(FramebufferTarget.Framebuffer, sceneFramebuffer);
-        GL.Viewport(0, 0, sceneFramebufferWidth, sceneFramebufferHeight);
+        // Рендер в context framebuffer
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, _contextFramebuffer);
+        GL.Viewport(0, 0, _contextFramebufferWidth, _contextFramebufferHeight);
         
         GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
         RenderScene();
+        
+        // Очистка основного буфера (можно показать что-то другое или оставить черным)
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+        GL.Viewport(0, 0, FramebufferSize.X, FramebufferSize.Y);
+        GL.ClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
     }
 
-    private void RenderSceneDirect()
+    private void RenderStandalone()
     {
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
         GL.Viewport(0, 0, FramebufferSize.X, FramebufferSize.Y);
@@ -335,19 +340,6 @@ public class Window : GameWindow
         }
 
         _shaderProgram.DeactiveProgram();
-    }
-
-    private void RenderImGuiInterface()
-    {
-        GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-        GL.Viewport(0, 0, FramebufferSize.X, FramebufferSize.Y);
-        
-        GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-
-        _imguiManager?.NewFrame();
-        _imguiManager?.RenderUI();
-        _imguiManager?.Render();
     }
 
     private void RenderObject(RenderableObject obj)
@@ -378,23 +370,21 @@ public class Window : GameWindow
     
     protected override void OnUnload()
     {
-        if (!initialized) return;
+        if (!_initialized) return;
         
         foreach (var vao in _vaoList)
             vao.Dispose();
 
         _shaderProgram.DeleteProgram();
         
-        if (_useImGui)
+        if (_renderMode == RenderMode.Context)
         {
-            GL.DeleteFramebuffer(sceneFramebuffer);
-            GL.DeleteTexture(sceneColorTexture);
-            GL.DeleteTexture(sceneDepthTexture);
-            
-            _imguiManager?.Shutdown();
+            GL.DeleteFramebuffer(_contextFramebuffer);
+            GL.DeleteTexture(_contextColorTexture);
+            GL.DeleteTexture(_contextDepthTexture);
         }
         
-        initialized = false;
+        _initialized = false;
         
         base.OnUnload();
     }
