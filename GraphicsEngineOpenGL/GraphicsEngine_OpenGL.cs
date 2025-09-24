@@ -34,7 +34,7 @@ public class GraphicsEngineOpenGl
 
         _window = new Window(GameWindowSettings.Default, nativeWindowSettings, _allRenderers, vertShaderPath,
             fragShaderPath, programName, SceneManager.FindCamera(scene),
-            vsync, CursorState.Normal, RenderMode.Context);
+            vsync, CursorState.Normal, RenderMode.Standalone);
 
         _window.UpdateFrame += (e) => updateCallback?.Invoke();
 
