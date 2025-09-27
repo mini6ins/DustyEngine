@@ -11,8 +11,9 @@ public class GraphicsEngineOpenGl
 {
     private List<MeshRenderer> _allRenderers = [];
     private Window? _window;
+    private FramebufferSender? _sender;
 
-    public void RunMainLoop(Scene scene, Action updateCallback, Vector2 resolution, string programName,
+    public async Task RunMainLoop(Scene scene, Action updateCallback, Vector2 resolution, string programName,
         string vertShaderPath, string fragShaderPath, bool vsync)
     {
         Debug.Log("GraphicsEngineOpenGl is working", Debug.LogLevel.Info, true);
@@ -29,21 +30,30 @@ public class GraphicsEngineOpenGl
         }
 
         Debug.Log($"Total Meshes: {_allRenderers.Count}", Debug.LogLevel.Info, true);
-        
-        //var cursorState = runInEditor ? CursorState.Normal : CursorState.Grabbed;
 
+        // Инициализируем отправщик с меньшим FPS для стабильности
+        _sender = new FramebufferSender(8080, 30); 
+        await _sender.StartAsync();  
+
+        // Создаем окно в режиме Context для сетевой отправки
         _window = new Window(GameWindowSettings.Default, nativeWindowSettings, _allRenderers, vertShaderPath,
             fragShaderPath, programName, SceneManager.FindCamera(scene),
-            vsync, CursorState.Normal, RenderMode.Standalone);
+            vsync, CursorState.Normal, RenderMode.Context, _sender);
 
-        _window.UpdateFrame += (e) => updateCallback?.Invoke();
+        // Подключаем обработчики событий
+        _window.UpdateFrame += (e) => {
+            updateCallback?.Invoke();
+        };
 
         _window.Run();
     }
 
-    
-
     public void AddRenderer(MeshRenderer meshRenderer) => _window?.AddRenderer(meshRenderer);
     
     public bool RemoveRenderer(int objectId) => _window?.RemoveRenderer(objectId) ?? false;
+
+    public void Dispose()
+    {
+        _sender?.Dispose();
+    }
 }

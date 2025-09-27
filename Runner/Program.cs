@@ -5,16 +5,20 @@ namespace DustyEngine.Runner;
 internal static class Program
 {
     private static volatile bool _stopping;
-
+     static string projectPath;
     static int Main(string[] args)
     {
         if (args.Length < 1)
         {
             Console.Error.WriteLine("Usage: DustyEngine.Runner <ProjectPath>");
-            return 2;
+            projectPath = "/home/maksym/github/DustyEngine/TestProject";
+            //      return 2;
         }
-
-        string projectPath = args[0];
+        else
+        {
+            projectPath = args[0];
+        }
+     
         
         Console.CancelKeyPress += (_, e) =>
         {

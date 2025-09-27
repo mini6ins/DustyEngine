@@ -56,11 +56,13 @@ public class Window : GameWindow
 
     // События для context mode
     public event Action<int>? OnFramebufferTextureChanged;
+    
+    private FramebufferSender? _framebufferSender;
 
     public Window(GameWindowSettings gws, NativeWindowSettings nws, List<MeshRenderer> allRenderers,
         string vertShaderPath, string fragShaderPath, string windowName,
         Camera camera, bool isVsync = true, CursorState cursorState = CursorState.Normal, 
-        RenderMode renderMode = RenderMode.Standalone)
+        RenderMode renderMode = RenderMode.Context, FramebufferSender framebufferSender = null)
         : base(gws, nws)
     {
         _windowName = windowName;
@@ -68,6 +70,7 @@ public class Window : GameWindow
         this._camera = camera;
         _cursorState = cursorState;
         _renderMode = renderMode;
+        _framebufferSender = framebufferSender;
         
         Debug.Log(GL.GetString(StringName.Version), Debug.LogLevel.Info, true);
         Debug.Log(GL.GetString(StringName.Vendor), Debug.LogLevel.Info, true);
@@ -299,19 +302,27 @@ public class Window : GameWindow
         // Рендер в context framebuffer
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, _contextFramebuffer);
         GL.Viewport(0, 0, _contextFramebufferWidth, _contextFramebufferHeight);
-        
+    
         GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
         RenderScene();
-        
+    
+        // Отправляем кадр по сети (если есть подключенные клиенты)
+        if (_framebufferSender?.IsClientConnected == true)
+        {
+            _framebufferSender.SendFramebuffer(_contextFramebuffer, _contextFramebufferWidth, _contextFramebufferHeight, true);
+        }
+    
         // Очистка основного буфера (можно показать что-то другое или оставить черным)
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
         GL.Viewport(0, 0, FramebufferSize.X, FramebufferSize.Y);
         GL.ClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
     }
-
+    
+    public int GetContextFramebufferId() => _contextFramebuffer;
+    
     private void RenderStandalone()
     {
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
