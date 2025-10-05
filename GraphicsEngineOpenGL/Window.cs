@@ -53,8 +53,7 @@ public class Window : GameWindow
     private int _contextFramebufferHeight = 600;
 
     private bool _initialized = false;
-
-    // События для context mode
+    
     public event Action<int>? OnFramebufferTextureChanged;
     
     private FramebufferSender? _framebufferSender;

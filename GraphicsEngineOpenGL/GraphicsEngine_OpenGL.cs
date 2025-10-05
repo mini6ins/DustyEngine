@@ -14,7 +14,7 @@ public class GraphicsEngineOpenGl
     private FramebufferSender? _sender;
 
     public async Task RunMainLoop(Scene scene, Action updateCallback, Vector2 resolution, string programName,
-        string vertShaderPath, string fragShaderPath, bool vsync)
+        string vertShaderPath, string fragShaderPath, bool vsync, RenderMode renderMode)
     {
         Debug.Log("GraphicsEngineOpenGl is working", Debug.LogLevel.Info, true);
 
@@ -38,8 +38,11 @@ public class GraphicsEngineOpenGl
         // Создаем окно в режиме Context для сетевой отправки
         _window = new Window(GameWindowSettings.Default, nativeWindowSettings, _allRenderers, vertShaderPath,
             fragShaderPath, programName, SceneManager.FindCamera(scene),
-            vsync, CursorState.Normal, RenderMode.Context, _sender);
-
+            vsync, CursorState.Normal, renderMode, _sender);
+        
+        if(renderMode == RenderMode.Context)
+            _window.IsVisible = false;
+        
         // Подключаем обработчики событий
         _window.UpdateFrame += (e) => {
             updateCallback?.Invoke();

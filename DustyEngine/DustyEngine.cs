@@ -15,7 +15,7 @@ namespace DustyEngine
 
         private static Action<MeshRenderer> AddRenderer = (renderer) => { graphicsEngineOpenGl.AddRenderer(renderer); };
 
-        public void StartEngine(string path)
+        public void StartEngine(string path, RenderMode  renderMode)
         {
             Debug.ClearLogs();
 
@@ -67,7 +67,7 @@ namespace DustyEngine
 
             graphicsEngineOpenGl.RunMainLoop(loadedScene, gameLoopAction,
                 settings.ScreenSize, settings.ProjectName, settings.PathToVertShader,
-                settings.PathToFragShader, settings.Vsync);
+                settings.PathToFragShader, settings.Vsync, renderMode);
         }
 
         

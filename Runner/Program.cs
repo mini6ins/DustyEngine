@@ -1,25 +1,36 @@
 ﻿using System.Runtime.InteropServices;
+using GraphicsEngineOpenGL;
 
 namespace DustyEngine.Runner;
 
 internal static class Program
 {
     private static volatile bool _stopping;
-     static string projectPath;
+    private static string projectPath;
+    private static RenderMode renderMode = RenderMode.Standalone;
+
     static int Main(string[] args)
     {
         if (args.Length < 1)
         {
-            Console.Error.WriteLine("Usage: DustyEngine.Runner <ProjectPath>");
+            Console.Error.WriteLine("Usage: DustyEngine.Runner <ProjectPath> [RenderMode]");
             projectPath = "/home/maksym/github/DustyEngine/TestProject";
-            //      return 2;
+            // return 2;
         }
         else
         {
             projectPath = args[0];
         }
-     
-        
+
+
+        if (args.Length >= 2)
+        {
+            if (!Enum.TryParse(args[1], true, out renderMode))
+            {
+                Console.Error.WriteLine($"Invalid RenderMode '{args[1]}'. Using default: {renderMode}");
+            }
+        }
+
         Console.CancelKeyPress += (_, e) =>
         {
             e.Cancel = true;
@@ -34,9 +45,7 @@ internal static class Program
         try
         {
             var engine = new DustyEngine();
-            
-            engine.StartEngine(projectPath);
-            
+            engine.StartEngine(projectPath, renderMode);
             return 0;
         }
         catch (Exception ex)
@@ -46,8 +55,8 @@ internal static class Program
         }
         finally
         {
-            // engine.Stop(); // если есть
-            // engine.Dispose(); // если есть
+            // engine.Stop();
+            // engine.Dispose();
         }
     }
 }

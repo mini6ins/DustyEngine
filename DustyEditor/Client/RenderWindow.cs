@@ -1,27 +1,34 @@
+using System;
 using System.Runtime.InteropServices;
+using ImGuiNET;
 using OpenTK.Graphics.OpenGL.Compatibility;
+using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
+using GraphicsEngineOpenGL; // для ImGuiManager
 
 public class RenderWindow : GameWindow
 {
     private int _displayTexture;
-    private int _shaderProgram;
+    private int _shaderProgram; // оставил (может пригодиться), но не используется при ImGui-выводе
     private int _vao;
     private int _vbo;
-    
+
     private readonly FrameReceiver _frameReceiver;
-    
-    // Буферизация для плавности
+
+    // Двойная буферизация кадров
     private FrameData? _currentFrame;
     private FrameData? _nextFrame;
     private readonly object _frameLock = new object();
-    
+
     // Информация о текущей текстуре
     private int _currentTextureWidth = 0;
     private int _currentTextureHeight = 0;
-    
+
+    // ImGui
+    private ImGuiManager _imgui;
+
     private const string VertexShaderSource = @"
         #version 330 core
         layout (location = 0) in vec3 aPosition;
@@ -32,7 +39,7 @@ public class RenderWindow : GameWindow
             gl_Position = vec4(aPosition, 1.0);
             texCoord = aTexCoord;
         }";
-    
+
     private const string FragmentShaderSource = @"
         #version 330 core
         in vec2 texCoord;
@@ -42,16 +49,14 @@ public class RenderWindow : GameWindow
         {
             FragColor = texture(frameTexture, texCoord);
         }";
-    
-    public RenderWindow(GameWindowSettings gameWindowSettings, NativeWindowSettings nativeWindowSettings, FrameReceiver frameReceiver)
-        : base(gameWindowSettings, nativeWindowSettings)
+
+    public RenderWindow(GameWindowSettings gws, NativeWindowSettings nws, FrameReceiver frameReceiver)
+        : base(gws, nws)
     {
         _frameReceiver = frameReceiver ?? throw new ArgumentNullException(nameof(frameReceiver));
-        
-        // Подписываемся на события получения кадров
         _frameReceiver.OnFrameReceived += OnFrameReceived;
     }
-    
+
     private void OnFrameReceived(FrameData frameData)
     {
         lock (_frameLock)
@@ -59,96 +64,117 @@ public class RenderWindow : GameWindow
             _nextFrame = frameData;
         }
     }
-    
+
     protected override void OnLoad()
     {
         base.OnLoad();
-        
-        GL.ClearColor(0.1f, 0.1f, 0.1f, 1.0f); // Темно-серый фон
-        GL.Disable(EnableCap.DepthTest); // Не нужен для полноэкранного quad
-        
-        SetupShaders();
-        SetupGeometry();
+
+        GL.ClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        GL.Disable(EnableCap.DepthTest);
+
+        SetupShaders();    // не обязателен для ImGui.Image, но оставлен если захочешь рендерить без ImGui
+        SetupGeometry();   // тоже оставил «на будущее»
         SetupTexture();
-        
+
+        // --- ImGui init ---
+        _imgui = new ImGuiManager();
+        _imgui.Initialize(this);
+
+        // делегаты для viewport менеджера, если захочешь их юзать
+        _imgui.GetSceneTexture = () => _displayTexture;
+        _imgui.GetSceneSize = () => (_currentTextureWidth, _currentTextureHeight);
+        _imgui.OnSceneResize = (w, h) =>
+        {
+            // тут можно отправить запрос на ресайз серверу, если поддерживается
+            // пока ничего не делаем
+        };
+
         Console.WriteLine("RenderWindow загружен, ожидаю подключения к серверу...");
     }
-    
+
     private void SetupShaders()
     {
-        int vertexShader = GL.CreateShader(ShaderType.VertexShader);
-        GL.ShaderSource(vertexShader, VertexShaderSource);
-        GL.CompileShader(vertexShader);
-        
-        int fragmentShader = GL.CreateShader(ShaderType.FragmentShader);
-        GL.ShaderSource(fragmentShader, FragmentShaderSource);
-        GL.CompileShader(fragmentShader);
-        
+        int vs = GL.CreateShader(ShaderType.VertexShader);
+        GL.ShaderSource(vs, VertexShaderSource);
+        GL.CompileShader(vs);
+
+        int fs = GL.CreateShader(ShaderType.FragmentShader);
+        GL.ShaderSource(fs, FragmentShaderSource);
+        GL.CompileShader(fs);
+
         _shaderProgram = GL.CreateProgram();
-        GL.AttachShader(_shaderProgram, vertexShader);
-        GL.AttachShader(_shaderProgram, fragmentShader);
+        GL.AttachShader(_shaderProgram, vs);
+        GL.AttachShader(_shaderProgram, fs);
         GL.LinkProgram(_shaderProgram);
-        
-        
-        GL.DeleteShader(vertexShader);
-        GL.DeleteShader(fragmentShader);
+
+        GL.DeleteShader(vs);
+        GL.DeleteShader(fs);
+
+        // правильная привязка семплера (int, не float)
+        GL.UseProgram(_shaderProgram);
+        int loc = GL.GetUniformLocation(_shaderProgram, "frameTexture");
+        if (loc >= 0) GL.Uniform1i(loc, 0);
+        GL.UseProgram(0);
     }
-    
+
     private void SetupGeometry()
     {
-        // Полноэкранный quad
+        // Оставлено для потенциального не-ImGui рендеринга
         float[] vertices = {
-            -1.0f, -1.0f, 0.0f,  0.0f, 1.0f, // Нижний левый
-             1.0f, -1.0f, 0.0f,  1.0f, 1.0f, // Нижний правый
-             1.0f,  1.0f, 0.0f,  1.0f, 0.0f, // Верхний правый
-            -1.0f,  1.0f, 0.0f,  0.0f, 0.0f  // Верхний левый
+            -1.0f, -1.0f, 0.0f,  0.0f, 1.0f,
+             1.0f, -1.0f, 0.0f,  1.0f, 1.0f,
+             1.0f,  1.0f, 0.0f,  1.0f, 0.0f,
+            -1.0f,  1.0f, 0.0f,  0.0f, 0.0f
         };
-        
         uint[] indices = { 0, 1, 2, 2, 3, 0 };
-        
+
         _vao = GL.GenVertexArray();
         _vbo = GL.GenBuffer();
         int ebo = GL.GenBuffer();
-        
+
         GL.BindVertexArray(_vao);
-        
+
         GL.BindBuffer(BufferTarget.ArrayBuffer, _vbo);
         GL.BufferData(BufferTarget.ArrayBuffer, vertices.Length * sizeof(float), vertices, BufferUsage.StaticDraw);
-        
+
         GL.BindBuffer(BufferTarget.ElementArrayBuffer, ebo);
         GL.BufferData(BufferTarget.ElementArrayBuffer, indices.Length * sizeof(uint), indices, BufferUsage.StaticDraw);
-        
+
         GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 5 * sizeof(float), 0);
         GL.EnableVertexAttribArray(0);
-        
+
         GL.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 5 * sizeof(float), 3 * sizeof(float));
         GL.EnableVertexAttribArray(1);
+
+        GL.BindVertexArray(0);
     }
-    
+
     private void SetupTexture()
     {
         _displayTexture = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2d, _displayTexture);
-        
-        // Создаем черную текстуру по умолчанию
-        byte[] blackPixels = new byte[4] { 32, 32, 32, 255 }; // Темно-серый
-        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba, 
-                     1, 1, 0, PixelFormat.Rgba, PixelType.UnsignedByte, blackPixels);
-        
+
+        // заглушка — 1×1 тёмно-серый пиксель
+        byte[] px = new byte[] { 32, 32, 32, 255 };
+        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba, 1, 1, 0,
+                      PixelFormat.Rgba, PixelType.UnsignedByte, px);
+
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
-        
-        _currentTextureWidth = 1;
+
+        _currentTextureWidth  = 1;
         _currentTextureHeight = 1;
+
+        GL.BindTexture(TextureTarget.Texture2d, 0);
     }
-    
+
     protected override void OnUpdateFrame(FrameEventArgs e)
     {
         base.OnUpdateFrame(e);
-        
-        // Проверяем есть ли новый кадр для обновления
+
+        // принять новый кадр от сети
         FrameData? frameToUpdate = null;
         lock (_frameLock)
         {
@@ -159,90 +185,133 @@ public class RenderWindow : GameWindow
                 _nextFrame = null;
             }
         }
-        
+
         if (frameToUpdate != null)
-        {
             UpdateTexture(frameToUpdate);
-        }
     }
-    
+
     private void UpdateTexture(FrameData frameData)
     {
         try
         {
             GL.BindTexture(TextureTarget.Texture2d, _displayTexture);
-            
-            // Обновляем размер текстуры только если изменился
+
             if (_currentTextureWidth != frameData.Width || _currentTextureHeight != frameData.Height)
             {
-                Console.WriteLine($"Изменение размера текстуры: {_currentTextureWidth}x{_currentTextureHeight} -> {frameData.Width}x{frameData.Height}");
-                _currentTextureWidth = frameData.Width;
+                _currentTextureWidth  = frameData.Width;
                 _currentTextureHeight = frameData.Height;
+                // переопределять storage отдельно не обязательно — TexImage2D ниже всё покроет
             }
-            
+
             var handle = GCHandle.Alloc(frameData.PixelData, GCHandleType.Pinned);
             try
             {
-                GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba, 
-                             frameData.Width, frameData.Height, 0, 
-                             PixelFormat.Rgba, PixelType.UnsignedByte, 
-                             handle.AddrOfPinnedObject());
+                GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba,
+                              frameData.Width, frameData.Height, 0,
+                              PixelFormat.Rgba, PixelType.UnsignedByte,
+                              handle.AddrOfPinnedObject());
             }
             finally
             {
                 handle.Free();
             }
+
+            GL.BindTexture(TextureTarget.Texture2d, 0);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Ошибка обновления текстуры: {ex.Message}");
         }
     }
-    
+
     protected override void OnRenderFrame(FrameEventArgs e)
     {
         base.OnRenderFrame(e);
-        
+
         GL.Clear(ClearBufferMask.ColorBufferBit);
-        
-        GL.UseProgram(_shaderProgram);
-        
-        GL.ActiveTexture(TextureUnit.Texture0);
-        GL.BindTexture(TextureTarget.Texture2d, _displayTexture);
-        GL.Uniform1f(GL.GetUniformLocation(_shaderProgram, "frameTexture"), 0);
-        
-        GL.BindVertexArray(_vao);
-        GL.DrawElements(PrimitiveType.Triangles, 6, DrawElementsType.UnsignedInt, 0);
-        
-        SwapBuffers();
-    }
-    
-    protected override void OnKeyDown(KeyboardKeyEventArgs e)
-    {
-        base.OnKeyDown(e);
-        
-        if (e.Key == Keys.Escape)
-        {
-            Close();
-        }
-        
-        if (e.Key == Keys.F11)
+
+        // ---------- ImGui frame ----------
+        _imgui.NewFrame();
+
+        // Панель 1: простой текст
+        ImGui.SetNextWindowSize(new System.Numerics.Vector2(360, 120), ImGuiCond.FirstUseEver);
+        ImGui.Begin("Test Panel");
+        ImGui.Text("Simple text :)");
+        ImGui.Text($"Connected: {_frameReceiver.IsConnected}");
+        ImGui.Text($"Texture: {_currentTextureWidth} x {_currentTextureHeight}");
+        if (ImGui.Button("Fullscreen (F11)")) 
         {
             WindowState = WindowState == WindowState.Fullscreen ? WindowState.Normal : WindowState.Fullscreen;
         }
+        ImGui.End();
+
+        // Панель 2: превью текстуры
+        ImGui.SetNextWindowSize(new System.Numerics.Vector2(800, 600), ImGuiCond.FirstUseEver);
+        ImGui.Begin("Frame Preview", ImGuiWindowFlags.NoCollapse);
+        {
+            var avail = ImGui.GetContentRegionAvail();
+            if (avail.X >= 2 && avail.Y >= 2)
+            {
+                // сохраняем аспект входной текстуры (если известен)
+                float w = Math.Max(1, _currentTextureWidth);
+                float h = Math.Max(1, _currentTextureHeight);
+                float aspect = w / h;
+
+                var size = avail;
+                float availAspect = size.X / size.Y;
+
+                if (availAspect > aspect)
+                {
+                    size.X = size.Y * aspect;
+                }
+                else
+                {
+                    size.Y = size.X / aspect;
+                }
+
+                // центрируем изображение в окне
+                var cursor = ImGui.GetCursorPos();
+                cursor.X += (avail.X - size.X) * 0.5f;
+                cursor.Y += (avail.Y - size.Y) * 0.5f;
+                ImGui.SetCursorPos(cursor);
+
+                // ВАЖНО: у ImGui Y-координата UV идёт сверху вниз; у OpenGL — снизу вверх.
+                // Поменяем V, чтобы картинка была не перевёрнута (0,1) -> (1,0)
+                ImGui.Image(new IntPtr(_displayTexture), size,
+                    new System.Numerics.Vector2(0, 1),   // uv0
+                    new System.Numerics.Vector2(1, 0));  // uv1
+            }
+        }
+        ImGui.End();
+
+        // Рисуем всё
+        _imgui.Render();
+
+        SwapBuffers();
     }
-    
+
+    protected override void OnKeyDown(KeyboardKeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+
+        if (e.Key == Keys.Escape) Close();
+        if (e.Key == Keys.F11)
+            WindowState = WindowState == WindowState.Fullscreen ? WindowState.Normal : WindowState.Fullscreen;
+    }
+
     protected override void OnUnload()
     {
-        // Отписываемся от событий
         _frameReceiver.OnFrameReceived -= OnFrameReceived;
-        
-        // Освобождаем OpenGL ресурсы
+
+        // OpenGL ресурсы
         GL.DeleteVertexArray(_vao);
         GL.DeleteBuffer(_vbo);
         GL.DeleteTexture(_displayTexture);
         GL.DeleteProgram(_shaderProgram);
-        
+
+        // ImGui shutdown
+        _imgui?.Shutdown();
+
         base.OnUnload();
     }
 }

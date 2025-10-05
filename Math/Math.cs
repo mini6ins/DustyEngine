@@ -23,6 +23,10 @@
     {
         return a < b ? a : b;
     }
+    public static double Min(double a, double b)
+    {
+        return a < b ? a : b;
+    }
 
     public static float DegreesToRadians(float degrees)
     {
