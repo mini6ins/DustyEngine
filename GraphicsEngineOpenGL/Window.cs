@@ -56,12 +56,12 @@ public class Window : GameWindow
     
     public event Action<int>? OnFramebufferTextureChanged;
     
-    private FramebufferSender? _framebufferSender;
+    private FramebufferSenderMMF? _framebufferSender;
 
     public Window(GameWindowSettings gws, NativeWindowSettings nws, List<MeshRenderer> allRenderers,
         string vertShaderPath, string fragShaderPath, string windowName,
         Camera camera, bool isVsync = true, CursorState cursorState = CursorState.Normal, 
-        RenderMode renderMode = RenderMode.Context, FramebufferSender framebufferSender = null)
+        RenderMode renderMode = RenderMode.Context, FramebufferSenderMMF framebufferSenderMmf = null)
         : base(gws, nws)
     {
         _windowName = windowName;
@@ -69,7 +69,7 @@ public class Window : GameWindow
         this._camera = camera;
         _cursorState = cursorState;
         _renderMode = renderMode;
-        _framebufferSender = framebufferSender;
+        _framebufferSender = framebufferSenderMmf;
         
         Debug.Log(GL.GetString(StringName.Version), Debug.LogLevel.Info, true);
         Debug.Log(GL.GetString(StringName.Vendor), Debug.LogLevel.Info, true);
@@ -205,17 +205,30 @@ public class Window : GameWindow
         GL.DepthFunc(DepthFunction.Less);
 
         CursorState = _cursorState;
-        
+    
         GL.Viewport(0, 0, FramebufferSize.X, FramebufferSize.Y);
-        
+    
         _camera.AspectRatio = Size.X / (float)Size.Y; 
         _projection = _camera.GetProjectionMatrix();
 
         if (_renderMode == RenderMode.Context)
         {
             SetupContextFramebuffer();
-        }
         
+            // Инициализация MMF sender
+            if (_framebufferSender != null && !_framebufferSender.IsRunning)
+            {
+                if (_framebufferSender.Start())
+                {
+                    Debug.Log("FramebufferSenderMMF started successfully", Debug.LogLevel.Info, true);
+                }
+                else
+                {
+                    Debug.Log("Failed to start FramebufferSenderMMF", Debug.LogLevel.Error, true);
+                }
+            }
+        }
+    
         _initialized = true;
     }
 
@@ -301,19 +314,19 @@ public class Window : GameWindow
         // Рендер в context framebuffer
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, _contextFramebuffer);
         GL.Viewport(0, 0, _contextFramebufferWidth, _contextFramebufferHeight);
-    
+
         GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
         RenderScene();
-    
-        // Отправляем кадр по сети (если есть подключенные клиенты)
-        if (_framebufferSender?.IsClientConnected == true)
+
+        // Отправка кадра через MMF
+        if (_framebufferSender?.IsRunning == true)
         {
             _framebufferSender.SendFramebuffer(_contextFramebuffer, _contextFramebufferWidth, _contextFramebufferHeight, true);
         }
-    
-        // Очистка основного буфера (можно показать что-то другое или оставить черным)
+
+        // Очистка основного буфера
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
         GL.Viewport(0, 0, FramebufferSize.X, FramebufferSize.Y);
         GL.ClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -381,21 +394,28 @@ public class Window : GameWindow
     protected override void OnUnload()
     {
         if (!_initialized) return;
-        
+    
         foreach (var vao in _vaoList)
             vao.Dispose();
 
         _shaderProgram.DeleteProgram();
-        
+    
         if (_renderMode == RenderMode.Context)
         {
             GL.DeleteFramebuffer(_contextFramebuffer);
             GL.DeleteTexture(_contextColorTexture);
             GL.DeleteTexture(_contextDepthTexture);
+        
+            // Остановка и очистка MMF sender
+            if (_framebufferSender != null)
+            {
+                _framebufferSender.Dispose();
+                Debug.Log("FramebufferSenderMMF stopped", Debug.LogLevel.Info, true);
+            }
         }
-        
+    
         _initialized = false;
-        
+    
         base.OnUnload();
     }
 }

@@ -1,15 +1,57 @@
-using System.Collections.Concurrent;
-using System.Net.Sockets;
+using System.IO.MemoryMappedFiles;
+using System.Runtime.InteropServices;
 
 public class FrameReceiver : IDisposable
 {
-    private TcpClient _tcpClient;
-    private NetworkStream _networkStream;
+    private const int MAX_INPUT_EVENTS = 32;
+
+    [StructLayout(LayoutKind.Sequential, Pack = 4)]
+    private struct Header
+    {
+        public int Width, Height, Stride, SlotCount;
+        public volatile int WriteIndex;
+        public long FrameId;
+        public volatile int InputWriteIndex;
+        public volatile int InputReadIndex;
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 4)]
+    private struct InputEvent
+    {
+        public int Type;
+        public int KeyCode;
+        public float MouseX;
+        public float MouseY;
+        public int MouseButton;
+        public float WheelDelta;
+    }
+
+    private unsafe struct StreamContext
+    {
+        public MemoryMappedViewAccessor Accessor;
+        public byte* BasePtr;
+        public byte* SlotsBase;
+        public byte* InputEventsBase;
+        public long HeaderSize;
+        public long SlotSize;
+        public long InputEventsSize;
+        public int Width;
+        public int Height;
+        public int Stride;
+        public int SlotCount;
+    }
+
+    private StreamContext _ctx;
+    private long _lastFrame = -1;
     private volatile bool _isConnected = false;
     private volatile bool _disposed = false;
 
-    private readonly string _serverIP;
-    private readonly int _serverPort;
+    private MemoryMappedFile _mmf;
+    private MemoryMappedViewAccessor _acc;
+    private FileStream _fs;
+    private Thread _readThread;
+
+    private readonly string _mmfPath;
 
     // Буферизация кадров
     private FrameData? _latestFrame;
@@ -27,10 +69,12 @@ public class FrameReceiver : IDisposable
 
     public bool IsConnected => _isConnected && !_disposed;
 
-    public FrameReceiver(string serverIP = "127.0.0.1", int serverPort = 8080)
+    public FrameReceiver(string mmfPath = null)
     {
-        _serverIP = serverIP;
-        _serverPort = serverPort;
+        // Используем тот же путь, что и в Producer/Sender
+        _mmfPath = mmfPath ?? (Directory.Exists("/dev/shm")
+            ? "/dev/shm/vid_stream.mmf"
+            : Path.Combine(Path.GetTempPath(), "vid_stream.mmf"));
     }
 
     public async Task<bool> ConnectAsync()
@@ -40,99 +84,125 @@ public class FrameReceiver : IDisposable
 
         try
         {
-            _tcpClient = new TcpClient();
-            _tcpClient.ReceiveTimeout = 30000; // 30 секунд
-            _tcpClient.SendTimeout = 30000;
-            _tcpClient.NoDelay = true; // Отключаем буферизацию Nagle
-
-            Console.WriteLine($"Подключение к {_serverIP}:{_serverPort}...");
-            await _tcpClient.ConnectAsync(_serverIP, _serverPort);
+            Console.WriteLine($"Ожидание MMF файла: {_mmfPath}...");
             
-            _networkStream = _tcpClient.GetStream();
-            _isConnected = true;
+            // Ждём появления файла
+            if (!await WaitForFileAsync(_mmfPath, TimeSpan.FromSeconds(10)))
+            {
+                Console.WriteLine("MMF файл не найден в течение таймаута");
+                return false;
+            }
 
-            Console.WriteLine("Успешно подключен к серверу!");
+            await Task.Run(() => InitializeSharedMemory());
+
+            _isConnected = true;
+            Console.WriteLine($"Успешно подключен к MMF! Разрешение: {_ctx.Width}x{_ctx.Height}");
             OnConnected?.Invoke();
 
-            // Запускаем прослушивание в отдельной задаче
-            _ = Task.Run(ListenForFrames);
+            // Запускаем прослушивание в отдельном потоке
+            _readThread = new Thread(ListenForFrames) { IsBackground = true };
+            _readThread.Start();
 
             return true;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Ошибка подключения: {ex.Message}");
+            Console.WriteLine($"Ошибка подключения к MMF: {ex.Message}");
             OnConnectionLost?.Invoke($"Ошибка подключения: {ex.Message}");
             return false;
         }
     }
 
+    private async Task<bool> WaitForFileAsync(string path, TimeSpan timeout)
+    {
+        var start = DateTime.UtcNow;
+        while (!File.Exists(path))
+        {
+            if ((DateTime.UtcNow - start) > timeout)
+                return false;
+            await Task.Delay(100);
+        }
+        return true;
+    }
+
+    private unsafe void InitializeSharedMemory()
+    {
+        _fs = new FileStream(_mmfPath, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
+        _mmf = MemoryMappedFile.CreateFromFile(_fs, null, 0, MemoryMappedFileAccess.ReadWrite, HandleInheritability.Inheritable, false);
+        _acc = _mmf.CreateViewAccessor(0, 0, MemoryMappedFileAccess.ReadWrite);
+
+        Header hdr;
+        _acc.Read(0, out hdr);
+        long headerSize = Marshal.SizeOf<Header>();
+        long slotSize = (long)hdr.Stride * hdr.Height;
+        long inputEventsSize = Marshal.SizeOf<InputEvent>() * MAX_INPUT_EVENTS;
+
+        byte* basePtr = null;
+        _acc.SafeMemoryMappedViewHandle.AcquirePointer(ref basePtr);
+
+        _ctx = new StreamContext
+        {
+            Accessor = _acc,
+            BasePtr = basePtr,
+            SlotsBase = basePtr + headerSize,
+            InputEventsBase = basePtr + headerSize + hdr.SlotCount * slotSize,
+            HeaderSize = headerSize,
+            SlotSize = slotSize,
+            InputEventsSize = inputEventsSize,
+            Width = hdr.Width,
+            Height = hdr.Height,
+            Stride = hdr.Stride,
+            SlotCount = hdr.SlotCount
+        };
+
+        Console.WriteLine($"MMF инициализирован: {hdr.Width}x{hdr.Height}, слотов: {hdr.SlotCount}");
+    }
+
     public void Disconnect()
     {
         _isConnected = false;
-
-        try
-        {
-            _networkStream?.Close();
-            _tcpClient?.Close();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Ошибка при отключении: {ex.Message}");
-        }
     }
 
-    private async Task ListenForFrames()
+    private unsafe void ListenForFrames()
     {
-        Console.WriteLine("Запуск прослушивания кадров...");
+        Console.WriteLine("Запуск прослушивания кадров из MMF...");
         
-        while (_isConnected && !_disposed && _tcpClient?.Connected == true)
+        while (_isConnected && !_disposed)
         {
             try
             {
-                // Читаем заголовок (8 байт: width + height)
-                byte[] headerBuffer = new byte[8];
-                if (!await ReadExactly(headerBuffer, 8))
-                    break;
-
-                int width = BitConverter.ToInt32(headerBuffer, 0);
-                int height = BitConverter.ToInt32(headerBuffer, 4);
-                int pixelDataSize = width * height * 4; // RGBA
-
-                // Проверяем разумность размеров
-                if (width <= 0 || height <= 0 || width > 8192 || height > 8192)
+                var frame = TryReadFrame();
+                
+                if (frame != null)
                 {
-                    Console.WriteLine($"Некорректные размеры кадра: {width}x{height}");
-                    break;
+                    var frameData = new FrameData
+                    {
+                        Width = frame.Value.Width,
+                        Height = frame.Value.Height,
+                        PixelData = frame.Value.PixelData
+                    };
+
+                    // Сохраняем только последний кадр
+                    lock (_frameLock)
+                    {
+                        _latestFrame = frameData;
+                    }
+
+                    _framesReceived++;
+                    OnFrameReceived?.Invoke(frameData);
+
+                    // Периодически выводим статистику
+                    var now = DateTime.Now;
+                    if ((now - _lastStatsTime).TotalSeconds >= 5)
+                    {
+                        Console.WriteLine($"Получено кадров: {_framesReceived}, пропущено: {_framesDropped}");
+                        _lastStatsTime = now;
+                    }
                 }
-
-                // Читаем данные пикселей
-                byte[] pixelBuffer = new byte[pixelDataSize];
-                if (!await ReadExactly(pixelBuffer, pixelDataSize))
-                    break;
-
-                var frameData = new FrameData
+                else
                 {
-                    Width = width,
-                    Height = height,
-                    PixelData = pixelBuffer
-                };
-
-                // Сохраняем только последний кадр (no-drop strategy)
-                lock (_frameLock)
-                {
-                    _latestFrame = frameData;
-                }
-
-                _framesReceived++;
-                OnFrameReceived?.Invoke(frameData);
-
-                // Периодически выводим статистику
-                var now = DateTime.Now;
-                if ((now - _lastStatsTime).TotalSeconds >= 5)
-                {
-                    Console.WriteLine($"Получено кадров: {_framesReceived}, пропущено: {_framesDropped}");
-                    _lastStatsTime = now;
+                    // Нет новых кадров, небольшая пауза
+                    Thread.Sleep(1);
                 }
             }
             catch (Exception ex)
@@ -149,34 +219,32 @@ public class FrameReceiver : IDisposable
         _isConnected = false;
         if (!_disposed)
         {
-            Console.WriteLine("Соединение с сервером потеряно");
+            Console.WriteLine("Соединение с MMF потеряно");
             OnConnectionLost?.Invoke("Соединение потеряно");
         }
     }
 
-    private async Task<bool> ReadExactly(byte[] buffer, int count)
+    private unsafe (int Width, int Height, byte[] PixelData)? TryReadFrame()
     {
-        int totalRead = 0;
-        while (totalRead < count && !_disposed)
+        Header hdr;
+        _ctx.Accessor.Read(0, out hdr);
+        long fid = hdr.FrameId;
+
+        if (fid == _lastFrame)
         {
-            try
-            {
-                int read = await _networkStream.ReadAsync(buffer, totalRead, count - totalRead);
-                if (read == 0)
-                {
-                    Console.WriteLine("Сервер закрыл соединение");
-                    return false;
-                }
-                totalRead += read;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Ошибка чтения данных: {ex.Message}");
-                return false;
-            }
+            return null;
         }
 
-        return totalRead == count && !_disposed;
+        int ready = (hdr.WriteIndex - 1 + hdr.SlotCount) % hdr.SlotCount;
+        byte* framePtr = _ctx.SlotsBase + (long)ready * _ctx.SlotSize;
+
+        _lastFrame = fid;
+
+        // Копируем данные в управляемый массив
+        byte[] pixelData = new byte[_ctx.Stride * _ctx.Height];
+        Marshal.Copy((IntPtr)framePtr, pixelData, 0, pixelData.Length);
+
+        return (_ctx.Width, _ctx.Height, pixelData);
     }
 
     public bool TryDequeueFrame(out FrameData frameData)
@@ -186,20 +254,27 @@ public class FrameReceiver : IDisposable
             frameData = _latestFrame;
             if (_latestFrame != null)
             {
-                _latestFrame = null; // Очищаем после извлечения
+                _latestFrame = null;
                 return true;
             }
         }
         return false;
     }
 
-    public void Dispose()
+    public unsafe void Dispose()
     {
         if (_disposed)
             return;
 
         _disposed = true;
         Disconnect();
+
+        if (_ctx.BasePtr != null && _acc != null)
+            _acc.SafeMemoryMappedViewHandle.ReleasePointer();
+
+        _acc?.Dispose();
+        _mmf?.Dispose();
+        _fs?.Dispose();
         
         Console.WriteLine($"FrameReceiver закрыт. Всего получено кадров: {_framesReceived}");
     }

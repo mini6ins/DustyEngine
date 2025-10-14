@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using OpenTK.Graphics.OpenGL.Compatibility;
 
-public class FramebufferSender : IDisposable
+public class FramebufferSenderTCP : IDisposable
 {
     private TcpListener _tcpListener;
     private TcpClient _connectedClient;
@@ -24,7 +24,7 @@ public class FramebufferSender : IDisposable
     public bool IsClientConnected => _connectedClient?.Connected == true && _networkStream?.CanWrite == true;
     public bool IsRunning => _isRunning && !_disposed;
 
-    public FramebufferSender(int port = 8080, int targetFPS = 30)
+    public FramebufferSenderTCP(int port = 8080, int targetFPS = 30)
     {
         _port = port;
         _frameInterval = TimeSpan.FromMilliseconds(1000.0 / targetFPS);
