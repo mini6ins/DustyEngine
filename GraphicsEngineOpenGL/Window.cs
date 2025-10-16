@@ -406,7 +406,7 @@ public class Window : GameWindow
             GL.DeleteTexture(_contextColorTexture);
             GL.DeleteTexture(_contextDepthTexture);
         
-            // Остановка и очистка MMF sender
+
             if (_framebufferSender != null)
             {
                 _framebufferSender.Dispose();
