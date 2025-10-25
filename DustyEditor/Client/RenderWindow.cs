@@ -6,27 +6,24 @@ using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
-using GraphicsEngineOpenGL; // для ImGuiManager
+using GraphicsEngineOpenGL;
 
 public class RenderWindow : GameWindow
 {
     private int _displayTexture;
-    private int _shaderProgram; // оставил (может пригодиться), но не используется при ImGui-выводе
+    private int _shaderProgram;
     private int _vao;
     private int _vbo;
 
     private readonly FrameReceiver _frameReceiver;
 
-    // Двойная буферизация кадров
     private FrameData? _currentFrame;
     private FrameData? _nextFrame;
     private readonly object _frameLock = new object();
 
-    // Информация о текущей текстуре
     private int _currentTextureWidth = 0;
     private int _currentTextureHeight = 0;
 
-    // ImGui
     private ImGuiManager _imgui;
 
     private const string VertexShaderSource = @"
@@ -72,24 +69,18 @@ public class RenderWindow : GameWindow
         GL.ClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         GL.Disable(EnableCap.DepthTest);
 
-        SetupShaders();    // не обязателен для ImGui.Image, но оставлен если захочешь рендерить без ImGui
-        SetupGeometry();   // тоже оставил «на будущее»
+        SetupShaders();
+        SetupGeometry();
         SetupTexture();
 
-        // --- ImGui init ---
         _imgui = new ImGuiManager();
         _imgui.Initialize(this);
 
-        // делегаты для viewport менеджера, если захочешь их юзать
         _imgui.GetSceneTexture = () => _displayTexture;
         _imgui.GetSceneSize = () => (_currentTextureWidth, _currentTextureHeight);
-        _imgui.OnSceneResize = (w, h) =>
-        {
-            // тут можно отправить запрос на ресайз серверу, если поддерживается
-            // пока ничего не делаем
-        };
+        _imgui.OnSceneResize = (w, h) => { /* при желании отправить запрос на ресайз серверу */ };
 
-        Console.WriteLine("RenderWindow загружен, ожидаю подключения к серверу...");
+        Console.WriteLine("RenderWindow загружен, ожидаю кадры...");
     }
 
     private void SetupShaders()
@@ -110,7 +101,6 @@ public class RenderWindow : GameWindow
         GL.DeleteShader(vs);
         GL.DeleteShader(fs);
 
-        // правильная привязка семплера (int, не float)
         GL.UseProgram(_shaderProgram);
         int loc = GL.GetUniformLocation(_shaderProgram, "frameTexture");
         if (loc >= 0) GL.Uniform1i(loc, 0);
@@ -119,12 +109,12 @@ public class RenderWindow : GameWindow
 
     private void SetupGeometry()
     {
-        // Оставлено для потенциального не-ImGui рендеринга
-        float[] vertices = {
-            -1.0f, -1.0f, 0.0f,  0.0f, 1.0f,
-             1.0f, -1.0f, 0.0f,  1.0f, 1.0f,
-             1.0f,  1.0f, 0.0f,  1.0f, 0.0f,
-            -1.0f,  1.0f, 0.0f,  0.0f, 0.0f
+        float[] vertices =
+        {
+            -1.0f, -1.0f, 0.0f, 0.0f, 1.0f,
+             1.0f, -1.0f, 0.0f, 1.0f, 1.0f,
+             1.0f,  1.0f, 0.0f, 1.0f, 0.0f,
+            -1.0f,  1.0f, 0.0f, 0.0f, 0.0f
         };
         uint[] indices = { 0, 1, 2, 2, 3, 0 };
 
@@ -154,17 +144,16 @@ public class RenderWindow : GameWindow
         _displayTexture = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2d, _displayTexture);
 
-        // заглушка — 1×1 тёмно-серый пиксель
         byte[] px = new byte[] { 32, 32, 32, 255 };
         GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba, 1, 1, 0,
-                      PixelFormat.Rgba, PixelType.UnsignedByte, px);
+            PixelFormat.Rgba, PixelType.UnsignedByte, px);
 
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
 
-        _currentTextureWidth  = 1;
+        _currentTextureWidth = 1;
         _currentTextureHeight = 1;
 
         GL.BindTexture(TextureTarget.Texture2d, 0);
@@ -174,7 +163,6 @@ public class RenderWindow : GameWindow
     {
         base.OnUpdateFrame(e);
 
-        // принять новый кадр от сети
         FrameData? frameToUpdate = null;
         lock (_frameLock)
         {
@@ -198,18 +186,17 @@ public class RenderWindow : GameWindow
 
             if (_currentTextureWidth != frameData.Width || _currentTextureHeight != frameData.Height)
             {
-                _currentTextureWidth  = frameData.Width;
+                _currentTextureWidth = frameData.Width;
                 _currentTextureHeight = frameData.Height;
-                // переопределять storage отдельно не обязательно — TexImage2D ниже всё покроет
             }
 
             var handle = GCHandle.Alloc(frameData.PixelData, GCHandleType.Pinned);
             try
             {
                 GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba,
-                              frameData.Width, frameData.Height, 0,
-                              PixelFormat.Rgba, PixelType.UnsignedByte,
-                              handle.AddrOfPinnedObject());
+                    frameData.Width, frameData.Height, 0,
+                    PixelFormat.Rgba, PixelType.UnsignedByte,
+                    handle.AddrOfPinnedObject());
             }
             finally
             {
@@ -230,63 +217,54 @@ public class RenderWindow : GameWindow
 
         GL.Clear(ClearBufferMask.ColorBufferBit);
 
-        // ---------- ImGui frame ----------
         _imgui.NewFrame();
 
-        // Панель 1: простой текст
         ImGui.SetNextWindowSize(new System.Numerics.Vector2(360, 120), ImGuiCond.FirstUseEver);
         ImGui.Begin("Test Panel");
         ImGui.Text("Simple text :)");
         ImGui.Text($"Connected: {_frameReceiver.IsConnected}");
         ImGui.Text($"Texture: {_currentTextureWidth} x {_currentTextureHeight}");
-        if (ImGui.Button("Fullscreen (F11)")) 
-        {
+        if (ImGui.Button("Fullscreen (F11)"))
             WindowState = WindowState == WindowState.Fullscreen ? WindowState.Normal : WindowState.Fullscreen;
-        }
         ImGui.End();
 
-        // Панель 2: превью текстуры
         ImGui.SetNextWindowSize(new System.Numerics.Vector2(800, 600), ImGuiCond.FirstUseEver);
         ImGui.Begin("Frame Preview", ImGuiWindowFlags.NoCollapse);
         {
             var avail = ImGui.GetContentRegionAvail();
             if (avail.X >= 2 && avail.Y >= 2)
             {
-                // сохраняем аспект входной текстуры (если известен)
-                float w = Math.Max(1, _currentTextureWidth);
-                float h = Math.Max(1, _currentTextureHeight);
-                float aspect = w / h;
+                float texW = Math.Max(1, _currentTextureWidth);
+                float texH = Math.Max(1, _currentTextureHeight);
+                float textureAspect = texW / texH;
+                float availableAspect = avail.X / avail.Y;
 
-                var size = avail;
-                float availAspect = size.X / size.Y;
-
-                if (availAspect > aspect)
+                System.Numerics.Vector2 displaySize;
+                if (textureAspect > availableAspect)
                 {
-                    size.X = size.Y * aspect;
+                    displaySize.X = avail.X;
+                    displaySize.Y = avail.X / textureAspect;
                 }
                 else
                 {
-                    size.Y = size.X / aspect;
+                    displaySize.Y = avail.Y;
+                    displaySize.X = avail.Y * textureAspect;
                 }
 
-                // центрируем изображение в окне
                 var cursor = ImGui.GetCursorPos();
-                cursor.X += (avail.X - size.X) * 0.5f;
-                cursor.Y += (avail.Y - size.Y) * 0.5f;
+                cursor.X += (avail.X - displaySize.X) * 0.5f;
+                cursor.Y += (avail.Y - displaySize.Y) * 0.5f;
                 ImGui.SetCursorPos(cursor);
 
-                // ВАЖНО: у ImGui Y-координата UV идёт сверху вниз; у OpenGL — снизу вверх.
-                // Поменяем V, чтобы картинка была не перевёрнута (0,1) -> (1,0)
-                ImGui.Image(new IntPtr(_displayTexture), size,
-                    new System.Numerics.Vector2(0, 1),   // uv0
-                    new System.Numerics.Vector2(1, 0));  // uv1
+                // ТЕПЕРЬ обычные UV — потому что флип сделан в sender
+                ImGui.Image(new IntPtr(_displayTexture), displaySize,
+                    new System.Numerics.Vector2(0, 0),
+                    new System.Numerics.Vector2(1, 1));
             }
         }
         ImGui.End();
 
-        // Рисуем всё
         _imgui.Render();
-
         SwapBuffers();
     }
 
@@ -303,13 +281,11 @@ public class RenderWindow : GameWindow
     {
         _frameReceiver.OnFrameReceived -= OnFrameReceived;
 
-        // OpenGL ресурсы
         GL.DeleteVertexArray(_vao);
         GL.DeleteBuffer(_vbo);
         GL.DeleteTexture(_displayTexture);
         GL.DeleteProgram(_shaderProgram);
 
-        // ImGui shutdown
         _imgui?.Shutdown();
 
         base.OnUnload();

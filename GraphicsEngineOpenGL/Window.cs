@@ -1,6 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System;
 using OpenTK.Graphics.OpenGL.Compatibility;
-using System.Runtime.InteropServices;
 using DustyEngine;
 using DustyEngine.Components;
 using GraphicsEngineOpenGL.RenderUtils;
@@ -9,7 +8,7 @@ using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using Utils;
 
-// Используем алиасы для OpenTK типов
+// Алиасы
 using Vec3 = OpenTK.Mathematics.Vector3;
 using Mat4 = OpenTK.Mathematics.Matrix4;
 using MathHelper = OpenTK.Mathematics.MathHelper;
@@ -25,8 +24,8 @@ public class RenderableObject
 
 public enum RenderMode
 {
-    Standalone,    // Рендер напрямую в окно
-    Context        // Рендер в framebuffer для использования в другом контексте
+    Standalone,
+    Context
 }
 
 public class Window : GameWindow
@@ -40,12 +39,11 @@ public class Window : GameWindow
     private CursorState _cursorState;
     private RenderMode _renderMode;
 
-    // Основная сцена
     private ShaderProgram _shaderProgram;
     private readonly List<VAOManager> _vaoList = new();
     private readonly List<RenderableObject> _sceneObjects = new();
 
-    // Framebuffer для context mode
+    // Context FBO
     private int _contextFramebuffer;
     private int _contextColorTexture;
     private int _contextDepthTexture;
@@ -66,106 +64,65 @@ public class Window : GameWindow
     {
         _windowName = windowName;
         Title = _windowName;
-        this._camera = camera;
+        _camera = camera;
         _cursorState = cursorState;
         _renderMode = renderMode;
         _framebufferSender = framebufferSenderMmf;
         
-        Debug.Log(GL.GetString(StringName.Version), Debug.LogLevel.Info, true);
-        Debug.Log(GL.GetString(StringName.Vendor), Debug.LogLevel.Info, true);
-        Debug.Log(GL.GetString(StringName.Renderer), Debug.LogLevel.Info, true);
-        Debug.Log(GL.GetString(StringName.ShadingLanguageVersion), Debug.LogLevel.Info, true);
-
         VSync = isVsync ? VSyncMode.On : VSyncMode.Off;
 
         _shaderProgram = new ShaderProgram(vertShaderPath, fragShaderPath);
         
         foreach (var meshRenderer in allRenderers)
-        {
             AddRenderer(meshRenderer);
-        }
     }
 
     public int AddRenderer(MeshRenderer meshRenderer)
     {
-        if (meshRenderer == null)
-        {
-            Debug.Log("Cannot add null MeshRenderer", Debug.LogLevel.Error, true);
-            return -1;
-        }
+        if (meshRenderer == null) return -1;
 
         var mesh = meshRenderer.GetMesh();
-        if (mesh == null)
-        {
-            Debug.Log($"MeshRenderer has no valid mesh data, skipping renderer for {meshRenderer.Parent?.Name ?? "unknown object"}", Debug.LogLevel.Warning, true);
-            return -1;
-        }
-
-        if (mesh.Vertices == null || mesh.Indices == null)
-        {
-            Debug.Log($"Mesh has null vertices or indices, skipping renderer for {meshRenderer.Parent?.Name ?? "unknown object"}", Debug.LogLevel.Warning, true);
-            return -1;
-        }
+        if (mesh == null || mesh.Vertices == null || mesh.Indices == null) return -1;
 
         var vao = new VAOManager(_shaderProgram);
         vao.CreateVAO(mesh.Vertices, mesh.Indices);
         _vaoList.Add(vao);
 
-        var renderableObject = new RenderableObject
+        _sceneObjects.Add(new RenderableObject
         {
             VaoIndex = _vaoList.Count - 1,
             Transform = meshRenderer.Parent.GetComponent<Transform>(),
             MeshRenderer = meshRenderer,
-        };
-
-        _sceneObjects.Add(renderableObject);
-    
-        Debug.Log($"Added new renderer. Total objects: {_sceneObjects.Count}", Debug.LogLevel.Info, true);
-    
+        });
         return _sceneObjects.Count - 1;
     }
     
     public bool RemoveRenderer(int objectId)
     {
-        if (objectId < 0 || objectId >= _sceneObjects.Count)
-        {
-            Debug.Log($"Invalid object ID: {objectId}", Debug.LogLevel.Warning, true);
-            return false;
-        }
+        if (objectId < 0 || objectId >= _sceneObjects.Count) return false;
 
         var obj = _sceneObjects[objectId];
- 
         if (obj.VaoIndex < _vaoList.Count)
         {
             _vaoList[obj.VaoIndex].Dispose();
             _vaoList.RemoveAt(obj.VaoIndex);
-            
             for (int i = 0; i < _sceneObjects.Count; i++)
-            {
-                if (_sceneObjects[i].VaoIndex > obj.VaoIndex)
-                {
-                    _sceneObjects[i].VaoIndex--;
-                }
-            }
+                if (_sceneObjects[i].VaoIndex > obj.VaoIndex) _sceneObjects[i].VaoIndex--;
         }
 
         _sceneObjects.RemoveAt(objectId);
-        
-        Debug.Log($"Removed renderer. Total objects: {_sceneObjects.Count}", Debug.LogLevel.Info, true);
-        
         return true;
     }
 
-    // Методы для context mode
     public int GetContextTexture() => _contextColorTexture;
     public (int width, int height) GetContextSize() => (_contextFramebufferWidth, _contextFramebufferHeight);
-    
+
     public void ResizeContext(int width, int height)
     {
         if (_renderMode != RenderMode.Context) return;
         
-        int newWidth = (int)Math.Max(64, width); 
-        int newHeight = (int)Math.Max(64, height);
+        int newWidth = System.Math.Max(64, width);
+        int newHeight = System.Math.Max(64, height);
         
         float widthDiff = Math.Abs(newWidth - _contextFramebufferWidth) / (float)_contextFramebufferWidth;
         float heightDiff = Math.Abs(newHeight - _contextFramebufferHeight) / (float)_contextFramebufferHeight;
@@ -182,12 +139,13 @@ public class Window : GameWindow
             GL.BindTexture(TextureTarget.Texture2d, _contextDepthTexture);
             GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.DepthComponent24,
                 newWidth, newHeight, 0, PixelFormat.DepthComponent, PixelType.Float, IntPtr.Zero);
-                
+
             _camera.AspectRatio = (float)newWidth / newHeight;
             _projection = _camera.GetProjectionMatrix();
+
+            // !!! синхронизируем sender
+            _framebufferSender?.Resize(newWidth, newHeight);
                 
-            Debug.Log($"Resized context framebuffer to {newWidth}x{newHeight}", Debug.LogLevel.Info, true);
-            
             OnFramebufferTextureChanged?.Invoke(_contextColorTexture);
         }
     }
@@ -205,7 +163,6 @@ public class Window : GameWindow
         GL.DepthFunc(DepthFunction.Less);
 
         CursorState = _cursorState;
-    
         GL.Viewport(0, 0, FramebufferSize.X, FramebufferSize.Y);
     
         _camera.AspectRatio = Size.X / (float)Size.Y; 
@@ -214,18 +171,13 @@ public class Window : GameWindow
         if (_renderMode == RenderMode.Context)
         {
             SetupContextFramebuffer();
-        
-            // Инициализация MMF sender
-            if (_framebufferSender != null && !_framebufferSender.IsRunning)
+
+            // если sender не передали — создадим с текущим размером контекста
+            _framebufferSender ??= new FramebufferSenderMMF(_contextFramebufferWidth, _contextFramebufferHeight);
+            if (!_framebufferSender.IsRunning)
             {
-                if (_framebufferSender.Start())
-                {
-                    Debug.Log("FramebufferSenderMMF started successfully", Debug.LogLevel.Info, true);
-                }
-                else
-                {
-                    Debug.Log("Failed to start FramebufferSenderMMF", Debug.LogLevel.Error, true);
-                }
+                if (!_framebufferSender.Start())
+                    Console.WriteLine("Failed to start FramebufferSenderMMF");
             }
         }
     
@@ -256,15 +208,10 @@ public class Window : GameWindow
             TextureTarget.Texture2d, _contextDepthTexture, 0);
 
         if (GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer) != FramebufferStatus.FramebufferComplete)
-        {
             throw new Exception("Context framebuffer не готов!");
-        }
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-        
         OnFramebufferTextureChanged?.Invoke(_contextColorTexture);
-        
-        Debug.Log($"Context framebuffer setup complete: {_contextFramebufferWidth}x{_contextFramebufferHeight}", Debug.LogLevel.Info, true);
     }
 
     protected override void OnUpdateFrame(FrameEventArgs args)
@@ -282,7 +229,6 @@ public class Window : GameWindow
             _fps = 0;
         }
 
-        //Debug
         if (Input.IsKeyDown(KeyCode.F1)) GL.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Line);
         if (Input.IsKeyDown(KeyCode.F2)) GL.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Fill);
     }
@@ -297,21 +243,14 @@ public class Window : GameWindow
     {
         base.OnRenderFrame(args);
 
-        if (_renderMode == RenderMode.Context)
-        {
-            RenderToContext();
-        }
-        else
-        {
-            RenderStandalone();
-        }
+        if (_renderMode == RenderMode.Context) RenderToContext();
+        else RenderStandalone();
 
         SwapBuffers();
     }
 
     private void RenderToContext()
     {
-        // Рендер в context framebuffer
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, _contextFramebuffer);
         GL.Viewport(0, 0, _contextFramebufferWidth, _contextFramebufferHeight);
 
@@ -320,13 +259,11 @@ public class Window : GameWindow
 
         RenderScene();
 
-        // Отправка кадра через MMF
+        // отправляем с реальными размерами
         if (_framebufferSender?.IsRunning == true)
-        {
             _framebufferSender.SendFramebuffer(_contextFramebuffer, _contextFramebufferWidth, _contextFramebufferHeight, true);
-        }
 
-        // Очистка основного буфера
+        // очистка backbuffer
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
         GL.Viewport(0, 0, FramebufferSize.X, FramebufferSize.Y);
         GL.ClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -355,12 +292,7 @@ public class Window : GameWindow
         _shaderProgram.SetUniform("uProjection", _projection);
         
         foreach (var obj in _sceneObjects)
-        {
-            if (obj.MeshRenderer.IsActiveAndEnabled)
-            {
-                RenderObject(obj);
-            }
-        }
+            if (obj.MeshRenderer.IsActiveAndEnabled) RenderObject(obj);
 
         _shaderProgram.DeactiveProgram();
     }
@@ -382,22 +314,14 @@ public class Window : GameWindow
         _shaderProgram.SetUniform("uModel", modelMatrix);
 
         if (obj.VaoIndex < _vaoList.Count)
-        {
             _vaoList[obj.VaoIndex].RenderVAO(0);
-        }
-        else
-        {
-            Debug.Log($"Invalid VAO index: {obj.VaoIndex}", Debug.LogLevel.Error, true);
-        }
     }
     
     protected override void OnUnload()
     {
         if (!_initialized) return;
     
-        foreach (var vao in _vaoList)
-            vao.Dispose();
-
+        foreach (var vao in _vaoList) vao.Dispose();
         _shaderProgram.DeleteProgram();
     
         if (_renderMode == RenderMode.Context)
@@ -405,17 +329,11 @@ public class Window : GameWindow
             GL.DeleteFramebuffer(_contextFramebuffer);
             GL.DeleteTexture(_contextColorTexture);
             GL.DeleteTexture(_contextDepthTexture);
-        
 
-            if (_framebufferSender != null)
-            {
-                _framebufferSender.Dispose();
-                Debug.Log("FramebufferSenderMMF stopped", Debug.LogLevel.Info, true);
-            }
+            _framebufferSender?.Dispose();
         }
     
         _initialized = false;
-    
         base.OnUnload();
     }
 }

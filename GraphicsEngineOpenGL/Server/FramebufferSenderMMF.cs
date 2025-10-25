@@ -97,7 +97,6 @@ public class FramebufferSenderMMF : IDisposable
             long inputEventsSize = Marshal.SizeOf<InputEvent>() * MAX_INPUT_EVENTS;
             long totalSize = headerSize + _slotCount * slotSize + inputEventsSize;
 
-            // ВАЖНО: используем тот же путь, что и Consumer!
             string path = Directory.Exists("/dev/shm")
                 ? "/dev/shm/vid_stream.mmf"
                 : Path.Combine(Path.GetTempPath(), "vid_stream.mmf");
@@ -115,7 +114,6 @@ public class FramebufferSenderMMF : IDisposable
                 MemoryMappedFileAccess.ReadWrite, HandleInheritability.Inheritable, false);
             _accessor = _mmf.CreateViewAccessor(0, totalSize, MemoryMappedFileAccess.ReadWrite);
 
-            // Инициализируем заголовок
             var header = new Header
             {
                 Width = _width,
@@ -129,7 +127,6 @@ public class FramebufferSenderMMF : IDisposable
             };
             _accessor.Write(0, ref header);
 
-            // Получаем указатели для прямого доступа
             byte* basePtr = null;
             _accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref basePtr);
 
@@ -188,12 +185,29 @@ public class FramebufferSenderMMF : IDisposable
         }
     }
 
+    /// <summary>Изменить разрешение буфера/файла без пересоздания объекта.</summary>
+    public bool Resize(int width, int height)
+    {
+        if (width <= 0 || height <= 0) return false;
+
+        Console.WriteLine($"FramebufferSenderMMF: Resize requested {width}x{height}");
+
+        // Остановить, пересчитать размеры и запустить заново
+        Stop();
+
+        _width = width;
+        _height = height;
+        _stride = _width * 4;
+        _frameBuffer = new byte[_stride * _height];
+
+        return Start();
+    }
+
     public bool SendFramebuffer(int framebufferId, int width, int height, bool flipVertically = true)
     {
         if (_disposed || _mmf == null)
             return false;
 
-        // Ограничиваем частоту отправки
         var now = DateTime.Now;
         if (now - _lastFrameSent < _frameInterval)
             return true;
@@ -202,33 +216,30 @@ public class FramebufferSenderMMF : IDisposable
 
         try
         {
-            // Проверяем и обновляем размер если нужно
+            // Если пришли новые реальные размеры — подстроимся
             if (width != _width || height != _height)
             {
-                Console.WriteLine($"FramebufferSenderMMF: Resolution mismatch {width}x{height} vs {_width}x{_height}");
-                // Для простоты пока игнорируем ресайз
-                // ResizeBuffers(width, height);
+                // быстрый путь: перестроить всё под новое разрешение
+                if (!Resize(width, height))
+                    Console.WriteLine($"FramebufferSenderMMF: Resize failed, using old size {_width}x{_height}");
             }
 
-            // Читаем пиксели из framebuffer
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, framebufferId);
+            // убедимся, что локальный буфер хватает
+            int need = _stride * _height;
+            if (_frameBuffer == null || _frameBuffer.Length != need)
+                _frameBuffer = new byte[need];
 
-            GL.ReadPixels(0, 0, _width, _height,
+            // Читать по фактическим width/height!
+            GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, framebufferId);
+            GL.ReadPixels(0, 0, width, height,
                 PixelFormat.Rgba,
                 PixelType.UnsignedByte, _frameBuffer);
+            GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, 0);
 
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-
-            // Переворачиваем изображение если нужно
             if (flipVertically)
-            {
-                FlipImageVertically(_frameBuffer, _width, _height);
-            }
+                FlipImageVertically(_frameBuffer, width, height);
 
-            // Публикуем кадр через MMF
             PublishFrame(_frameBuffer);
-
-            // Обрабатываем входящие события
             ProcessInputEvents();
 
             return true;
@@ -251,13 +262,11 @@ public class FramebufferSenderMMF : IDisposable
         int writeIndex = header.WriteIndex;
         byte* destination = _context.SlotsBase + (long)writeIndex * _context.SlotSize;
 
-        // Копируем данные кадра
         fixed (byte* source = frameData)
         {
             Buffer.MemoryCopy(source, destination, _context.SlotSize, frameData.LongLength);
         }
 
-        // Обновляем заголовок
         header.FrameId = ++_currentFrameId;
         header.WriteIndex = (writeIndex + 1) % header.SlotCount;
         _context.Accessor.Write(0, ref header);
@@ -275,14 +284,11 @@ public class FramebufferSenderMMF : IDisposable
             int index = header.InputReadIndex % MAX_INPUT_EVENTS;
             long offset = index * Marshal.SizeOf<InputEvent>();
 
-            // Читаем событие
             byte* eventPtr = _context.InputEventsBase + offset;
             InputEvent inputEvent = Marshal.PtrToStructure<InputEvent>((IntPtr)eventPtr);
 
-            // Вызываем обработчик события
             OnInputEventReceived?.Invoke(inputEvent);
 
-            // Обновляем индекс чтения
             header.InputReadIndex = (header.InputReadIndex + 1);
             _context.Accessor.Write(0, ref header);
             _context.Accessor.Read(0, out header);
@@ -299,18 +305,16 @@ public class FramebufferSenderMMF : IDisposable
         int writeIndex = header.InputWriteIndex % MAX_INPUT_EVENTS;
         long offset = writeIndex * Marshal.SizeOf<InputEvent>();
 
-        // Записываем событие
         byte* eventPtr = _context.InputEventsBase + offset;
         Marshal.StructureToPtr(inputEvent, (IntPtr)eventPtr, false);
 
-        // Обновляем индекс записи
         header.InputWriteIndex = (header.InputWriteIndex + 1);
         _context.Accessor.Write(0, ref header);
     }
 
     private void FlipImageVertically(byte[] pixels, int width, int height)
     {
-        int rowSize = width * 4; // RGBA
+        int rowSize = width * 4;
         byte[] temp = new byte[rowSize];
 
         for (int y = 0; y < height / 2; y++)
@@ -318,27 +322,18 @@ public class FramebufferSenderMMF : IDisposable
             int topRow = y * rowSize;
             int bottomRow = (height - 1 - y) * rowSize;
 
-            // Swap rows
             Array.Copy(pixels, topRow, temp, 0, rowSize);
             Array.Copy(pixels, bottomRow, pixels, topRow, rowSize);
             Array.Copy(temp, 0, pixels, bottomRow, rowSize);
         }
     }
 
-    public (int width, int height) GetResolution()
-    {
-        return (_width, _height);
-    }
-
-    public long GetCurrentFrameId()
-    {
-        return _currentFrameId;
-    }
+    public (int width, int height) GetResolution() => (_width, _height);
+    public long GetCurrentFrameId() => _currentFrameId;
 
     public void Dispose()
     {
         if (_disposed) return;
-
         _disposed = true;
         Stop();
     }

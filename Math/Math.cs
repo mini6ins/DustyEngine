@@ -1,4 +1,4 @@
-﻿public static class Math
+﻿public static class Math 
 {
     public const float Pi = 3.14159265f;
 
@@ -8,7 +8,7 @@
         if (value > max) return max;
         return value;
     }
-
+    
     public static float Abs(float value)
     {
         return value >= 0f ? value : -value;
