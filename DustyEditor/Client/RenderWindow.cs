@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using ImGuiNET;
 using OpenTK.Graphics.OpenGL.Compatibility;
@@ -28,6 +29,11 @@ public class RenderWindow : GameWindow
     
     // Для отправки событий ввода
     private bool _capturingInput = false;
+    
+    // Throttling для событий мыши
+    private const int INPUT_SEND_RATE_MS = 8; // 125 Hz
+    private DateTime _lastMouseMoveSent = DateTime.MinValue;
+    private readonly HashSet<Keys> _pressedKeys = new();
 
     private const string VertexShaderSource = @"
         #version 330 core
@@ -291,6 +297,13 @@ public class RenderWindow : GameWindow
             _capturingInput = !_capturingInput;
             CursorState = _capturingInput ? CursorState.Grabbed : CursorState.Normal;
             Console.WriteLine($"[CLIENT] Input capture: {_capturingInput}");
+            
+            // Очищаем состояние клавиш при переключении режима
+            if (!_capturingInput)
+            {
+                _pressedKeys.Clear();
+            }
+            
             return;
         }
 
@@ -300,6 +313,7 @@ public class RenderWindow : GameWindow
             {
                 _capturingInput = false;
                 CursorState = CursorState.Normal;
+                _pressedKeys.Clear();
             }
             else
             {
@@ -315,8 +329,11 @@ public class RenderWindow : GameWindow
         }
 
         // Отправляем события только если захватываем ввод
-        if (_capturingInput)
+        // Дедупликация: не отправляем повторные KeyDown
+        if (_capturingInput && !_pressedKeys.Contains(e.Key))
         {
+            _pressedKeys.Add(e.Key);
+            
             _frameReceiver.SendInputEvent(new FrameReceiver.InputEvent
             {
                 Type = (int)FrameReceiver.InputEventType.KeyDown,
@@ -335,6 +352,8 @@ public class RenderWindow : GameWindow
 
         if (_capturingInput)
         {
+            _pressedKeys.Remove(e.Key);
+            
             _frameReceiver.SendInputEvent(new FrameReceiver.InputEvent
             {
                 Type = (int)FrameReceiver.InputEventType.KeyUp,
@@ -355,6 +374,14 @@ public class RenderWindow : GameWindow
 
         if (_capturingInput)
         {
+            var now = DateTime.Now;
+            
+            // Throttling: отправляем не чаще чем каждые 8ms (125 Hz)
+            if ((now - _lastMouseMoveSent).TotalMilliseconds < INPUT_SEND_RATE_MS)
+                return;
+            
+            _lastMouseMoveSent = now;
+            
             // Нормализуем координаты в диапазон [0, 1]
             float normalizedX = e.X / (float)Size.X;
             float normalizedY = e.Y / (float)Size.Y;
@@ -377,12 +404,15 @@ public class RenderWindow : GameWindow
 
         if (_capturingInput)
         {
+            float normalizedX = MouseState.Position.X / (float)Size.X;
+            float normalizedY = MouseState.Position.Y / (float)Size.Y;
+            
             _frameReceiver.SendInputEvent(new FrameReceiver.InputEvent
             {
                 Type = (int)FrameReceiver.InputEventType.MouseDown,
                 KeyCode = 0,
-                // MouseX = e.X / (float)Size.X,
-                // MouseY = e.Y / (float)Size.Y,
+                MouseX = normalizedX,
+                MouseY = normalizedY,
                 MouseButton = (int)e.Button,
                 WheelDelta = 0
             });
@@ -395,12 +425,15 @@ public class RenderWindow : GameWindow
 
         if (_capturingInput)
         {
+            float normalizedX = MouseState.Position.X / (float)Size.X;
+            float normalizedY = MouseState.Position.Y / (float)Size.Y;
+            
             _frameReceiver.SendInputEvent(new FrameReceiver.InputEvent
             {
                 Type = (int)FrameReceiver.InputEventType.MouseUp,
                 KeyCode = 0,
-                // MouseX = e.X / (float)Size.X,
-                // MouseY = e.Y / (float)Size.Y,
+                MouseX = normalizedX,
+                MouseY = normalizedY,
                 MouseButton = (int)e.Button,
                 WheelDelta = 0
             });

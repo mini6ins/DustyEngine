@@ -36,7 +36,7 @@ public class GraphicsEngineOpenGl
         Debug.Log($"Total Meshes: {_allRenderers.Count}", Debug.LogLevel.Info, true);
 
         // Инициализируем MMF sender с правильным разрешением
-        _sender = new FramebufferSenderMMF(contextWidth, contextHeight, 30);
+        _sender = new FramebufferSenderMMF(contextWidth, contextHeight, 200);
 
         if (!_sender.Start())
         {

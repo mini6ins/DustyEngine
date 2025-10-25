@@ -173,7 +173,7 @@ public class Window : GameWindow
             SetupContextFramebuffer();
 
             // если sender не передали — создадим с текущим размером контекста
-            _framebufferSender ??= new FramebufferSenderMMF(_contextFramebufferWidth, _contextFramebufferHeight);
+            _framebufferSender ??= new FramebufferSenderMMF(_contextFramebufferWidth, _contextFramebufferHeight, 60);
             if (!_framebufferSender.IsRunning)
             {
                 if (!_framebufferSender.Start())

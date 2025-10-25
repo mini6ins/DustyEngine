@@ -69,6 +69,10 @@ public class FramebufferSenderMMF : IDisposable
     private readonly TimeSpan _frameInterval;
     private long _currentFrameId = 0;
 
+    // Отдельный поток для обработки Input
+    private Thread _inputThread;
+    private volatile bool _inputThreadRunning = false;
+
     public event Action OnClientConnected;
     public event Action OnClientDisconnected;
     public event Action<string> OnError;
@@ -76,7 +80,7 @@ public class FramebufferSenderMMF : IDisposable
 
     public bool IsRunning => !_disposed && _mmf != null;
 
-    public FramebufferSenderMMF(int width = 1280, int height = 720, int targetFPS = 30)  // БЫЛО 1920x1080!
+    public FramebufferSenderMMF(int width = 1280, int height = 720, int targetFPS = 60)
     {
         _width = width;
         _height = height;
@@ -143,8 +147,19 @@ public class FramebufferSenderMMF : IDisposable
 
             Console.WriteLine($"FramebufferSenderMMF: Started successfully");
             Console.WriteLine($"  Resolution: {_width}x{_height}");
+            Console.WriteLine($"  Target FPS: {1000.0 / _frameInterval.TotalMilliseconds:F0}");
             Console.WriteLine($"  Slots: {_slotCount}");
             Console.WriteLine($"  Total size: {totalSize / 1024 / 1024:F2} MB");
+
+            // Запускаем отдельный поток для обработки input
+            _inputThreadRunning = true;
+            _inputThread = new Thread(InputProcessingLoop)
+            {
+                IsBackground = true,
+                Name = "InputProcessor",
+                Priority = ThreadPriority.Highest // Высокий приоритет для input
+            };
+            _inputThread.Start();
 
             OnClientConnected?.Invoke();
             return true;
@@ -163,6 +178,16 @@ public class FramebufferSenderMMF : IDisposable
 
         try
         {
+            // Останавливаем input поток
+            _inputThreadRunning = false;
+            if (_inputThread != null && _inputThread.IsAlive)
+            {
+                if (!_inputThread.Join(1000))
+                {
+                    Console.WriteLine("Input thread did not stop gracefully");
+                }
+            }
+
             unsafe
             {
                 if (_context.BasePtr != null)
@@ -209,7 +234,10 @@ public class FramebufferSenderMMF : IDisposable
             return false;
 
         var now = DateTime.Now;
-        if (now - _lastFrameSent < _frameInterval)
+        var elapsed = now - _lastFrameSent;
+        
+        // Адаптивный throttling: минимум 8ms между кадрами (макс 125 FPS)
+        if (elapsed < TimeSpan.FromMilliseconds(8))
             return true;
 
         _lastFrameSent = now;
@@ -219,12 +247,13 @@ public class FramebufferSenderMMF : IDisposable
             // Если пришли новые реальные размеры — подстроимся
             if (width != _width || height != _height)
             {
-                // быстрый путь: перестроить всё под новое разрешение
                 if (!Resize(width, height))
+                {
                     Console.WriteLine($"FramebufferSenderMMF: Resize failed, using old size {_width}x{_height}");
+                }
             }
 
-            // убедимся, что локальный буфер хватает
+            // Убедимся, что локальный буфер хватает
             int need = _stride * _height;
             if (_frameBuffer == null || _frameBuffer.Length != need)
                 _frameBuffer = new byte[need];
@@ -240,7 +269,8 @@ public class FramebufferSenderMMF : IDisposable
                 FlipImageVertically(_frameBuffer, width, height);
 
             PublishFrame(_frameBuffer);
-            ProcessInputEvents();
+
+            // Input обрабатывается в отдельном потоке, здесь не вызываем
 
             return true;
         }
@@ -270,6 +300,30 @@ public class FramebufferSenderMMF : IDisposable
         header.FrameId = ++_currentFrameId;
         header.WriteIndex = (writeIndex + 1) % header.SlotCount;
         _context.Accessor.Write(0, ref header);
+    }
+
+    // Отдельный поток для обработки Input событий
+    private void InputProcessingLoop()
+    {
+        Console.WriteLine("Input processing thread started");
+        
+        while (_inputThreadRunning && !_disposed)
+        {
+            try
+            {
+                ProcessInputEvents();
+                Thread.Sleep(1); // Проверяем каждую миллисекунду (1000 Hz)
+            }
+            catch (Exception ex)
+            {
+                if (_inputThreadRunning && !_disposed)
+                {
+                    Console.WriteLine($"Input processing error: {ex.Message}");
+                }
+            }
+        }
+        
+        Console.WriteLine("Input processing thread stopped");
     }
 
     private unsafe void ProcessInputEvents()
