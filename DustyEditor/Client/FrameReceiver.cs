@@ -5,6 +5,28 @@ public class FrameReceiver : IDisposable
 {
     private const int MAX_INPUT_EVENTS = 32;
 
+    public enum InputEventType : int
+    {
+        None = 0,
+        KeyDown = 1,
+        KeyUp = 2,
+        MouseMove = 3,
+        MouseDown = 4,
+        MouseUp = 5,
+        MouseWheel = 6
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 4)]
+    public struct InputEvent
+    {
+        public int Type;
+        public int KeyCode;
+        public float MouseX;
+        public float MouseY;
+        public int MouseButton;
+        public float WheelDelta;
+    }
+
     [StructLayout(LayoutKind.Sequential, Pack = 4)]
     private struct Header
     {
@@ -13,17 +35,6 @@ public class FrameReceiver : IDisposable
         public long FrameId;
         public volatile int InputWriteIndex;
         public volatile int InputReadIndex;
-    }
-
-    [StructLayout(LayoutKind.Sequential, Pack = 4)]
-    private struct InputEvent
-    {
-        public int Type;
-        public int KeyCode;
-        public float MouseX;
-        public float MouseY;
-        public int MouseButton;
-        public float WheelDelta;
     }
 
     private unsafe struct StreamContext
@@ -56,7 +67,7 @@ public class FrameReceiver : IDisposable
     // Буферизация кадров
     private FrameData? _latestFrame;
     private readonly object _frameLock = new object();
-    
+
     // Счетчики для диагностики
     private long _framesReceived = 0;
     private long _framesDropped = 0;
@@ -85,7 +96,7 @@ public class FrameReceiver : IDisposable
         try
         {
             Console.WriteLine($"Ожидание MMF файла: {_mmfPath}...");
-            
+
             // Ждём появления файла
             if (!await WaitForFileAsync(_mmfPath, TimeSpan.FromSeconds(10)))
             {
@@ -122,13 +133,15 @@ public class FrameReceiver : IDisposable
                 return false;
             await Task.Delay(100);
         }
+
         return true;
     }
 
     private unsafe void InitializeSharedMemory()
     {
         _fs = new FileStream(_mmfPath, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
-        _mmf = MemoryMappedFile.CreateFromFile(_fs, null, 0, MemoryMappedFileAccess.ReadWrite, HandleInheritability.Inheritable, false);
+        _mmf = MemoryMappedFile.CreateFromFile(_fs, null, 0, MemoryMappedFileAccess.ReadWrite,
+            HandleInheritability.Inheritable, false);
         _acc = _mmf.CreateViewAccessor(0, 0, MemoryMappedFileAccess.ReadWrite);
 
         Header hdr;
@@ -166,13 +179,13 @@ public class FrameReceiver : IDisposable
     private unsafe void ListenForFrames()
     {
         Console.WriteLine("Запуск прослушивания кадров из MMF...");
-        
+
         while (_isConnected && !_disposed)
         {
             try
             {
                 var frame = TryReadFrame();
-                
+
                 if (frame != null)
                 {
                     var frameData = new FrameData
@@ -212,6 +225,7 @@ public class FrameReceiver : IDisposable
                     Console.WriteLine($"Ошибка получения фрейма: {ex.Message}");
                     OnConnectionLost?.Invoke($"Ошибка получения фрейма: {ex.Message}");
                 }
+
                 break;
             }
         }
@@ -258,7 +272,32 @@ public class FrameReceiver : IDisposable
                 return true;
             }
         }
+
         return false;
+    }
+
+    public unsafe void SendInputEvent(InputEvent inputEvent)
+    {
+        if (!_isConnected || _disposed || _ctx.BasePtr == null) return;
+
+        try
+        {
+            Header hdr;
+            _ctx.Accessor.Read(0, out hdr);
+
+            int writeIndex = hdr.InputWriteIndex % MAX_INPUT_EVENTS;
+            long offset = writeIndex * Marshal.SizeOf<InputEvent>();
+
+            byte* eventPtr = _ctx.InputEventsBase + offset;
+            Marshal.StructureToPtr(inputEvent, (IntPtr)eventPtr, false);
+
+            hdr.InputWriteIndex = (hdr.InputWriteIndex + 1);
+            _ctx.Accessor.Write(0, ref hdr);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[CLIENT] Error sending input event: {ex.Message}");
+        }
     }
 
     public unsafe void Dispose()
@@ -275,7 +314,7 @@ public class FrameReceiver : IDisposable
         _acc?.Dispose();
         _mmf?.Dispose();
         _fs?.Dispose();
-        
+
         Console.WriteLine($"FrameReceiver закрыт. Всего получено кадров: {_framesReceived}");
     }
 }

@@ -25,6 +25,9 @@ public class RenderWindow : GameWindow
     private int _currentTextureHeight = 0;
 
     private ImGuiManager _imgui;
+    
+    // Для отправки событий ввода
+    private bool _capturingInput = false;
 
     private const string VertexShaderSource = @"
         #version 330 core
@@ -78,7 +81,7 @@ public class RenderWindow : GameWindow
 
         _imgui.GetSceneTexture = () => _displayTexture;
         _imgui.GetSceneSize = () => (_currentTextureWidth, _currentTextureHeight);
-        _imgui.OnSceneResize = (w, h) => { /* при желании отправить запрос на ресайз серверу */ };
+        _imgui.OnSceneResize = (w, h) => { /* при желании отправить запрос на ресайз сервера */ };
 
         Console.WriteLine("RenderWindow загружен, ожидаю кадры...");
     }
@@ -188,6 +191,8 @@ public class RenderWindow : GameWindow
             {
                 _currentTextureWidth = frameData.Width;
                 _currentTextureHeight = frameData.Height;
+                float aspect = (float)frameData.Width / frameData.Height;
+                Console.WriteLine($"[CLIENT] Texture resized: {frameData.Width}x{frameData.Height}, aspect: {aspect:F3}");
             }
 
             var handle = GCHandle.Alloc(frameData.PixelData, GCHandleType.Pinned);
@@ -219,11 +224,16 @@ public class RenderWindow : GameWindow
 
         _imgui.NewFrame();
 
-        ImGui.SetNextWindowSize(new System.Numerics.Vector2(360, 120), ImGuiCond.FirstUseEver);
+        ImGui.SetNextWindowSize(new System.Numerics.Vector2(360, 150), ImGuiCond.FirstUseEver);
         ImGui.Begin("Test Panel");
         ImGui.Text("Simple text :)");
         ImGui.Text($"Connected: {_frameReceiver.IsConnected}");
         ImGui.Text($"Texture: {_currentTextureWidth} x {_currentTextureHeight}");
+        
+        ImGui.Separator();
+        ImGui.Checkbox("Capture Input (Ctrl+I)", ref _capturingInput);
+        ImGui.Text(_capturingInput ? "Input: CAPTURING" : "Input: GUI mode");
+        
         if (ImGui.Button("Fullscreen (F11)"))
             WindowState = WindowState == WindowState.Fullscreen ? WindowState.Normal : WindowState.Fullscreen;
         ImGui.End();
@@ -232,11 +242,9 @@ public class RenderWindow : GameWindow
         ImGui.Begin("Frame Preview", ImGuiWindowFlags.NoCollapse);
         {
             var avail = ImGui.GetContentRegionAvail();
-            if (avail.X >= 2 && avail.Y >= 2)
+            if (avail.X >= 2 && avail.Y >= 2 && _currentTextureWidth > 0 && _currentTextureHeight > 0)
             {
-                float texW = Math.Max(1, _currentTextureWidth);
-                float texH = Math.Max(1, _currentTextureHeight);
-                float textureAspect = texW / texH;
+                float textureAspect = (float)_currentTextureWidth / _currentTextureHeight;
                 float availableAspect = avail.X / avail.Y;
 
                 System.Numerics.Vector2 displaySize;
@@ -256,11 +264,13 @@ public class RenderWindow : GameWindow
                 cursor.Y += (avail.Y - displaySize.Y) * 0.5f;
                 ImGui.SetCursorPos(cursor);
 
-                // ТЕПЕРЬ обычные UV — потому что флип сделан в sender
                 ImGui.Image(new IntPtr(_displayTexture), displaySize,
-                    new System.Numerics.Vector2(0, 1),  // ИЗМЕНЕНО!
-                    new System.Numerics.Vector2(1, 0)); // ИЗМЕНЕНО!
-                
+                    new System.Numerics.Vector2(0, 1),
+                    new System.Numerics.Vector2(1, 0));
+            }
+            else
+            {
+                ImGui.Text($"Waiting for frames... ({_currentTextureWidth}x{_currentTextureHeight})");
             }
         }
         ImGui.End();
@@ -269,13 +279,150 @@ public class RenderWindow : GameWindow
         SwapBuffers();
     }
 
+    // ========== СОБЫТИЯ КЛАВИАТУРЫ ==========
+    
     protected override void OnKeyDown(KeyboardKeyEventArgs e)
     {
         base.OnKeyDown(e);
 
-        if (e.Key == Keys.Escape) Close();
+        // Переключение режима захвата ввода
+        if (e.Key == Keys.I && e.Control)
+        {
+            _capturingInput = !_capturingInput;
+            CursorState = _capturingInput ? CursorState.Grabbed : CursorState.Normal;
+            Console.WriteLine($"[CLIENT] Input capture: {_capturingInput}");
+            return;
+        }
+
+        if (e.Key == Keys.Escape)
+        {
+            if (_capturingInput)
+            {
+                _capturingInput = false;
+                CursorState = CursorState.Normal;
+            }
+            else
+            {
+                Close();
+            }
+            return;
+        }
+
         if (e.Key == Keys.F11)
+        {
             WindowState = WindowState == WindowState.Fullscreen ? WindowState.Normal : WindowState.Fullscreen;
+            return;
+        }
+
+        // Отправляем события только если захватываем ввод
+        if (_capturingInput)
+        {
+            _frameReceiver.SendInputEvent(new FrameReceiver.InputEvent
+            {
+                Type = (int)FrameReceiver.InputEventType.KeyDown,
+                KeyCode = (int)e.Key,
+                MouseX = 0,
+                MouseY = 0,
+                MouseButton = 0,
+                WheelDelta = 0
+            });
+        }
+    }
+
+    protected override void OnKeyUp(KeyboardKeyEventArgs e)
+    {
+        base.OnKeyUp(e);
+
+        if (_capturingInput)
+        {
+            _frameReceiver.SendInputEvent(new FrameReceiver.InputEvent
+            {
+                Type = (int)FrameReceiver.InputEventType.KeyUp,
+                KeyCode = (int)e.Key,
+                MouseX = 0,
+                MouseY = 0,
+                MouseButton = 0,
+                WheelDelta = 0
+            });
+        }
+    }
+
+    // ========== СОБЫТИЯ МЫШИ ==========
+
+    protected override void OnMouseMove(MouseMoveEventArgs e)
+    {
+        base.OnMouseMove(e);
+
+        if (_capturingInput)
+        {
+            // Нормализуем координаты в диапазон [0, 1]
+            float normalizedX = e.X / (float)Size.X;
+            float normalizedY = e.Y / (float)Size.Y;
+
+            _frameReceiver.SendInputEvent(new FrameReceiver.InputEvent
+            {
+                Type = (int)FrameReceiver.InputEventType.MouseMove,
+                KeyCode = 0,
+                MouseX = normalizedX,
+                MouseY = normalizedY,
+                MouseButton = 0,
+                WheelDelta = 0
+            });
+        }
+    }
+
+    protected override void OnMouseDown(MouseButtonEventArgs e)
+    {
+        base.OnMouseDown(e);
+
+        if (_capturingInput)
+        {
+            _frameReceiver.SendInputEvent(new FrameReceiver.InputEvent
+            {
+                Type = (int)FrameReceiver.InputEventType.MouseDown,
+                KeyCode = 0,
+                // MouseX = e.X / (float)Size.X,
+                // MouseY = e.Y / (float)Size.Y,
+                MouseButton = (int)e.Button,
+                WheelDelta = 0
+            });
+        }
+    }
+
+    protected override void OnMouseUp(MouseButtonEventArgs e)
+    {
+        base.OnMouseUp(e);
+
+        if (_capturingInput)
+        {
+            _frameReceiver.SendInputEvent(new FrameReceiver.InputEvent
+            {
+                Type = (int)FrameReceiver.InputEventType.MouseUp,
+                KeyCode = 0,
+                // MouseX = e.X / (float)Size.X,
+                // MouseY = e.Y / (float)Size.Y,
+                MouseButton = (int)e.Button,
+                WheelDelta = 0
+            });
+        }
+    }
+
+    protected override void OnMouseWheel(MouseWheelEventArgs e)
+    {
+        base.OnMouseWheel(e);
+
+        if (_capturingInput)
+        {
+            _frameReceiver.SendInputEvent(new FrameReceiver.InputEvent
+            {
+                Type = (int)FrameReceiver.InputEventType.MouseWheel,
+                KeyCode = 0,
+                MouseX = 0,
+                MouseY = 0,
+                MouseButton = 0,
+                WheelDelta = e.OffsetY
+            });
+        }
     }
 
     protected override void OnUnload()

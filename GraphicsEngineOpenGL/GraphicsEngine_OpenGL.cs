@@ -66,37 +66,37 @@ public class GraphicsEngineOpenGl
        _window.Run();
    }
 
-    private void HandleRemoteInput(FramebufferSenderMMF.InputEvent inputEvent)
-    {
-        // Здесь можно обработать входящие события от удаленного клиента
-        switch (inputEvent.Type)
-        {
-            case FramebufferSenderMMF.InputEventType.KeyDown:
-                Debug.Log($"Remote KeyDown: {inputEvent.KeyCode}", Debug.LogLevel.Info, true);
-                // Передаем событие в Input систему или обрабатываем напрямую
-                break;
+   private void HandleRemoteInput(FramebufferSenderMMF.InputEvent inputEvent)
+   {
+       switch (inputEvent.Type)
+       {
+           case FramebufferSenderMMF.InputEventType.KeyDown:
+               // Можно интегрировать с вашей системой Input
+               Console.WriteLine($"[SERVER] Remote KeyDown: {inputEvent.KeyCode}");
+               break;
 
-            case FramebufferSenderMMF.InputEventType.KeyUp:
-                Debug.Log($"Remote KeyUp: {inputEvent.KeyCode}", Debug.LogLevel.Info, true);
-                break;
+           case FramebufferSenderMMF.InputEventType.KeyUp:
+               Console.WriteLine($"[SERVER] Remote KeyUp: {inputEvent.KeyCode}");
+               break;
 
-            case FramebufferSenderMMF.InputEventType.MouseMove:
-                Debug.Log($"Remote MouseMove: ({inputEvent.MouseX}, {inputEvent.MouseY})", Debug.LogLevel.Info, true);
-                break;
+           case FramebufferSenderMMF.InputEventType.MouseMove:
+               // inputEvent.MouseX и MouseY находятся в диапазоне [0, 1]
+               Console.WriteLine($"[SERVER] Remote MouseMove: ({inputEvent.MouseX:F3}, {inputEvent.MouseY:F3})");
+               break;
 
-            case FramebufferSenderMMF.InputEventType.MouseDown:
-                Debug.Log($"Remote MouseDown: Button {inputEvent.MouseButton}", Debug.LogLevel.Info, true);
-                break;
+           case FramebufferSenderMMF.InputEventType.MouseDown:
+               Console.WriteLine($"[SERVER] Remote MouseDown: Button {inputEvent.MouseButton} at ({inputEvent.MouseX:F3}, {inputEvent.MouseY:F3})");
+               break;
 
-            case FramebufferSenderMMF.InputEventType.MouseUp:
-                Debug.Log($"Remote MouseUp: Button {inputEvent.MouseButton}", Debug.LogLevel.Info, true);
-                break;
+           case FramebufferSenderMMF.InputEventType.MouseUp:
+               Console.WriteLine($"[SERVER] Remote MouseUp: Button {inputEvent.MouseButton}");
+               break;
 
-            case FramebufferSenderMMF.InputEventType.MouseWheel:
-                Debug.Log($"Remote MouseWheel: {inputEvent.WheelDelta}", Debug.LogLevel.Info, true);
-                break;
-        }
-    }
+           case FramebufferSenderMMF.InputEventType.MouseWheel:
+               Console.WriteLine($"[SERVER] Remote MouseWheel: {inputEvent.WheelDelta:F2}");
+               break;
+       }
+   }
 
     public void AddRenderer(MeshRenderer meshRenderer) => _window?.AddRenderer(meshRenderer);
 
