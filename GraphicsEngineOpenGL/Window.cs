@@ -153,7 +153,7 @@ public class Window : GameWindow
     protected override void OnLoad()
     {
         base.OnLoad();
-        Input.Update(KeyboardState);
+            //       Input.Update(KeyboardState);
 
         GL.ClearColor(173/255f, 216/255f, 230/255f, 1.0f);
         GL.Enable(EnableCap.CullFace);
@@ -223,29 +223,37 @@ public class Window : GameWindow
     OnFramebufferTextureChanged?.Invoke(_contextColorTexture);
 }
 
-    protected override void OnUpdateFrame(FrameEventArgs args)
+protected override void OnUpdateFrame(FrameEventArgs args)
+{
+    base.OnUpdateFrame(args);
+    
+    // ========== ВАЖНО: УСЛОВНОЕ ОБНОВЛЕНИЕ ==========
+    // В Context режиме НЕ обновляем локальный Input (используем удалённый)
+    if (_renderMode != RenderMode.Context)
     {
-        base.OnUpdateFrame(args);
         Input.Update(KeyboardState);
-        float deltaTime = (float)args.Time;
-
-        _frameTime += deltaTime;
-        _fps++;
-        if (_frameTime >= 1.0f)
-        {
-            Title = $"{_windowName} : FPS - {_fps} | Objects: {_sceneObjects.Count} | Mode: {_renderMode}";
-            _frameTime = 0.0f;
-            _fps = 0;
-        }
-
-        if (Input.IsKeyDown(KeyCode.F1)) GL.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Line);
-        if (Input.IsKeyDown(KeyCode.F2)) GL.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Fill);
     }
+    // ========== КОНЕЦ ИЗМЕНЕНИЯ ==========
+    
+    float deltaTime = (float)args.Time;
+
+    _frameTime += deltaTime;
+    _fps++;
+    if (_frameTime >= 1.0f)
+    {
+        Title = $"{_windowName} : FPS - {_fps} | Objects: {_sceneObjects.Count} | Mode: {_renderMode}";
+        _frameTime = 0.0f;
+        _fps = 0;
+    }
+
+    if (Input.IsKeyDown(KeyCode.F1)) GL.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Line);
+    if (Input.IsKeyDown(KeyCode.F2)) GL.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Fill);
+}
 
     protected override void OnMouseMove(MouseMoveEventArgs e)
     {
         base.OnMouseMove(e);
-        Input.UpdateMouse(e.X, e.Y);
+     //   Input.UpdateMouse(e.X, e.Y);
     }
 
     protected override void OnRenderFrame(FrameEventArgs args)
