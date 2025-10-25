@@ -17,8 +17,7 @@ public class GraphicsEngineOpenGl
         string vertShaderPath, string fragShaderPath, bool vsync, RenderMode renderMode, bool useMMF = true)
     {
         Debug.Log("GraphicsEngineOpenGl is working", Debug.LogLevel.Info, true);
-
-        // ИСПОЛЬЗУЕМ 16:9 независимо от переданного resolution
+        
         int contextWidth = 1280;
         int contextHeight = 720;
 
@@ -34,8 +33,7 @@ public class GraphicsEngineOpenGl
         }
 
         Debug.Log($"Total Meshes: {_allRenderers.Count}", Debug.LogLevel.Info, true);
-
-        // Инициализируем MMF sender с правильным разрешением
+        
         _sender = new FramebufferSenderMMF(contextWidth, contextHeight, 200);
 
         if (!_sender.Start())
@@ -47,14 +45,11 @@ public class GraphicsEngineOpenGl
             Debug.Log($"FramebufferSenderMMF started: {contextWidth}x{contextHeight}", Debug.LogLevel.Info, true);
             _sender.OnInputEventReceived += HandleRemoteInput;
             
-            // ========== ДОБАВЬТЕ ЭТО ==========
-            // Включаем режим удалённого ввода только в Context режиме
             if (renderMode == RenderMode.Context)
             {
                 Utils.Input.SetRemoteInputMode(true);
                 Debug.Log("Remote input mode ENABLED", Debug.LogLevel.Info, true);
             }
-            // ========== КОНЕЦ ДОБАВЛЕНИЯ ==========
         }
 
         _window = new Window(GameWindowSettings.Default, nativeWindowSettings, _allRenderers, vertShaderPath,
@@ -87,7 +82,6 @@ public class GraphicsEngineOpenGl
 
             case FramebufferSenderMMF.InputEventType.MouseMove:
                 Utils.Input.ProcessRemoteMouseMove(inputEvent.MouseX, inputEvent.MouseY);
-                // Не логируем каждое движение мыши
                 break;
 
             case FramebufferSenderMMF.InputEventType.MouseDown:
@@ -107,9 +101,4 @@ public class GraphicsEngineOpenGl
     public void AddRenderer(MeshRenderer meshRenderer) => _window?.AddRenderer(meshRenderer);
 
     public bool RemoveRenderer(int objectId) => _window?.RemoveRenderer(objectId) ?? false;
-
-    public void Dispose()
-    {
-        _sender?.Dispose();
-    }
 }

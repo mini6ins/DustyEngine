@@ -1,17 +1,10 @@
-﻿using System;
-using OpenTK.Graphics.OpenGL.Compatibility;
-using DustyEngine;
-using DustyEngine.Components;
+﻿using DustyEngine.Components;
 using GraphicsEngineOpenGL.RenderUtils;
+using OpenTK.Graphics.OpenGL.Compatibility;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using Utils;
-
-// Алиасы
-using Vec3 = OpenTK.Mathematics.Vector3;
-using Mat4 = OpenTK.Mathematics.Matrix4;
-using MathHelper = OpenTK.Mathematics.MathHelper;
 
 namespace GraphicsEngineOpenGL;
 
@@ -19,7 +12,7 @@ public class RenderableObject
 {
     public int VaoIndex;
     public Transform Transform = new();
-    public MeshRenderer MeshRenderer; 
+    public MeshRenderer MeshRenderer;
 }
 
 public enum RenderMode
@@ -47,18 +40,22 @@ public class Window : GameWindow
     private int _contextFramebuffer;
     private int _contextColorTexture;
     private int _contextDepthTexture;
-    private int _contextFramebufferWidth = 1280;  // БЫЛО 800!
-    private int _contextFramebufferHeight = 720;   // БЫЛО 600!
+    private int _contextFramebufferWidth = 1280;
+    private int _contextFramebufferHeight = 720;
 
     private bool _initialized = false;
-    
+
     public event Action<int>? OnFramebufferTextureChanged;
-    
+
     private FramebufferSenderMMF? _framebufferSender;
+
+    // Высокочастотное обновление Input
+    private Thread _inputUpdateThread;
+    private volatile bool _inputThreadRunning = false;
 
     public Window(GameWindowSettings gws, NativeWindowSettings nws, List<MeshRenderer> allRenderers,
         string vertShaderPath, string fragShaderPath, string windowName,
-        Camera camera, bool isVsync = true, CursorState cursorState = CursorState.Normal, 
+        Camera camera, bool isVsync = true, CursorState cursorState = CursorState.Normal,
         RenderMode renderMode = RenderMode.Context, FramebufferSenderMMF framebufferSenderMmf = null)
         : base(gws, nws)
     {
@@ -68,11 +65,11 @@ public class Window : GameWindow
         _cursorState = cursorState;
         _renderMode = renderMode;
         _framebufferSender = framebufferSenderMmf;
-        
+
         VSync = isVsync ? VSyncMode.On : VSyncMode.Off;
 
         _shaderProgram = new ShaderProgram(vertShaderPath, fragShaderPath);
-        
+
         foreach (var meshRenderer in allRenderers)
             AddRenderer(meshRenderer);
     }
@@ -96,7 +93,7 @@ public class Window : GameWindow
         });
         return _sceneObjects.Count - 1;
     }
-    
+
     public bool RemoveRenderer(int objectId)
     {
         if (objectId < 0 || objectId >= _sceneObjects.Count) return false;
@@ -107,55 +104,19 @@ public class Window : GameWindow
             _vaoList[obj.VaoIndex].Dispose();
             _vaoList.RemoveAt(obj.VaoIndex);
             for (int i = 0; i < _sceneObjects.Count; i++)
-                if (_sceneObjects[i].VaoIndex > obj.VaoIndex) _sceneObjects[i].VaoIndex--;
+                if (_sceneObjects[i].VaoIndex > obj.VaoIndex)
+                    _sceneObjects[i].VaoIndex--;
         }
 
         _sceneObjects.RemoveAt(objectId);
         return true;
     }
 
-    public int GetContextTexture() => _contextColorTexture;
-    public (int width, int height) GetContextSize() => (_contextFramebufferWidth, _contextFramebufferHeight);
-
-    public void ResizeContext(int width, int height)
-    {
-        if (_renderMode != RenderMode.Context) return;
-        
-        int newWidth = System.Math.Max(64, width);
-        int newHeight = System.Math.Max(64, height);
-        
-        float widthDiff = Math.Abs(newWidth - _contextFramebufferWidth) / (float)_contextFramebufferWidth;
-        float heightDiff = Math.Abs(newHeight - _contextFramebufferHeight) / (float)_contextFramebufferHeight;
-        
-        if (widthDiff > 0.1f || heightDiff > 0.1f)
-        {
-            _contextFramebufferWidth = newWidth;
-            _contextFramebufferHeight = newHeight;
-
-            GL.BindTexture(TextureTarget.Texture2d, _contextColorTexture);
-            GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba8,
-                newWidth, newHeight, 0, PixelFormat.Rgba, PixelType.UnsignedByte, IntPtr.Zero);
-
-            GL.BindTexture(TextureTarget.Texture2d, _contextDepthTexture);
-            GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.DepthComponent24,
-                newWidth, newHeight, 0, PixelFormat.DepthComponent, PixelType.Float, IntPtr.Zero);
-
-            _camera.AspectRatio = (float)newWidth / newHeight;
-            _projection = _camera.GetProjectionMatrix();
-
-            // !!! синхронизируем sender
-            _framebufferSender?.Resize(newWidth, newHeight);
-                
-            OnFramebufferTextureChanged?.Invoke(_contextColorTexture);
-        }
-    }
-
     protected override void OnLoad()
     {
         base.OnLoad();
-            //       Input.Update(KeyboardState);
 
-        GL.ClearColor(173/255f, 216/255f, 230/255f, 1.0f);
+        GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
         GL.Enable(EnableCap.CullFace);
         GL.CullFace(TriangleFace.Back);
         GL.FrontFace(FrontFaceDirection.Ccw);
@@ -164,96 +125,129 @@ public class Window : GameWindow
 
         CursorState = _cursorState;
         GL.Viewport(0, 0, FramebufferSize.X, FramebufferSize.Y);
-    
-        _camera.AspectRatio = Size.X / (float)Size.Y; 
+
+        _camera.AspectRatio = Size.X / (float)Size.Y;
         _projection = _camera.GetProjectionMatrix();
 
         if (_renderMode == RenderMode.Context)
         {
             SetupContextFramebuffer();
 
-            // если sender не передали — создадим с текущим размером контекста
             _framebufferSender ??= new FramebufferSenderMMF(_contextFramebufferWidth, _contextFramebufferHeight, 60);
             if (!_framebufferSender.IsRunning)
             {
                 if (!_framebufferSender.Start())
                     Console.WriteLine("Failed to start FramebufferSenderMMF");
             }
+
+            // Запускаем высокочастотное обновление Input (1000 Hz)
+            _inputThreadRunning = true;
+            _inputUpdateThread = new Thread(HighFrequencyInputUpdate)
+            {
+                IsBackground = true,
+                Name = "InputUpdateThread",
+                Priority = ThreadPriority.Highest
+            };
+            _inputUpdateThread.Start();
+            Console.WriteLine("[SERVER] High-frequency input update thread started (1000 Hz)");
         }
-    
+
         _initialized = true;
     }
 
-  private void SetupContextFramebuffer()
-{
-    _contextFramebuffer = GL.GenFramebuffer();
-    GL.BindFramebuffer(FramebufferTarget.Framebuffer, _contextFramebuffer);
-
-    _contextColorTexture = GL.GenTexture();
-    GL.BindTexture(TextureTarget.Texture2d, _contextColorTexture);
-    GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba8, 
-        _contextFramebufferWidth, _contextFramebufferHeight, 0, PixelFormat.Rgba, PixelType.UnsignedByte, IntPtr.Zero);
-    GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-    GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-    GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0,
-        TextureTarget.Texture2d, _contextColorTexture, 0);
-
-    _contextDepthTexture = GL.GenTexture();
-    GL.BindTexture(TextureTarget.Texture2d, _contextDepthTexture);
-    GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.DepthComponent24,
-        _contextFramebufferWidth, _contextFramebufferHeight, 0, PixelFormat.DepthComponent, PixelType.Float, IntPtr.Zero);
-    GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-    GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-    GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment,
-        TextureTarget.Texture2d, _contextDepthTexture, 0);
-
-    if (GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer) != FramebufferStatus.FramebufferComplete)
-        throw new Exception("Context framebuffer не готов!");
-
-    GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-    
-    // ВАЖНО: обновляем aspect ratio камеры
-    _camera.AspectRatio = (float)_contextFramebufferWidth / _contextFramebufferHeight;
-    _projection = _camera.GetProjectionMatrix();
-    
-    // ЛОГИРОВАНИЕ
-    float aspect = (float)_contextFramebufferWidth / _contextFramebufferHeight;
-    Console.WriteLine($"[SERVER] Context framebuffer: {_contextFramebufferWidth}x{_contextFramebufferHeight}, aspect: {aspect:F3}");
-    
-    OnFramebufferTextureChanged?.Invoke(_contextColorTexture);
-}
-
-protected override void OnUpdateFrame(FrameEventArgs args)
-{
-    base.OnUpdateFrame(args);
-    
-    // ========== ВАЖНО: УСЛОВНОЕ ОБНОВЛЕНИЕ ==========
-    // В Context режиме НЕ обновляем локальный Input (используем удалённый)
-    if (_renderMode != RenderMode.Context)
+    private void SetupContextFramebuffer()
     {
+        _contextFramebuffer = GL.GenFramebuffer();
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, _contextFramebuffer);
+
+        _contextColorTexture = GL.GenTexture();
+        GL.BindTexture(TextureTarget.Texture2d, _contextColorTexture);
+        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba8,
+            _contextFramebufferWidth, _contextFramebufferHeight, 0, PixelFormat.Rgba, PixelType.UnsignedByte,
+            IntPtr.Zero);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0,
+            TextureTarget.Texture2d, _contextColorTexture, 0);
+
+        _contextDepthTexture = GL.GenTexture();
+        GL.BindTexture(TextureTarget.Texture2d, _contextDepthTexture);
+        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.DepthComponent24,
+            _contextFramebufferWidth, _contextFramebufferHeight, 0, PixelFormat.DepthComponent, PixelType.Float,
+            IntPtr.Zero);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment,
+            TextureTarget.Texture2d, _contextDepthTexture, 0);
+
+        if (GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer) != FramebufferStatus.FramebufferComplete)
+            throw new Exception("Context framebuffer не готов!");
+
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+
+        _camera.AspectRatio = (float)_contextFramebufferWidth / _contextFramebufferHeight;
+        _projection = _camera.GetProjectionMatrix();
+
+        float aspect = (float)_contextFramebufferWidth / _contextFramebufferHeight;
+        Console.WriteLine(
+            $"[SERVER] Context framebuffer: {_contextFramebufferWidth}x{_contextFramebufferHeight}, aspect: {aspect:F3}");
+
+        OnFramebufferTextureChanged?.Invoke(_contextColorTexture);
+    }
+
+    // НОВЫЙ МЕТОД: Высокочастотное обновление Input (1000 Hz)
+    private void HighFrequencyInputUpdate()
+    {
+        while (_inputThreadRunning && !IsExiting)
+        {
+            try
+            {
+                Input.Update();
+                Thread.Sleep(1); // 1000 Hz
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[SERVER] Input update error: {ex.Message}");
+            }
+        }
+
+        Console.WriteLine("[SERVER] Input update thread stopped");
+    }
+
+    protected override void OnUpdateFrame(FrameEventArgs args)
+    {
+        base.OnUpdateFrame(args);
+
+        // В Standalone режиме обновляем Input как обычно
+        if (_renderMode != RenderMode.Context)
+        {
+            Input.Update(KeyboardState);
+        }
+
         Input.Update(KeyboardState);
-    }
-    // ========== КОНЕЦ ИЗМЕНЕНИЯ ==========
-    
-    float deltaTime = (float)args.Time;
+        // В Context режиме Input обновляется в отдельном потоке
 
-    _frameTime += deltaTime;
-    _fps++;
-    if (_frameTime >= 1.0f)
-    {
-        Title = $"{_windowName} : FPS - {_fps} | Objects: {_sceneObjects.Count} | Mode: {_renderMode}";
-        _frameTime = 0.0f;
-        _fps = 0;
-    }
+        float deltaTime = (float)args.Time;
 
-    if (Input.IsKeyDown(KeyCode.F1)) GL.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Line);
-    if (Input.IsKeyDown(KeyCode.F2)) GL.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Fill);
-}
+        _frameTime += deltaTime;
+        _fps++;
+        if (_frameTime >= 1.0f)
+        {
+            Title = $"{_windowName} : FPS - {_fps} | Objects: {_sceneObjects.Count} | Mode: {_renderMode}";
+            _frameTime = 0.0f;
+            _fps = 0;
+        }
+
+        if (Input.IsKeyDown(KeyCode.F1)) GL.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Line);
+        if (Input.IsKeyDown(KeyCode.F2)) GL.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Fill);
+    }
 
     protected override void OnMouseMove(MouseMoveEventArgs e)
     {
         base.OnMouseMove(e);
-     //   Input.UpdateMouse(e.X, e.Y);
+        // Раскомментируйте для Standalone режима:
+        if (_renderMode != RenderMode.Context)
+            Input.UpdateMouse(e.X, e.Y);
     }
 
     protected override void OnRenderFrame(FrameEventArgs args)
@@ -278,7 +272,8 @@ protected override void OnUpdateFrame(FrameEventArgs args)
 
         // отправляем БЕЗ флипа
         if (_framebufferSender?.IsRunning == true)
-            _framebufferSender.SendFramebuffer(_contextFramebuffer, _contextFramebufferWidth, _contextFramebufferHeight, false);  // false!
+            _framebufferSender.SendFramebuffer(_contextFramebuffer, _contextFramebufferWidth, _contextFramebufferHeight,
+                false);
 
         // очистка backbuffer
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
@@ -286,14 +281,14 @@ protected override void OnUpdateFrame(FrameEventArgs args)
         GL.ClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
     }
-    
+
     public int GetContextFramebufferId() => _contextFramebuffer;
-    
+
     private void RenderStandalone()
     {
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
         GL.Viewport(0, 0, FramebufferSize.X, FramebufferSize.Y);
-        
+
         GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
@@ -307,9 +302,10 @@ protected override void OnUpdateFrame(FrameEventArgs args)
         var viewMatrix = _camera.GetViewMatrix();
         _shaderProgram.SetUniform("uView", viewMatrix);
         _shaderProgram.SetUniform("uProjection", _projection);
-        
+
         foreach (var obj in _sceneObjects)
-            if (obj.MeshRenderer.IsActiveAndEnabled) RenderObject(obj);
+            if (obj.MeshRenderer.IsActiveAndEnabled)
+                RenderObject(obj);
 
         _shaderProgram.DeactiveProgram();
     }
@@ -317,7 +313,7 @@ protected override void OnUpdateFrame(FrameEventArgs args)
     private void RenderObject(RenderableObject obj)
     {
         var transform = obj.Transform;
-        
+
         Matrix4 rotation =
             Matrix4.CreateRotationX(transform.GlobalRotation.X) *
             Matrix4.CreateRotationY(transform.GlobalRotation.Y) *
@@ -333,14 +329,24 @@ protected override void OnUpdateFrame(FrameEventArgs args)
         if (obj.VaoIndex < _vaoList.Count)
             _vaoList[obj.VaoIndex].RenderVAO(0);
     }
-    
+
     protected override void OnUnload()
     {
         if (!_initialized) return;
-    
+
+        // Останавливаем Input поток
+        _inputThreadRunning = false;
+        if (_inputUpdateThread != null && _inputUpdateThread.IsAlive)
+        {
+            if (!_inputUpdateThread.Join(1000))
+            {
+                Console.WriteLine("[SERVER] Input update thread did not stop gracefully");
+            }
+        }
+
         foreach (var vao in _vaoList) vao.Dispose();
         _shaderProgram.DeleteProgram();
-    
+
         if (_renderMode == RenderMode.Context)
         {
             GL.DeleteFramebuffer(_contextFramebuffer);
@@ -349,7 +355,7 @@ protected override void OnUpdateFrame(FrameEventArgs args)
 
             _framebufferSender?.Dispose();
         }
-    
+
         _initialized = false;
         base.OnUnload();
     }

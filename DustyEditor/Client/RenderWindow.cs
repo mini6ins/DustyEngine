@@ -34,6 +34,11 @@ public class RenderWindow : GameWindow
     private const int INPUT_SEND_RATE_MS = 8; // 125 Hz
     private DateTime _lastMouseMoveSent = DateTime.MinValue;
     private readonly HashSet<Keys> _pressedKeys = new();
+    
+    // Для отслеживания дельты мыши
+    private float _lastMouseX = 0;
+    private float _lastMouseY = 0;
+    private bool _firstMouseMove = true;
 
     private const string VertexShaderSource = @"
         #version 330 core
@@ -368,6 +373,8 @@ public class RenderWindow : GameWindow
 
     // ========== СОБЫТИЯ МЫШИ ==========
 
+
+
     protected override void OnMouseMove(MouseMoveEventArgs e)
     {
         base.OnMouseMove(e);
@@ -375,23 +382,38 @@ public class RenderWindow : GameWindow
         if (_capturingInput)
         {
             var now = DateTime.Now;
-            
-            // Throttling: отправляем не чаще чем каждые 8ms (125 Hz)
+        
             if ((now - _lastMouseMoveSent).TotalMilliseconds < INPUT_SEND_RATE_MS)
                 return;
-            
+        
             _lastMouseMoveSent = now;
-            
-            // Нормализуем координаты в диапазон [0, 1]
+        
             float normalizedX = e.X / (float)Size.X;
             float normalizedY = e.Y / (float)Size.Y;
+
+            // ✅ ВЫЧИСЛЯЕМ ДЕЛЬТУ на клиенте
+            float deltaX = 0;
+            float deltaY = 0;
+        
+            if (!_firstMouseMove)
+            {
+                deltaX = normalizedX - _lastMouseX;
+                deltaY = normalizedY - _lastMouseY;
+            }
+            else
+            {
+                _firstMouseMove = false;
+            }
+        
+            _lastMouseX = normalizedX;
+            _lastMouseY = normalizedY;
 
             _frameReceiver.SendInputEvent(new FrameReceiver.InputEvent
             {
                 Type = (int)FrameReceiver.InputEventType.MouseMove,
                 KeyCode = 0,
-                MouseX = normalizedX,
-                MouseY = normalizedY,
+                MouseX = deltaX,  // ✅ Теперь это дельта!
+                MouseY = deltaY,  // ✅ Теперь это дельта!
                 MouseButton = 0,
                 WheelDelta = 0
             });

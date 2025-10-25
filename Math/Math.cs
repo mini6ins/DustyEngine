@@ -1,4 +1,4 @@
-﻿public static class Math 
+﻿public static partial class Math 
 {
     public const float Pi = 3.14159265f;
 

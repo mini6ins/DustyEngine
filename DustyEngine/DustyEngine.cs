@@ -1,7 +1,4 @@
-﻿using DustyEngine;
-using DustyEngine.Components;
-using DustyEngine.Core.Converters;
-using DustyEngine.Engine.Math.Vectors;
+﻿using DustyEngine.Components;
 using DustyEngine.Scene;
 using GraphicsEngineOpenGL;
 
@@ -10,12 +7,12 @@ namespace DustyEngine
     public class DustyEngine
     {
         public static string ProjectFolderPath { get; set; }
-        private static ProjectSettings settings = new ProjectSettings();
+        private static ProjectSettings settings = new(); 
         private static GraphicsEngineOpenGl graphicsEngineOpenGl;
 
         private static Action<MeshRenderer> AddRenderer = (renderer) => { graphicsEngineOpenGl.AddRenderer(renderer); };
 
-        public void StartEngine(string path, RenderMode  renderMode)
+        public void StartEngine(string path, RenderMode renderMode)
         {
             Debug.ClearLogs();
 
@@ -27,7 +24,7 @@ namespace DustyEngine
 
             ProjectFolderPath = path;
 
-            settings =  ProjectSettings.DeserializeProjectSettings(ProjectFolderPath);
+            settings = ProjectSettings.DeserializeProjectSettings(ProjectFolderPath);
 
             Debug.EnableDebugMode(settings.Debug);
             Debug.SetLogLevel(settings.LogLevel);
@@ -51,7 +48,6 @@ namespace DustyEngine
                 }
             }
 
-
             GameLoop.Initialize(loadedScene);
             Time.Init();
             graphicsEngineOpenGl = new GraphicsEngineOpenGl();
@@ -63,13 +59,10 @@ namespace DustyEngine
                 GameLoop.ExecuteFrame(loadedScene);
                 Time.Tick();
             };
-
-
+            
             graphicsEngineOpenGl.RunMainLoop(loadedScene, gameLoopAction,
                 settings.ScreenSize, settings.ProjectName, settings.PathToVertShader,
                 settings.PathToFragShader, settings.Vsync, renderMode);
         }
-
-        
     }
 }

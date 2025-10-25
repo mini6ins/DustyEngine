@@ -1,5 +1,3 @@
-using System;
-using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
 using OpenTK.Graphics.OpenGL.Compatibility;
@@ -69,7 +67,6 @@ public class FramebufferSenderMMF : IDisposable
     private readonly TimeSpan _frameInterval;
     private long _currentFrameId = 0;
 
-    // Отдельный поток для обработки Input
     private Thread _inputThread;
     private volatile bool _inputThreadRunning = false;
 
@@ -84,7 +81,7 @@ public class FramebufferSenderMMF : IDisposable
     {
         _width = width;
         _height = height;
-        _stride = width * 4; // RGBA
+        _stride = width * 4;
         _frameBuffer = new byte[_stride * _height];
         _frameInterval = TimeSpan.FromMilliseconds(1000.0 / targetFPS);
     }
@@ -104,8 +101,6 @@ public class FramebufferSenderMMF : IDisposable
             string path = Directory.Exists("/dev/shm")
                 ? "/dev/shm/vid_stream.mmf"
                 : Path.Combine(Path.GetTempPath(), "vid_stream.mmf");
-
-            Console.WriteLine($"FramebufferSenderMMF: Creating MMF at {path}");
 
             _fileStream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
             if (_fileStream.Length != totalSize)
@@ -151,13 +146,12 @@ public class FramebufferSenderMMF : IDisposable
             Console.WriteLine($"  Slots: {_slotCount}");
             Console.WriteLine($"  Total size: {totalSize / 1024 / 1024:F2} MB");
 
-            // Запускаем отдельный поток для обработки input
             _inputThreadRunning = true;
             _inputThread = new Thread(InputProcessingLoop)
             {
                 IsBackground = true,
                 Name = "InputProcessor",
-                Priority = ThreadPriority.Highest // Высокий приоритет для input
+                Priority = ThreadPriority.Highest
             };
             _inputThread.Start();
 
@@ -166,27 +160,18 @@ public class FramebufferSenderMMF : IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"FramebufferSenderMMF: Error starting: {ex.Message}");
             OnError?.Invoke($"Error starting: {ex.Message}");
             return false;
         }
     }
 
-    public void Stop()
+    private void Stop()
     {
         if (_disposed) return;
 
         try
         {
-            // Останавливаем input поток
             _inputThreadRunning = false;
-            if (_inputThread != null && _inputThread.IsAlive)
-            {
-                if (!_inputThread.Join(1000))
-                {
-                    Console.WriteLine("Input thread did not stop gracefully");
-                }
-            }
 
             unsafe
             {
@@ -202,31 +187,13 @@ public class FramebufferSenderMMF : IDisposable
             _fileStream?.Dispose();
 
             OnClientDisconnected?.Invoke();
-            Console.WriteLine("FramebufferSenderMMF: Stopped");
         }
-        catch (Exception ex)
+        catch
         {
-            Console.WriteLine($"FramebufferSenderMMF: Error stopping: {ex.Message}");
+            // ignored
         }
     }
 
-    /// <summary>Изменить разрешение буфера/файла без пересоздания объекта.</summary>
-    public bool Resize(int width, int height)
-    {
-        if (width <= 0 || height <= 0) return false;
-
-        Console.WriteLine($"FramebufferSenderMMF: Resize requested {width}x{height}");
-
-        // Остановить, пересчитать размеры и запустить заново
-        Stop();
-
-        _width = width;
-        _height = height;
-        _stride = _width * 4;
-        _frameBuffer = new byte[_stride * _height];
-
-        return Start();
-    }
 
     public bool SendFramebuffer(int framebufferId, int width, int height, bool flipVertically = true)
     {
@@ -234,31 +201,15 @@ public class FramebufferSenderMMF : IDisposable
             return false;
 
         var now = DateTime.Now;
-        var elapsed = now - _lastFrameSent;
-        
-        // Адаптивный throttling: минимум 8ms между кадрами (макс 125 FPS)
-        if (elapsed < TimeSpan.FromMilliseconds(8))
-            return true;
 
         _lastFrameSent = now;
 
         try
         {
-            // Если пришли новые реальные размеры — подстроимся
-            if (width != _width || height != _height)
-            {
-                if (!Resize(width, height))
-                {
-                    Console.WriteLine($"FramebufferSenderMMF: Resize failed, using old size {_width}x{_height}");
-                }
-            }
-
-            // Убедимся, что локальный буфер хватает
             int need = _stride * _height;
             if (_frameBuffer == null || _frameBuffer.Length != need)
                 _frameBuffer = new byte[need];
 
-            // Читать по фактическим width/height!
             GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, framebufferId);
             GL.ReadPixels(0, 0, width, height,
                 PixelFormat.Rgba,
@@ -269,8 +220,6 @@ public class FramebufferSenderMMF : IDisposable
                 FlipImageVertically(_frameBuffer, width, height);
 
             PublishFrame(_frameBuffer);
-
-            // Input обрабатывается в отдельном потоке, здесь не вызываем
 
             return true;
         }
@@ -302,28 +251,22 @@ public class FramebufferSenderMMF : IDisposable
         _context.Accessor.Write(0, ref header);
     }
 
-    // Отдельный поток для обработки Input событий
     private void InputProcessingLoop()
     {
-        Console.WriteLine("Input processing thread started");
-        
         while (_inputThreadRunning && !_disposed)
         {
             try
             {
                 ProcessInputEvents();
-                Thread.Sleep(1); // Проверяем каждую миллисекунду (1000 Hz)
+                Thread.Sleep(1);
             }
             catch (Exception ex)
             {
                 if (_inputThreadRunning && !_disposed)
                 {
-                    Console.WriteLine($"Input processing error: {ex.Message}");
                 }
             }
         }
-        
-        Console.WriteLine("Input processing thread stopped");
     }
 
     private unsafe void ProcessInputEvents()
@@ -349,22 +292,6 @@ public class FramebufferSenderMMF : IDisposable
         }
     }
 
-    public unsafe void SendInputEvent(InputEvent inputEvent)
-    {
-        if (_disposed || _context.BasePtr == null) return;
-
-        Header header;
-        _context.Accessor.Read(0, out header);
-
-        int writeIndex = header.InputWriteIndex % MAX_INPUT_EVENTS;
-        long offset = writeIndex * Marshal.SizeOf<InputEvent>();
-
-        byte* eventPtr = _context.InputEventsBase + offset;
-        Marshal.StructureToPtr(inputEvent, (IntPtr)eventPtr, false);
-
-        header.InputWriteIndex = (header.InputWriteIndex + 1);
-        _context.Accessor.Write(0, ref header);
-    }
 
     private void FlipImageVertically(byte[] pixels, int width, int height)
     {
@@ -381,9 +308,6 @@ public class FramebufferSenderMMF : IDisposable
             Array.Copy(temp, 0, pixels, bottomRow, rowSize);
         }
     }
-
-    public (int width, int height) GetResolution() => (_width, _height);
-    public long GetCurrentFrameId() => _currentFrameId;
 
     public void Dispose()
     {
