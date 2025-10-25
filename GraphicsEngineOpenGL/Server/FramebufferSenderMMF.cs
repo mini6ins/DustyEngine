@@ -76,7 +76,7 @@ public class FramebufferSenderMMF : IDisposable
 
     public bool IsRunning => !_disposed && _mmf != null;
 
-    public FramebufferSenderMMF(int width = 1920, int height = 1080, int targetFPS = 30)
+    public FramebufferSenderMMF(int width = 1280, int height = 720, int targetFPS = 30)  // БЫЛО 1920x1080!
     {
         _width = width;
         _height = height;

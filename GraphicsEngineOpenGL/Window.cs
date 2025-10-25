@@ -47,8 +47,8 @@ public class Window : GameWindow
     private int _contextFramebuffer;
     private int _contextColorTexture;
     private int _contextDepthTexture;
-    private int _contextFramebufferWidth = 800;
-    private int _contextFramebufferHeight = 600;
+    private int _contextFramebufferWidth = 1280;  // БЫЛО 800!
+    private int _contextFramebufferHeight = 720;   // БЫЛО 600!
 
     private bool _initialized = false;
     
@@ -184,35 +184,44 @@ public class Window : GameWindow
         _initialized = true;
     }
 
-    private void SetupContextFramebuffer()
-    {
-        _contextFramebuffer = GL.GenFramebuffer();
-        GL.BindFramebuffer(FramebufferTarget.Framebuffer, _contextFramebuffer);
+  private void SetupContextFramebuffer()
+{
+    _contextFramebuffer = GL.GenFramebuffer();
+    GL.BindFramebuffer(FramebufferTarget.Framebuffer, _contextFramebuffer);
 
-        _contextColorTexture = GL.GenTexture();
-        GL.BindTexture(TextureTarget.Texture2d, _contextColorTexture);
-        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba8, 
-            _contextFramebufferWidth, _contextFramebufferHeight, 0, PixelFormat.Rgba, PixelType.UnsignedByte, IntPtr.Zero);
-        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0,
-            TextureTarget.Texture2d, _contextColorTexture, 0);
+    _contextColorTexture = GL.GenTexture();
+    GL.BindTexture(TextureTarget.Texture2d, _contextColorTexture);
+    GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba8, 
+        _contextFramebufferWidth, _contextFramebufferHeight, 0, PixelFormat.Rgba, PixelType.UnsignedByte, IntPtr.Zero);
+    GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+    GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+    GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0,
+        TextureTarget.Texture2d, _contextColorTexture, 0);
 
-        _contextDepthTexture = GL.GenTexture();
-        GL.BindTexture(TextureTarget.Texture2d, _contextDepthTexture);
-        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.DepthComponent24,
-            _contextFramebufferWidth, _contextFramebufferHeight, 0, PixelFormat.DepthComponent, PixelType.Float, IntPtr.Zero);
-        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment,
-            TextureTarget.Texture2d, _contextDepthTexture, 0);
+    _contextDepthTexture = GL.GenTexture();
+    GL.BindTexture(TextureTarget.Texture2d, _contextDepthTexture);
+    GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.DepthComponent24,
+        _contextFramebufferWidth, _contextFramebufferHeight, 0, PixelFormat.DepthComponent, PixelType.Float, IntPtr.Zero);
+    GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+    GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+    GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment,
+        TextureTarget.Texture2d, _contextDepthTexture, 0);
 
-        if (GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer) != FramebufferStatus.FramebufferComplete)
-            throw new Exception("Context framebuffer не готов!");
+    if (GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer) != FramebufferStatus.FramebufferComplete)
+        throw new Exception("Context framebuffer не готов!");
 
-        GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-        OnFramebufferTextureChanged?.Invoke(_contextColorTexture);
-    }
+    GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+    
+    // ВАЖНО: обновляем aspect ratio камеры
+    _camera.AspectRatio = (float)_contextFramebufferWidth / _contextFramebufferHeight;
+    _projection = _camera.GetProjectionMatrix();
+    
+    // ЛОГИРОВАНИЕ
+    float aspect = (float)_contextFramebufferWidth / _contextFramebufferHeight;
+    Console.WriteLine($"[SERVER] Context framebuffer: {_contextFramebufferWidth}x{_contextFramebufferHeight}, aspect: {aspect:F3}");
+    
+    OnFramebufferTextureChanged?.Invoke(_contextColorTexture);
+}
 
     protected override void OnUpdateFrame(FrameEventArgs args)
     {
@@ -259,9 +268,9 @@ public class Window : GameWindow
 
         RenderScene();
 
-        // отправляем с реальными размерами
+        // отправляем БЕЗ флипа
         if (_framebufferSender?.IsRunning == true)
-            _framebufferSender.SendFramebuffer(_contextFramebuffer, _contextFramebufferWidth, _contextFramebufferHeight, true);
+            _framebufferSender.SendFramebuffer(_contextFramebuffer, _contextFramebufferWidth, _contextFramebufferHeight, false);  // false!
 
         // очистка backbuffer
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);

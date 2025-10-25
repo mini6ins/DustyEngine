@@ -14,53 +14,57 @@ public class GraphicsEngineOpenGl
     private FramebufferSenderMMF? _sender;
    // private FramebufferSenderTCP? _senderTcp; // Опционально, для совместимости
 
-    public async Task RunMainLoop(Scene scene, Action updateCallback, Vector2 resolution, string programName,
-        string vertShaderPath, string fragShaderPath, bool vsync, RenderMode renderMode, bool useMMF = true)
-    {
-        Debug.Log("GraphicsEngineOpenGl is working", Debug.LogLevel.Info, true);
+   public async Task RunMainLoop(Scene scene, Action updateCallback, Vector2 resolution, string programName,
+       string vertShaderPath, string fragShaderPath, bool vsync, RenderMode renderMode, bool useMMF = true)
+   {
+       Debug.Log("GraphicsEngineOpenGl is working", Debug.LogLevel.Info, true);
 
-        var nativeWindowSettings = new NativeWindowSettings()
-        {
-            ClientSize = new Vector2i((int)resolution.X, (int)resolution.Y),
-            Title = programName,
-        };
+       // ИГНОРИРУЕМ переданное resolution и используем фиксированное 16:9
+       int contextWidth = 1280;
+       int contextHeight = 720;
 
-        foreach (var obj in scene.GameObjects)
-        {
-            SceneManager.CollectMeshRenderers(obj, _allRenderers);
-        }
+       var nativeWindowSettings = new NativeWindowSettings()
+       {
+           ClientSize = new Vector2i(contextWidth, contextHeight),  // ИЗМЕНЕНО!
+           Title = programName,
+       };
 
-        Debug.Log($"Total Meshes: {_allRenderers.Count}", Debug.LogLevel.Info, true);
+       foreach (var obj in scene.GameObjects)
+       {
+           SceneManager.CollectMeshRenderers(obj, _allRenderers);
+       }
 
-        // Инициализируем MMF sender
-        _sender = new FramebufferSenderMMF((int)resolution.X, (int)resolution.Y, 30);
+       Debug.Log($"Total Meshes: {_allRenderers.Count}", Debug.LogLevel.Info, true);
 
-        // Запускаем MMF (синхронно, так как это локальная операция)
-        if (!_sender.Start())
-        {
-            Debug.Log("Failed to start FramebufferSenderMMF", Debug.LogLevel.Error, true);
-        }
-        else
-        {
-            Debug.Log("FramebufferSenderMMF started successfully", Debug.LogLevel.Info, true);
+       // Инициализируем MMF sender с правильным разрешением
+       _sender = new FramebufferSenderMMF(contextWidth, contextHeight, 30);  // ИЗМЕНЕНО!
 
-            // Подписываемся на события ввода
-            _sender.OnInputEventReceived += HandleRemoteInput;
-        }
+       // Запускаем MMF (синхронно, так как это локальная операция)
+       if (!_sender.Start())
+       {
+           Debug.Log("Failed to start FramebufferSenderMMF", Debug.LogLevel.Error, true);
+       }
+       else
+       {
+           Debug.Log($"FramebufferSenderMMF started: {contextWidth}x{contextHeight}", Debug.LogLevel.Info, true);
 
-        // Создаем окно в режиме Context для MMF отправки
-        _window = new Window(GameWindowSettings.Default, nativeWindowSettings, _allRenderers, vertShaderPath,
-            fragShaderPath, programName, SceneManager.FindCamera(scene),
-            vsync, CursorState.Normal, renderMode, _sender);
+           // Подписываемся на события ввода
+           _sender.OnInputEventReceived += HandleRemoteInput;
+       }
 
-        if (renderMode == RenderMode.Context)
-            _window.IsVisible = false;
+       // Создаем окно в режиме Context для MMF отправки
+       _window = new Window(GameWindowSettings.Default, nativeWindowSettings, _allRenderers, vertShaderPath,
+           fragShaderPath, programName, SceneManager.FindCamera(scene),
+           vsync, CursorState.Normal, renderMode, _sender);
 
-        // Подключаем обработчики событий
-        _window.UpdateFrame += (e) => { updateCallback?.Invoke(); };
+       if (renderMode == RenderMode.Context)
+           _window.IsVisible = false;
 
-        _window.Run();
-    }
+       // Подключаем обработчики событий
+       _window.UpdateFrame += (e) => { updateCallback?.Invoke(); };
+
+       _window.Run();
+   }
 
     private void HandleRemoteInput(FramebufferSenderMMF.InputEvent inputEvent)
     {

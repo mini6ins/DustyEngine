@@ -258,8 +258,9 @@ public class RenderWindow : GameWindow
 
                 // ТЕПЕРЬ обычные UV — потому что флип сделан в sender
                 ImGui.Image(new IntPtr(_displayTexture), displaySize,
-                    new System.Numerics.Vector2(0, 0),
-                    new System.Numerics.Vector2(1, 1));
+                    new System.Numerics.Vector2(0, 1),  // ИЗМЕНЕНО!
+                    new System.Numerics.Vector2(1, 0)); // ИЗМЕНЕНО!
+                
             }
         }
         ImGui.End();
