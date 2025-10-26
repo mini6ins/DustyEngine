@@ -4,6 +4,8 @@ using DustyEngine.Scene;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
+using OpenTK.Windowing.GraphicsLibraryFramework;
+using Utils;
 
 namespace GraphicsEngineOpenGL;
 
@@ -17,7 +19,7 @@ public class GraphicsEngineOpenGl
         string vertShaderPath, string fragShaderPath, bool vsync, RenderMode renderMode, bool useMMF = true)
     {
         Debug.Log("GraphicsEngineOpenGl is working", Debug.LogLevel.Info, true);
-        
+
         int contextWidth = 1280;
         int contextHeight = 720;
 
@@ -33,7 +35,7 @@ public class GraphicsEngineOpenGl
         }
 
         Debug.Log($"Total Meshes: {_allRenderers.Count}", Debug.LogLevel.Info, true);
-        
+
         _sender = new FramebufferSenderMMF(contextWidth, contextHeight, 200);
 
         if (!_sender.Start())
@@ -44,10 +46,10 @@ public class GraphicsEngineOpenGl
         {
             Debug.Log($"FramebufferSenderMMF started: {contextWidth}x{contextHeight}", Debug.LogLevel.Info, true);
             _sender.OnInputEventReceived += HandleRemoteInput;
-            
+
             if (renderMode == RenderMode.Context)
             {
-                Utils.Input.SetRemoteInputMode(true);
+                Input.SetRemoteInputMode(true);
                 Debug.Log("Remote input mode ENABLED", Debug.LogLevel.Info, true);
             }
         }
@@ -65,35 +67,38 @@ public class GraphicsEngineOpenGl
         return Task.CompletedTask;
     }
 
-    private void HandleRemoteInput(FramebufferSenderMMF.InputEvent inputEvent)
+    private void HandleRemoteInput(MMFShared.InputEvent inputEvent)
     {
-        var key = (OpenTK.Windowing.GraphicsLibraryFramework.Keys)inputEvent.KeyCode;
-        
-        switch (inputEvent.Type)
+        var key = (Keys)inputEvent.KeyCode;
+        var eventType = (MMFShared.InputEventType)inputEvent.Type;
+
+        switch (eventType)
         {
-            case FramebufferSenderMMF.InputEventType.KeyDown:
-                Utils.Input.ProcessRemoteKeyEvent(key, true);
+            case MMFShared.InputEventType.KeyDown:
+                Input.ProcessRemoteKeyEvent(key, true);
                 Debug.Log($"Remote KeyDown: {key}", Debug.LogLevel.Info, true);
                 break;
 
-            case FramebufferSenderMMF.InputEventType.KeyUp:
-                Utils.Input.ProcessRemoteKeyEvent(key, false);
+            case MMFShared.InputEventType.KeyUp:
+                Input.ProcessRemoteKeyEvent(key, false);
                 Debug.Log($"Remote KeyUp: {key}", Debug.LogLevel.Info, true);
                 break;
 
-            case FramebufferSenderMMF.InputEventType.MouseMove:
-                Utils.Input.ProcessRemoteMouseMove(inputEvent.MouseX, inputEvent.MouseY);
+            case MMFShared.InputEventType.MouseMove:
+                Input.ProcessRemoteMouseMove(inputEvent.MouseX, inputEvent.MouseY);
                 break;
 
-            case FramebufferSenderMMF.InputEventType.MouseDown:
-                Debug.Log($"Remote MouseDown: Button {inputEvent.MouseButton} at ({inputEvent.MouseX:F2}, {inputEvent.MouseY:F2})", Debug.LogLevel.Info, true);
+            case MMFShared.InputEventType.MouseDown:
+                Debug.Log(
+                    $"Remote MouseDown: Button {inputEvent.MouseButton} at ({inputEvent.MouseX:F2}, {inputEvent.MouseY:F2})",
+                    Debug.LogLevel.Info, true);
                 break;
 
-            case FramebufferSenderMMF.InputEventType.MouseUp:
+            case MMFShared.InputEventType.MouseUp:
                 Debug.Log($"Remote MouseUp: Button {inputEvent.MouseButton}", Debug.LogLevel.Info, true);
                 break;
 
-            case FramebufferSenderMMF.InputEventType.MouseWheel:
+            case MMFShared.InputEventType.MouseWheel:
                 Debug.Log($"Remote MouseWheel: {inputEvent.WheelDelta:F2}", Debug.LogLevel.Info, true);
                 break;
         }

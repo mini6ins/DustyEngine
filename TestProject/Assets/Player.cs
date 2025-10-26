@@ -71,16 +71,16 @@ public class Player : MonoBehaviour
         float effectiveDeltaX = _smoothDeltaX;
         float effectiveDeltaY = _smoothDeltaY;
 
-        if (Math.Abs(effectiveDeltaX) < deadZone && Math.Abs(effectiveDeltaY) < deadZone)
+        if (Math.Math.Abs(effectiveDeltaX) < deadZone && Math.Math.Abs(effectiveDeltaY) < deadZone)
             return;
 
         _yaw -= effectiveDeltaX * _mouseSensitivity;
         _pitch -= effectiveDeltaY * _mouseSensitivity;
 
-        _pitch = Math.Clamp(_pitch, -89f, 89f);
+        _pitch = Math.Math.Clamp(_pitch, -89f, 89f);
 
-        float pitchRad = Math.DegreesToRadians(_pitch);
-        float yawRad = Math.DegreesToRadians(_yaw);
+        float pitchRad = Math.Math.DegreesToRadians(_pitch);
+        float yawRad = Math.Math.DegreesToRadians(_yaw);
 
         var currentRight = _cameraTransform.LocalRotationQuat.Rotate(new Vector3(1f, 0f, 0f));
         var qPitch = Quaternion.FromAxisAngle(currentRight, pitchRad);
@@ -92,9 +92,9 @@ public class Player : MonoBehaviour
 
         var euler = _cameraTransform.LocalRotationQuat.ToEulerAngles();
         _cameraTransform.LocalRotation = new Vector3(
-            Math.RadiansToDegrees(euler.X),
-            Math.RadiansToDegrees(euler.Y),
-            Math.RadiansToDegrees(euler.Z)
+            Math.Math.RadiansToDegrees(euler.X),
+            Math.Math.RadiansToDegrees(euler.Y),
+            Math.Math.RadiansToDegrees(euler.Z)
         );
     }
 }

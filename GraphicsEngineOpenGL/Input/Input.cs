@@ -169,12 +169,12 @@ namespace Utils
 
         public static bool HasMouseMoved()
         {
-            return Math.Abs(currentDelta.X) > 0.001f || Math.Abs(currentDelta.Y) > 0.001f;
+            return Math.Math.Abs(currentDelta.X) > 0.001f || Math.Math.Abs(currentDelta.Y) > 0.001f;
         }
 
         public static float GetMouseSensitivityAdjustedDelta(float sensitivity)
         {
-            return Math.Sqrt(currentDelta.X * currentDelta.X + currentDelta.Y * currentDelta.Y) * sensitivity;
+            return Math.Math.Sqrt(currentDelta.X * currentDelta.X + currentDelta.Y * currentDelta.Y) * sensitivity;
         }
 
         public static void SetRemoteInputMode(bool enabled)

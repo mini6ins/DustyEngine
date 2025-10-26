@@ -1,7 +1,7 @@
-﻿public static partial class Math 
-{
-    public const float Pi = 3.14159265f;
+﻿namespace Math;
 
+public static class Math 
+{
     public static float Clamp(float value, float min, float max)
     {
         if (value < min) return min;
@@ -13,16 +13,7 @@
     {
         return value >= 0f ? value : -value;
     }
-
-    public static float Max(float a, float b)
-    {
-        return a > b ? a : b;
-    }
     
-    public static float Min(float a, float b)
-    {
-        return a < b ? a : b;
-    }
     public static double Min(double a, double b)
     {
         return a < b ? a : b;

@@ -4,6 +4,7 @@ using OpenTK.Graphics.OpenGL.Compatibility;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
+using OpenTK.Windowing.GraphicsLibraryFramework;
 using Utils;
 
 namespace GraphicsEngineOpenGL;
@@ -36,7 +37,6 @@ public class Window : GameWindow
     private readonly List<VAOManager> _vaoList = [];
     private readonly List<RenderableObject> _sceneObjects = [];
 
-
     private int _contextFramebuffer;
     private int _contextColorTexture;
     private int _contextDepthTexture;
@@ -68,10 +68,10 @@ public class Window : GameWindow
             AddRenderer(meshRenderer);
     }
 
-    public int AddRenderer(MeshRenderer? meshRenderer)
+    public void AddRenderer(MeshRenderer? meshRenderer)
     {
         var mesh = meshRenderer?.GetMesh();
-        if (mesh?.Vertices == null) return -1;
+        if (mesh?.Vertices == null) ;
 
         var vao = new VAOManager(_shaderProgram);
         vao.CreateVAO(mesh.Vertices, mesh.Indices);
@@ -83,7 +83,6 @@ public class Window : GameWindow
             Transform = meshRenderer.Parent.GetComponent<Transform>(),
             MeshRenderer = meshRenderer,
         });
-        return _sceneObjects.Count - 1;
     }
 
     public bool RemoveRenderer(int objectId)
@@ -95,7 +94,8 @@ public class Window : GameWindow
         {
             _vaoList[obj.VaoIndex].Dispose();
             _vaoList.RemoveAt(obj.VaoIndex);
-            foreach (var t in _sceneObjects.Where(t => t.VaoIndex > obj.VaoIndex)) t.VaoIndex--;
+            foreach (var t in _sceneObjects.Where(t => t.VaoIndex > obj.VaoIndex))
+                t.VaoIndex--;
         }
 
         _sceneObjects.RemoveAt(objectId);
@@ -122,7 +122,7 @@ public class Window : GameWindow
         if (_renderMode == RenderMode.Context)
         {
             SetupContextFramebuffer();
-            
+
             Input.SetRemoteInputMode(true);
 
             _framebufferSender ??= new FramebufferSenderMMF(ContextFramebufferWidth, ContextFramebufferHeight, 60);
@@ -170,25 +170,21 @@ public class Window : GameWindow
 
         _camera.AspectRatio = (float)ContextFramebufferWidth / ContextFramebufferHeight;
         _projection = _camera.GetProjectionMatrix();
-
-        float aspect = (float)ContextFramebufferWidth / ContextFramebufferHeight;
-        Console.WriteLine(
-            $"[SERVER] Context framebuffer: {ContextFramebufferWidth}x{ContextFramebufferHeight}, aspect: {aspect:F3}");
     }
-    
-    private void OnRemoteInputReceived(FramebufferSenderMMF.InputEvent evt)
+
+    private void OnRemoteInputReceived(MMFShared.InputEvent evt)
     {
-        switch (evt.Type)
+        switch ((MMFShared.InputEventType)evt.Type)
         {
-            case FramebufferSenderMMF.InputEventType.KeyDown:
-                Input.ProcessRemoteKeyEvent((OpenTK.Windowing.GraphicsLibraryFramework.Keys)evt.KeyCode, true);
+            case MMFShared.InputEventType.KeyDown:
+                Input.ProcessRemoteKeyEvent((Keys)evt.KeyCode, true);
                 break;
 
-            case FramebufferSenderMMF.InputEventType.KeyUp:
-                Input.ProcessRemoteKeyEvent((OpenTK.Windowing.GraphicsLibraryFramework.Keys)evt.KeyCode, false);
+            case MMFShared.InputEventType.KeyUp:
+                Input.ProcessRemoteKeyEvent((Keys)evt.KeyCode, false);
                 break;
 
-            case FramebufferSenderMMF.InputEventType.MouseMove:
+            case MMFShared.InputEventType.MouseMove:
                 Input.ProcessRemoteMouseMove(evt.MouseX, evt.MouseY);
                 break;
         }
@@ -197,12 +193,12 @@ public class Window : GameWindow
     protected override void OnUpdateFrame(FrameEventArgs args)
     {
         base.OnUpdateFrame(args);
-        
+
         if (_renderMode == RenderMode.Context)
             Input.Update();
         else
             Input.Update(KeyboardState);
-        
+
         float deltaTime = (float)args.Time;
 
         _frameTime += deltaTime;
@@ -221,7 +217,7 @@ public class Window : GameWindow
     protected override void OnMouseMove(MouseMoveEventArgs e)
     {
         base.OnMouseMove(e);
-        
+
         if (_renderMode == RenderMode.Standalone)
             Input.UpdateMouse(e.X, e.Y);
     }
@@ -230,8 +226,10 @@ public class Window : GameWindow
     {
         base.OnRenderFrame(args);
 
-        if (_renderMode == RenderMode.Context) RenderToContext();
-        else RenderStandalone();
+        if (_renderMode == RenderMode.Context)
+            RenderToContext();
+        else
+            RenderStandalone();
 
         SwapBuffers();
     }
@@ -245,7 +243,7 @@ public class Window : GameWindow
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
         RenderScene();
-        
+
         if (_framebufferSender?.IsRunning == true)
             _framebufferSender.SendFramebuffer(_contextFramebuffer, ContextFramebufferWidth, ContextFramebufferHeight,
                 false);
@@ -255,7 +253,7 @@ public class Window : GameWindow
         GL.ClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
     }
-    
+
     private void RenderStandalone()
     {
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
@@ -305,13 +303,15 @@ public class Window : GameWindow
     protected override void OnUnload()
     {
         if (!_initialized) return;
-        
+
         if (_framebufferSender != null)
         {
             _framebufferSender.OnInputEventReceived -= OnRemoteInputReceived;
         }
 
-        foreach (var vao in _vaoList) vao.Dispose();
+        foreach (var vao in _vaoList)
+            vao.Dispose();
+
         _shaderProgram.DeleteProgram();
 
         if (_renderMode == RenderMode.Context)

@@ -1,63 +1,17 @@
 using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
 using OpenTK.Graphics.OpenGL.Compatibility;
+using Utils;
 using Buffer = System.Buffer;
 
 public class FramebufferSenderMMF : IDisposable
 {
-    private const int MaxInputEvents = 32;
-
-    public enum InputEventType
-    {
-        None = 0,
-        KeyDown = 1,
-        KeyUp = 2,
-        MouseMove = 3,
-        MouseDown = 4,
-        MouseUp = 5,
-        MouseWheel = 6
-    }
-
-    [StructLayout(LayoutKind.Sequential, Pack = 4)]
-    public struct InputEvent
-    {
-        public InputEventType Type;
-        public int KeyCode;
-        public float MouseX;
-        public float MouseY;
-        public int MouseButton;
-        public float WheelDelta;
-    }
-
-    [StructLayout(LayoutKind.Sequential, Pack = 4)]
-    private struct Header
-    {
-        public int Width;
-        public int Height;
-        public int Stride;
-        public int SlotCount;
-        public volatile int WriteIndex;
-        public long FrameId;
-        public volatile int InputWriteIndex;
-        public volatile int InputReadIndex;
-    }
-
-    private unsafe struct StreamContext
-    {
-        public MemoryMappedViewAccessor Accessor;
-        public byte* BasePtr;
-        public byte* SlotsBase;
-        public byte* InputEventsBase;
-        public long SlotSize;
-    }
-
     private FileStream _fileStream;
     private MemoryMappedFile _mmf;
     private MemoryMappedViewAccessor _accessor;
-    private StreamContext _context;
+    private MMFShared.StreamContext _context;
     private byte[] _frameBuffer;
-    private int _width;
-    private int _height;
+    private int _width, _height;
     private int _stride;
     private int _slotCount = 3;
     private volatile bool _disposed;
@@ -69,7 +23,7 @@ public class FramebufferSenderMMF : IDisposable
     public event Action OnClientConnected;
     public event Action OnClientDisconnected;
     public event Action<string> OnError;
-    public event Action<InputEvent> OnInputEventReceived;
+    public event Action<MMFShared.InputEvent> OnInputEventReceived;
 
     public bool IsRunning => !_disposed;
 
@@ -88,9 +42,9 @@ public class FramebufferSenderMMF : IDisposable
 
         try
         {
-            long headerSize = Marshal.SizeOf<Header>();
+            long headerSize = Marshal.SizeOf<MMFShared.Header>();
             long slotSize = (long)_stride * _height;
-            long inputEventsSize = Marshal.SizeOf<InputEvent>() * MaxInputEvents;
+            long inputEventsSize = Marshal.SizeOf<MMFShared.InputEvent>() * MMFShared.MaxInputEvents;
             long totalSize = headerSize + _slotCount * slotSize + inputEventsSize;
 
             string path = Directory.Exists("/dev/shm")
@@ -108,7 +62,7 @@ public class FramebufferSenderMMF : IDisposable
                 MemoryMappedFileAccess.ReadWrite, HandleInheritability.Inheritable, false);
             _accessor = _mmf.CreateViewAccessor(0, totalSize, MemoryMappedFileAccess.ReadWrite);
 
-            var header = new Header
+            var header = new MMFShared.Header
             {
                 Width = _width,
                 Height = _height,
@@ -124,13 +78,12 @@ public class FramebufferSenderMMF : IDisposable
             byte* basePtr = null;
             _accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref basePtr);
 
-            _context = new StreamContext
+            _context = new MMFShared.StreamContext
             {
                 Accessor = _accessor,
                 BasePtr = basePtr,
                 SlotsBase = basePtr + headerSize,
-                InputEventsBase = basePtr + headerSize + _slotCount * slotSize,
-                SlotSize = slotSize,
+                InputEventsBase = basePtr + headerSize + _slotCount * slotSize
             };
 
             _inputThreadRunning = true;
@@ -145,7 +98,7 @@ public class FramebufferSenderMMF : IDisposable
             OnClientConnected?.Invoke();
             return true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             return false;
         }
@@ -180,7 +133,6 @@ public class FramebufferSenderMMF : IDisposable
         }
     }
 
-
     public bool SendFramebuffer(int framebufferId, int width, int height, bool flipVertically = true)
     {
         if (_disposed) return false;
@@ -192,9 +144,7 @@ public class FramebufferSenderMMF : IDisposable
                 _frameBuffer = new byte[need];
 
             GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, framebufferId);
-            GL.ReadPixels(0, 0, width, height,
-                PixelFormat.Rgba,
-                PixelType.UnsignedByte, _frameBuffer);
+            GL.ReadPixels(0, 0, width, height, PixelFormat.Rgba, PixelType.UnsignedByte, _frameBuffer);
             GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, 0);
 
             if (flipVertically)
@@ -206,7 +156,6 @@ public class FramebufferSenderMMF : IDisposable
         }
         catch (Exception ex)
         {
-            OnError?.Invoke($"Error sending framebuffer: {ex.Message}");
             return false;
         }
     }
@@ -215,14 +164,15 @@ public class FramebufferSenderMMF : IDisposable
     {
         if (_disposed || _context.BasePtr == null) return;
 
-        _context.Accessor.Read(0, out Header header);
+        _context.Accessor.Read(0, out MMFShared.Header header);
 
         int writeIndex = header.WriteIndex;
-        byte* destination = _context.SlotsBase + writeIndex * _context.SlotSize;
+        long slotSize = (long)_stride * _height;
+        byte* destination = _context.SlotsBase + writeIndex * slotSize;
 
         fixed (byte* source = frameData)
         {
-            Buffer.MemoryCopy(source, destination, _context.SlotSize, frameData.LongLength);
+            Buffer.MemoryCopy(source, destination, slotSize, frameData.LongLength);
         }
 
         header.FrameId = ++_currentFrameId;
@@ -239,11 +189,9 @@ public class FramebufferSenderMMF : IDisposable
                 ProcessInputEvents();
                 Thread.Sleep(1);
             }
-            catch (Exception ex)
+            catch
             {
-                if (_inputThreadRunning && !_disposed)
-                {
-                }
+                // ignored
             }
         }
     }
@@ -252,24 +200,23 @@ public class FramebufferSenderMMF : IDisposable
     {
         if (_disposed || _context.BasePtr == null) return;
 
-        _context.Accessor.Read(0, out Header header);
+        _context.Accessor.Read(0, out MMFShared.Header header);
 
         while (header.InputReadIndex != header.InputWriteIndex)
         {
-            int index = header.InputReadIndex % MaxInputEvents;
-            long offset = index * Marshal.SizeOf<InputEvent>();
+            int index = header.InputReadIndex % MMFShared.MaxInputEvents;
+            long offset = index * Marshal.SizeOf<MMFShared.InputEvent>();
 
             byte* eventPtr = _context.InputEventsBase + offset;
-            InputEvent inputEvent = Marshal.PtrToStructure<InputEvent>((IntPtr)eventPtr);
+            MMFShared.InputEvent inputEvent = Marshal.PtrToStructure<MMFShared.InputEvent>((IntPtr)eventPtr);
 
             OnInputEventReceived?.Invoke(inputEvent);
 
-            header.InputReadIndex = (header.InputReadIndex + 1);
+            header.InputReadIndex++;
             _context.Accessor.Write(0, ref header);
             _context.Accessor.Read(0, out header);
         }
     }
-
 
     private void FlipImageVertically(byte[] pixels, int width, int height)
     {

@@ -1,13 +1,11 @@
-using System;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using GraphicsEngineOpenGL;
 using ImGuiNET;
 using OpenTK.Graphics.OpenGL.Compatibility;
-using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
-using GraphicsEngineOpenGL;
+using Utils;
 
 public class RenderWindow : GameWindow
 {
@@ -18,29 +16,22 @@ public class RenderWindow : GameWindow
 
     private readonly FrameReceiver _frameReceiver;
 
-    private FrameData? _currentFrame;
-    private FrameData? _nextFrame;
-    private readonly object _frameLock = new object();
+    private MMFShared.FrameData? _nextFrame;
+    private readonly Lock _frameLock = new();
 
-    private int _currentTextureWidth = 0;
-    private int _currentTextureHeight = 0;
+    private int _currentTextureWidth;
+    private int _currentTextureHeight;
 
     private ImGuiManager _imgui;
-    
-    // Для отправки событий ввода
-    private bool _capturingInput = false;
-    
-    // Throttling для событий мыши
-    private const int INPUT_SEND_RATE_MS = 1; // 125 Hz
-    private DateTime _lastMouseMoveSent = DateTime.MinValue;
-    private readonly HashSet<Keys> _pressedKeys = new();
-    
-    // Для отслеживания дельты мыши
-    private float _lastMouseX = 0;
-    private float _lastMouseY = 0;
+
+    private bool _capturingInput;
+    private readonly HashSet<Keys> _pressedKeys = [];
+
+    private float _lastMouseX;
+    private float _lastMouseY;
     private bool _firstMouseMove = true;
 
-    private const string VertexShaderSource = @"
+    private const string VertexShaderSource = """
         #version 330 core
         layout (location = 0) in vec3 aPosition;
         layout (location = 1) in vec2 aTexCoord;
@@ -49,9 +40,10 @@ public class RenderWindow : GameWindow
         {
             gl_Position = vec4(aPosition, 1.0);
             texCoord = aTexCoord;
-        }";
+        }
+        """;
 
-    private const string FragmentShaderSource = @"
+    private const string FragmentShaderSource = """
         #version 330 core
         in vec2 texCoord;
         out vec4 FragColor;
@@ -59,7 +51,8 @@ public class RenderWindow : GameWindow
         void main()
         {
             FragColor = texture(frameTexture, texCoord);
-        }";
+        }
+        """;
 
     public RenderWindow(GameWindowSettings gws, NativeWindowSettings nws, FrameReceiver frameReceiver)
         : base(gws, nws)
@@ -68,7 +61,7 @@ public class RenderWindow : GameWindow
         _frameReceiver.OnFrameReceived += OnFrameReceived;
     }
 
-    private void OnFrameReceived(FrameData frameData)
+    private void OnFrameReceived(MMFShared.FrameData frameData)
     {
         lock (_frameLock)
         {
@@ -89,12 +82,6 @@ public class RenderWindow : GameWindow
 
         _imgui = new ImGuiManager();
         _imgui.Initialize(this);
-
-        _imgui.GetSceneTexture = () => _displayTexture;
-        _imgui.GetSceneSize = () => (_currentTextureWidth, _currentTextureHeight);
-        _imgui.OnSceneResize = (w, h) => { /* при желании отправить запрос на ресайз сервера */ };
-
-        Console.WriteLine("RenderWindow загружен, ожидаю кадры...");
     }
 
     private void SetupShaders()
@@ -124,13 +111,13 @@ public class RenderWindow : GameWindow
     private void SetupGeometry()
     {
         float[] vertices =
-        {
+        [
             -1.0f, -1.0f, 0.0f, 0.0f, 1.0f,
-             1.0f, -1.0f, 0.0f, 1.0f, 1.0f,
-             1.0f,  1.0f, 0.0f, 1.0f, 0.0f,
-            -1.0f,  1.0f, 0.0f, 0.0f, 0.0f
-        };
-        uint[] indices = { 0, 1, 2, 2, 3, 0 };
+            1.0f, -1.0f, 0.0f, 1.0f, 1.0f,
+            1.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+            -1.0f, 1.0f, 0.0f, 0.0f, 0.0f
+        ];
+        uint[] indices = [0, 1, 2, 2, 3, 0];
 
         _vao = GL.GenVertexArray();
         _vbo = GL.GenBuffer();
@@ -158,7 +145,7 @@ public class RenderWindow : GameWindow
         _displayTexture = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2d, _displayTexture);
 
-        byte[] px = new byte[] { 32, 32, 32, 255 };
+        byte[] px = [32, 32, 32, 255];
         GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba, 1, 1, 0,
             PixelFormat.Rgba, PixelType.UnsignedByte, px);
 
@@ -177,13 +164,12 @@ public class RenderWindow : GameWindow
     {
         base.OnUpdateFrame(e);
 
-        FrameData? frameToUpdate = null;
+        MMFShared.FrameData? frameToUpdate = null;
         lock (_frameLock)
         {
             if (_nextFrame != null)
             {
                 frameToUpdate = _nextFrame;
-                _currentFrame = _nextFrame;
                 _nextFrame = null;
             }
         }
@@ -192,7 +178,7 @@ public class RenderWindow : GameWindow
             UpdateTexture(frameToUpdate);
     }
 
-    private void UpdateTexture(FrameData frameData)
+    private void UpdateTexture(MMFShared.FrameData frameData)
     {
         try
         {
@@ -202,8 +188,6 @@ public class RenderWindow : GameWindow
             {
                 _currentTextureWidth = frameData.Width;
                 _currentTextureHeight = frameData.Height;
-                float aspect = (float)frameData.Width / frameData.Height;
-                Console.WriteLine($"[CLIENT] Texture resized: {frameData.Width}x{frameData.Height}, aspect: {aspect:F3}");
             }
 
             var handle = GCHandle.Alloc(frameData.PixelData, GCHandleType.Pinned);
@@ -221,9 +205,9 @@ public class RenderWindow : GameWindow
 
             GL.BindTexture(TextureTarget.Texture2d, 0);
         }
-        catch (Exception ex)
+        catch
         {
-            Console.WriteLine($"Ошибка обновления текстуры: {ex.Message}");
+            // ignored
         }
     }
 
@@ -236,15 +220,14 @@ public class RenderWindow : GameWindow
         _imgui.NewFrame();
 
         ImGui.SetNextWindowSize(new System.Numerics.Vector2(360, 150), ImGuiCond.FirstUseEver);
-        ImGui.Begin("Test Panel");
-        ImGui.Text("Simple text :)");
+        ImGui.Begin("Control Panel");
         ImGui.Text($"Connected: {_frameReceiver.IsConnected}");
         ImGui.Text($"Texture: {_currentTextureWidth} x {_currentTextureHeight}");
-        
+
         ImGui.Separator();
         ImGui.Checkbox("Capture Input (Ctrl+I)", ref _capturingInput);
         ImGui.Text(_capturingInput ? "Input: CAPTURING" : "Input: GUI mode");
-        
+
         if (ImGui.Button("Fullscreen (F11)"))
             WindowState = WindowState == WindowState.Fullscreen ? WindowState.Normal : WindowState.Fullscreen;
         ImGui.End();
@@ -290,64 +273,65 @@ public class RenderWindow : GameWindow
         SwapBuffers();
     }
 
-    // ========== СОБЫТИЯ КЛАВИАТУРЫ ==========
-    
+
+    private void SendInputEvent(MMFShared.InputEventType type, int keyCode = 0, 
+        float mouseX = 0, float mouseY = 0, int mouseButton = 0, float wheelDelta = 0)
+    {
+        _frameReceiver.SendInputEvent(new MMFShared.InputEvent
+        {
+            Type = (int)type,
+            KeyCode = keyCode,
+            MouseX = mouseX,
+            MouseY = mouseY,
+            MouseButton = mouseButton,
+            WheelDelta = wheelDelta
+        });
+    }
+
+
     protected override void OnKeyDown(KeyboardKeyEventArgs e)
     {
         base.OnKeyDown(e);
 
-        // Переключение режима захвата ввода
-        if (e.Key == Keys.I && e.Control)
+        switch (e.Key)
         {
-            _capturingInput = !_capturingInput;
-            CursorState = _capturingInput ? CursorState.Grabbed : CursorState.Normal;
-            Console.WriteLine($"[CLIENT] Input capture: {_capturingInput}");
-            
-            // Очищаем состояние клавиш при переключении режима
-            if (!_capturingInput)
+            case Keys.I when e.Control:
             {
-                _pressedKeys.Clear();
+                _capturingInput = !_capturingInput;
+                CursorState = _capturingInput ? CursorState.Grabbed : CursorState.Normal;
+
+                if (!_capturingInput)
+                {
+                    _pressedKeys.Clear();
+                    _firstMouseMove = true;
+                }
+
+                return;
             }
-            
-            return;
+            case Keys.Escape:
+            {
+                if (_capturingInput)
+                {
+                    _capturingInput = false;
+                    CursorState = CursorState.Normal;
+                    _pressedKeys.Clear();
+                    _firstMouseMove = true;
+                }
+                else
+                {
+                    Close();
+                }
+
+                return;
+            }
+            case Keys.F11:
+                WindowState = WindowState == WindowState.Fullscreen ? WindowState.Normal : WindowState.Fullscreen;
+                return;
         }
 
-        if (e.Key == Keys.Escape)
+        if (_capturingInput && _pressedKeys.Add(e.Key))
         {
-            if (_capturingInput)
-            {
-                _capturingInput = false;
-                CursorState = CursorState.Normal;
-                _pressedKeys.Clear();
-            }
-            else
-            {
-                Close();
-            }
-            return;
-        }
-
-        if (e.Key == Keys.F11)
-        {
-            WindowState = WindowState == WindowState.Fullscreen ? WindowState.Normal : WindowState.Fullscreen;
-            return;
-        }
-
-        // Отправляем события только если захватываем ввод
-        // Дедупликация: не отправляем повторные KeyDown
-        if (_capturingInput && !_pressedKeys.Contains(e.Key))
-        {
-            _pressedKeys.Add(e.Key);
-            
-            _frameReceiver.SendInputEvent(new FrameReceiver.InputEvent
-            {
-                Type = (int)FrameReceiver.InputEventType.KeyDown,
-                KeyCode = (int)e.Key,
-                MouseX = 0,
-                MouseY = 0,
-                MouseButton = 0,
-                WheelDelta = 0
-            });
+            SendInputEvent(MMFShared.InputEventType.KeyDown, keyCode: (int)e.Key);
         }
     }
 
@@ -355,122 +339,75 @@ public class RenderWindow : GameWindow
     {
         base.OnKeyUp(e);
 
-        if (_capturingInput)
-        {
-            _pressedKeys.Remove(e.Key);
-            
-            _frameReceiver.SendInputEvent(new FrameReceiver.InputEvent
-            {
-                Type = (int)FrameReceiver.InputEventType.KeyUp,
-                KeyCode = (int)e.Key,
-                MouseX = 0,
-                MouseY = 0,
-                MouseButton = 0,
-                WheelDelta = 0
-            });
-        }
+        if (!_capturingInput) return;
+
+        _pressedKeys.Remove(e.Key);
+        SendInputEvent(MMFShared.InputEventType.KeyUp, keyCode: (int)e.Key);
     }
-
-    // ========== СОБЫТИЯ МЫШИ ==========
-
 
     protected override void OnMouseMove(MouseMoveEventArgs e)
     {
         base.OnMouseMove(e);
 
-        if (_capturingInput)
+        if (!_capturingInput) return;
+
+        float normalizedX = e.X / Size.X;
+        float normalizedY = e.Y / Size.Y;
+
+        float deltaX = 0;
+        float deltaY = 0;
+
+        if (!_firstMouseMove)
         {
-            float normalizedX = e.X / (float)Size.X;
-            float normalizedY = e.Y / (float)Size.Y;
-
-            float deltaX = 0;
-            float deltaY = 0;
-    
-            if (!_firstMouseMove)
-            {
-                deltaX = normalizedX - _lastMouseX;
-                deltaY = normalizedY - _lastMouseY;
-            }
-            else
-            {
-                _firstMouseMove = false;
-            }
-    
-            _lastMouseX = normalizedX;
-            _lastMouseY = normalizedY;
-
-            _frameReceiver.SendInputEvent(new FrameReceiver.InputEvent
-            {
-                Type = (int)FrameReceiver.InputEventType.MouseMove,
-                KeyCode = 0,
-                MouseX = deltaX,
-                MouseY = deltaY,
-                MouseButton = 0,
-                WheelDelta = 0
-            });
+            deltaX = normalizedX - _lastMouseX;
+            deltaY = normalizedY - _lastMouseY;
         }
+        else
+        {
+            _firstMouseMove = false;
+        }
+
+        _lastMouseX = normalizedX;
+        _lastMouseY = normalizedY;
+
+        SendInputEvent(MMFShared.InputEventType.MouseMove, mouseX: deltaX, mouseY: deltaY);
     }
 
     protected override void OnMouseDown(MouseButtonEventArgs e)
     {
         base.OnMouseDown(e);
 
-        if (_capturingInput)
-        {
-            float normalizedX = MouseState.Position.X / (float)Size.X;
-            float normalizedY = MouseState.Position.Y / (float)Size.Y;
-            
-            _frameReceiver.SendInputEvent(new FrameReceiver.InputEvent
-            {
-                Type = (int)FrameReceiver.InputEventType.MouseDown,
-                KeyCode = 0,
-                MouseX = normalizedX,
-                MouseY = normalizedY,
-                MouseButton = (int)e.Button,
-                WheelDelta = 0
-            });
-        }
+        if (!_capturingInput) return;
+
+        float normalizedX = MouseState.Position.X / Size.X;
+        float normalizedY = MouseState.Position.Y / Size.Y;
+
+        SendInputEvent(MMFShared.InputEventType.MouseDown, 
+            mouseX: normalizedX, mouseY: normalizedY, mouseButton: (int)e.Button);
     }
 
     protected override void OnMouseUp(MouseButtonEventArgs e)
     {
         base.OnMouseUp(e);
 
-        if (_capturingInput)
-        {
-            float normalizedX = MouseState.Position.X / (float)Size.X;
-            float normalizedY = MouseState.Position.Y / (float)Size.Y;
-            
-            _frameReceiver.SendInputEvent(new FrameReceiver.InputEvent
-            {
-                Type = (int)FrameReceiver.InputEventType.MouseUp,
-                KeyCode = 0,
-                MouseX = normalizedX,
-                MouseY = normalizedY,
-                MouseButton = (int)e.Button,
-                WheelDelta = 0
-            });
-        }
+        if (!_capturingInput) return;
+
+        float normalizedX = MouseState.Position.X / Size.X;
+        float normalizedY = MouseState.Position.Y / Size.Y;
+
+        SendInputEvent(MMFShared.InputEventType.MouseUp, 
+            mouseX: normalizedX, mouseY: normalizedY, mouseButton: (int)e.Button);
     }
 
     protected override void OnMouseWheel(MouseWheelEventArgs e)
     {
         base.OnMouseWheel(e);
 
-        if (_capturingInput)
-        {
-            _frameReceiver.SendInputEvent(new FrameReceiver.InputEvent
-            {
-                Type = (int)FrameReceiver.InputEventType.MouseWheel,
-                KeyCode = 0,
-                MouseX = 0,
-                MouseY = 0,
-                MouseButton = 0,
-                WheelDelta = e.OffsetY
-            });
-        }
-    }
+        if (!_capturingInput) return;
 
+        SendInputEvent(MMFShared.InputEventType.MouseWheel, wheelDelta: e.OffsetY);
+    }
+    
     protected override void OnUnload()
     {
         _frameReceiver.OnFrameReceived -= OnFrameReceived;

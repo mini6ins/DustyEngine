@@ -60,7 +60,7 @@ public struct Quaternion(float x, float y, float z, float w)
             a.W * b.W - a.X * b.X - a.Y * b.Y - a.Z * b.Z
         );
 
-    public Quaternion Inverted() => new Quaternion(-X, -Y, -Z, W);
+    public Quaternion Inverted() => new(-X, -Y, -Z, W);
 
     public Vector3 Rotate(Vector3 v)
     {
