@@ -13,7 +13,7 @@ public class GraphicsEngineOpenGl
     private Window? _window;
     private FramebufferSenderMMF? _sender;
 
-    public async Task RunMainLoop(Scene scene, Action updateCallback, Vector2 resolution, string programName,
+    public Task RunMainLoop(Scene scene, Action updateCallback, Vector2 resolution, string programName,
         string vertShaderPath, string fragShaderPath, bool vsync, RenderMode renderMode, bool useMMF = true)
     {
         Debug.Log("GraphicsEngineOpenGl is working", Debug.LogLevel.Info, true);
@@ -62,6 +62,7 @@ public class GraphicsEngineOpenGl
         _window.UpdateFrame += (e) => { updateCallback?.Invoke(); };
 
         _window.Run();
+        return Task.CompletedTask;
     }
 
     private void HandleRemoteInput(FramebufferSenderMMF.InputEvent inputEvent)

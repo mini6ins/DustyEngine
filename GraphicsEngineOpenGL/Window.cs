@@ -33,30 +33,24 @@ public class Window : GameWindow
     private RenderMode _renderMode;
 
     private ShaderProgram _shaderProgram;
-    private readonly List<VAOManager> _vaoList = new();
-    private readonly List<RenderableObject> _sceneObjects = new();
+    private readonly List<VAOManager> _vaoList = [];
+    private readonly List<RenderableObject> _sceneObjects = [];
 
-    // Context FBO
+
     private int _contextFramebuffer;
     private int _contextColorTexture;
     private int _contextDepthTexture;
-    public  static int ContextFramebufferWidth = 1280;
+    public static int ContextFramebufferWidth = 1280;
     public static int ContextFramebufferHeight = 720;
 
-    private bool _initialized = false;
-
-    public event Action<int>? OnFramebufferTextureChanged;
+    private bool _initialized;
 
     private FramebufferSenderMMF? _framebufferSender;
-
-    // ✅ УДАЛЁН высокочастотный поток - Input обновляется в OnUpdateFrame
-    // private Thread _inputUpdateThread;
-    // private volatile bool _inputThreadRunning = false;
 
     public Window(GameWindowSettings gws, NativeWindowSettings nws, List<MeshRenderer> allRenderers,
         string vertShaderPath, string fragShaderPath, string windowName,
         Camera camera, bool isVsync = true, CursorState cursorState = CursorState.Normal,
-        RenderMode renderMode = RenderMode.Context, FramebufferSenderMMF framebufferSenderMmf = null)
+        RenderMode renderMode = RenderMode.Context, FramebufferSenderMMF? framebufferSenderMmf = null)
         : base(gws, nws)
     {
         _windowName = windowName;
@@ -74,12 +68,10 @@ public class Window : GameWindow
             AddRenderer(meshRenderer);
     }
 
-    public int AddRenderer(MeshRenderer meshRenderer)
+    public int AddRenderer(MeshRenderer? meshRenderer)
     {
-        if (meshRenderer == null) return -1;
-
-        var mesh = meshRenderer.GetMesh();
-        if (mesh == null || mesh.Vertices == null || mesh.Indices == null) return -1;
+        var mesh = meshRenderer?.GetMesh();
+        if (mesh?.Vertices == null) return -1;
 
         var vao = new VAOManager(_shaderProgram);
         vao.CreateVAO(mesh.Vertices, mesh.Indices);
@@ -103,9 +95,7 @@ public class Window : GameWindow
         {
             _vaoList[obj.VaoIndex].Dispose();
             _vaoList.RemoveAt(obj.VaoIndex);
-            for (int i = 0; i < _sceneObjects.Count; i++)
-                if (_sceneObjects[i].VaoIndex > obj.VaoIndex)
-                    _sceneObjects[i].VaoIndex--;
+            foreach (var t in _sceneObjects.Where(t => t.VaoIndex > obj.VaoIndex)) t.VaoIndex--;
         }
 
         _sceneObjects.RemoveAt(objectId);
@@ -132,18 +122,14 @@ public class Window : GameWindow
         if (_renderMode == RenderMode.Context)
         {
             SetupContextFramebuffer();
-
-            // ✅ Включаем режим удалённого ввода ДО запуска sender
+            
             Input.SetRemoteInputMode(true);
 
             _framebufferSender ??= new FramebufferSenderMMF(ContextFramebufferWidth, ContextFramebufferHeight, 60);
             if (!_framebufferSender.IsRunning)
             {
-                if (!_framebufferSender.Start())
-                    Console.WriteLine("Failed to start FramebufferSenderMMF");
-                else
+                if (_framebufferSender.Start())
                 {
-                    // ✅ Подписываемся на события ввода
                     _framebufferSender.OnInputEventReceived += OnRemoteInputReceived;
                 }
             }
@@ -188,11 +174,8 @@ public class Window : GameWindow
         float aspect = (float)ContextFramebufferWidth / ContextFramebufferHeight;
         Console.WriteLine(
             $"[SERVER] Context framebuffer: {ContextFramebufferWidth}x{ContextFramebufferHeight}, aspect: {aspect:F3}");
-
-        OnFramebufferTextureChanged?.Invoke(_contextColorTexture);
     }
-
-    // ✅ Обработка удалённых событий ввода
+    
     private void OnRemoteInputReceived(FramebufferSenderMMF.InputEvent evt)
     {
         switch (evt.Type)
@@ -206,7 +189,6 @@ public class Window : GameWindow
                 break;
 
             case FramebufferSenderMMF.InputEventType.MouseMove:
-                // ✅ evt.MouseX и MouseY уже являются нормализованными дельтами
                 Input.ProcessRemoteMouseMove(evt.MouseX, evt.MouseY);
                 break;
         }
@@ -215,19 +197,12 @@ public class Window : GameWindow
     protected override void OnUpdateFrame(FrameEventArgs args)
     {
         base.OnUpdateFrame(args);
-
-        // ✅ Обновляем Input ОДИН РАЗ за кадр
+        
         if (_renderMode == RenderMode.Context)
-        {
-            // Для Context режима используем удалённый ввод
-            Input.Update(); // Без параметров - обновляет remote input
-        }
+            Input.Update();
         else
-        {
-            // Для Standalone режима используем локальную клавиатуру
             Input.Update(KeyboardState);
-        }
-
+        
         float deltaTime = (float)args.Time;
 
         _frameTime += deltaTime;
@@ -246,8 +221,7 @@ public class Window : GameWindow
     protected override void OnMouseMove(MouseMoveEventArgs e)
     {
         base.OnMouseMove(e);
-
-        // ✅ Только для Standalone режима
+        
         if (_renderMode == RenderMode.Standalone)
             Input.UpdateMouse(e.X, e.Y);
     }
@@ -271,21 +245,17 @@ public class Window : GameWindow
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
         RenderScene();
-
-        // отправляем БЕЗ флипа
+        
         if (_framebufferSender?.IsRunning == true)
             _framebufferSender.SendFramebuffer(_contextFramebuffer, ContextFramebufferWidth, ContextFramebufferHeight,
                 false);
 
-        // очистка backbuffer
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
         GL.Viewport(0, 0, FramebufferSize.X, FramebufferSize.Y);
         GL.ClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
     }
-
-    public int GetContextFramebufferId() => _contextFramebuffer;
-
+    
     private void RenderStandalone()
     {
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
@@ -335,8 +305,7 @@ public class Window : GameWindow
     protected override void OnUnload()
     {
         if (!_initialized) return;
-
-        // ✅ Отписываемся от событий
+        
         if (_framebufferSender != null)
         {
             _framebufferSender.OnInputEventReceived -= OnRemoteInputReceived;

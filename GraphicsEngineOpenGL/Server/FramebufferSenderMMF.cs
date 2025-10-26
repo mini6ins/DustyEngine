@@ -5,9 +5,9 @@ using Buffer = System.Buffer;
 
 public class FramebufferSenderMMF : IDisposable
 {
-    private const int MAX_INPUT_EVENTS = 32;
+    private const int MaxInputEvents = 32;
 
-    public enum InputEventType : int
+    public enum InputEventType
     {
         None = 0,
         KeyDown = 1,
@@ -48,42 +48,37 @@ public class FramebufferSenderMMF : IDisposable
         public byte* BasePtr;
         public byte* SlotsBase;
         public byte* InputEventsBase;
-        public long HeaderSize;
         public long SlotSize;
-        public long InputEventsSize;
     }
 
     private FileStream _fileStream;
     private MemoryMappedFile _mmf;
     private MemoryMappedViewAccessor _accessor;
-    private unsafe StreamContext _context;
+    private StreamContext _context;
     private byte[] _frameBuffer;
     private int _width;
     private int _height;
     private int _stride;
     private int _slotCount = 3;
-    private volatile bool _disposed = false;
-    private DateTime _lastFrameSent = DateTime.MinValue;
-    private readonly TimeSpan _frameInterval;
-    private long _currentFrameId = 0;
+    private volatile bool _disposed;
+    private long _currentFrameId;
 
     private Thread _inputThread;
-    private volatile bool _inputThreadRunning = false;
+    private volatile bool _inputThreadRunning;
 
     public event Action OnClientConnected;
     public event Action OnClientDisconnected;
     public event Action<string> OnError;
     public event Action<InputEvent> OnInputEventReceived;
 
-    public bool IsRunning => !_disposed && _mmf != null;
+    public bool IsRunning => !_disposed;
 
-    public FramebufferSenderMMF(int width = 1280, int height = 720, int targetFPS = 60)
+    public FramebufferSenderMMF(int width = 1280, int height = 720, int targetFps = 60)
     {
         _width = width;
         _height = height;
         _stride = width * 4;
         _frameBuffer = new byte[_stride * _height];
-        _frameInterval = TimeSpan.FromMilliseconds(1000.0 / targetFPS);
     }
 
     public unsafe bool Start()
@@ -95,7 +90,7 @@ public class FramebufferSenderMMF : IDisposable
         {
             long headerSize = Marshal.SizeOf<Header>();
             long slotSize = (long)_stride * _height;
-            long inputEventsSize = Marshal.SizeOf<InputEvent>() * MAX_INPUT_EVENTS;
+            long inputEventsSize = Marshal.SizeOf<InputEvent>() * MaxInputEvents;
             long totalSize = headerSize + _slotCount * slotSize + inputEventsSize;
 
             string path = Directory.Exists("/dev/shm")
@@ -135,16 +130,8 @@ public class FramebufferSenderMMF : IDisposable
                 BasePtr = basePtr,
                 SlotsBase = basePtr + headerSize,
                 InputEventsBase = basePtr + headerSize + _slotCount * slotSize,
-                HeaderSize = headerSize,
                 SlotSize = slotSize,
-                InputEventsSize = inputEventsSize
             };
-
-            Console.WriteLine($"FramebufferSenderMMF: Started successfully");
-            Console.WriteLine($"  Resolution: {_width}x{_height}");
-            Console.WriteLine($"  Target FPS: {1000.0 / _frameInterval.TotalMilliseconds:F0}");
-            Console.WriteLine($"  Slots: {_slotCount}");
-            Console.WriteLine($"  Total size: {totalSize / 1024 / 1024:F2} MB");
 
             _inputThreadRunning = true;
             _inputThread = new Thread(InputProcessingLoop)
@@ -158,9 +145,8 @@ public class FramebufferSenderMMF : IDisposable
             OnClientConnected?.Invoke();
             return true;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            OnError?.Invoke($"Error starting: {ex.Message}");
             return false;
         }
     }
@@ -197,17 +183,12 @@ public class FramebufferSenderMMF : IDisposable
 
     public bool SendFramebuffer(int framebufferId, int width, int height, bool flipVertically = true)
     {
-        if (_disposed || _mmf == null)
-            return false;
-
-        var now = DateTime.Now;
-
-        _lastFrameSent = now;
+        if (_disposed) return false;
 
         try
         {
             int need = _stride * _height;
-            if (_frameBuffer == null || _frameBuffer.Length != need)
+            if (_frameBuffer.Length != need)
                 _frameBuffer = new byte[need];
 
             GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, framebufferId);
@@ -225,7 +206,6 @@ public class FramebufferSenderMMF : IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"FramebufferSenderMMF: Error sending framebuffer: {ex.Message}");
             OnError?.Invoke($"Error sending framebuffer: {ex.Message}");
             return false;
         }
@@ -235,11 +215,10 @@ public class FramebufferSenderMMF : IDisposable
     {
         if (_disposed || _context.BasePtr == null) return;
 
-        Header header;
-        _context.Accessor.Read(0, out header);
+        _context.Accessor.Read(0, out Header header);
 
         int writeIndex = header.WriteIndex;
-        byte* destination = _context.SlotsBase + (long)writeIndex * _context.SlotSize;
+        byte* destination = _context.SlotsBase + writeIndex * _context.SlotSize;
 
         fixed (byte* source = frameData)
         {
@@ -273,12 +252,11 @@ public class FramebufferSenderMMF : IDisposable
     {
         if (_disposed || _context.BasePtr == null) return;
 
-        Header header;
-        _context.Accessor.Read(0, out header);
+        _context.Accessor.Read(0, out Header header);
 
         while (header.InputReadIndex != header.InputWriteIndex)
         {
-            int index = header.InputReadIndex % MAX_INPUT_EVENTS;
+            int index = header.InputReadIndex % MaxInputEvents;
             long offset = index * Marshal.SizeOf<InputEvent>();
 
             byte* eventPtr = _context.InputEventsBase + offset;
