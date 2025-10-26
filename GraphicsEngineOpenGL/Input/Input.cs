@@ -15,6 +15,7 @@
         private static float lastY;
         private static (float X, float Y) currentDelta = (0, 0);
         
+        // ✅ Разделяем накопленную дельту и текущую дельту
         private static float _accumulatedRemoteDeltaX = 0;
         private static float _accumulatedRemoteDeltaY = 0;
         private static readonly object _mouseLock = new object();
@@ -23,18 +24,11 @@
         {
             get
             {
-                if (_useRemoteInput)
-                {
-                    lock (_mouseLock)
-                    {
-                        return (currentDelta.X, currentDelta.Y);
-                    }
-                }
-
                 return currentDelta;
             }
         }
         
+        // ✅ Вызывается ОДИН РАЗ за кадр для remote input
         public static void Update()
         {
             if (_useRemoteInput)
@@ -43,7 +37,7 @@
                 foreach (var key in _remoteKeysDown)
                     _previousRemoteKeysDown.Add(key);
 
-     
+                // ✅ Берём накопленную дельту и сбрасываем её
                 lock (_mouseLock)
                 {
                     currentDelta = (_accumulatedRemoteDeltaX, _accumulatedRemoteDeltaY);
@@ -53,24 +47,13 @@
             }
         }
 
+        // ✅ Для standalone режима
         public static void Update(OpenTK.Windowing.GraphicsLibraryFramework.KeyboardState newKeyboardState)
         {
             if (!_useRemoteInput)
             {
                 previousKeyboardState = keyboardState;
                 keyboardState = newKeyboardState;
-            }
-
-            _previousRemoteKeysDown.Clear();
-            foreach (var key in _remoteKeysDown)
-                _previousRemoteKeysDown.Add(key);
-            
-            if (_useRemoteInput)
-            {
-                lock (_mouseLock)
-                {
-                    currentDelta = (_accumulatedRemoteDeltaX, _accumulatedRemoteDeltaY);
-                }
             }
         }
 
@@ -165,7 +148,6 @@
         {
             if (_useRemoteInput)
                 return;
-            
 
             if (firstMove)
             {
@@ -184,19 +166,7 @@
 
         public static void ResetMouse()
         {
-            if (_useRemoteInput)
-            {
-                lock (_mouseLock)
-                {
-                    _accumulatedRemoteDeltaX = 0;
-                    _accumulatedRemoteDeltaY = 0;
-                    currentDelta = (0, 0);
-                }
-            }
-            else
-            {
-                currentDelta = (0, 0);
-            }
+            currentDelta = (0, 0);
         }
 
         public static void FullResetMouse()
@@ -221,19 +191,21 @@
             return Math.Sqrt(currentDelta.X * currentDelta.X + currentDelta.Y * currentDelta.Y) * sensitivity;
         }
 
-
         public static void SetRemoteInputMode(bool enabled)
         {
             _useRemoteInput = enabled;
             if (enabled)
             {
                 Console.WriteLine("[INPUT] Remote input mode ENABLED");
+                // ✅ Сбрасываем состояние при переключении
+                FullResetMouse();
             }
             else
             {
                 Console.WriteLine("[INPUT] Remote input mode DISABLED");
                 _remoteKeysDown.Clear();
                 _previousRemoteKeysDown.Clear();
+                FullResetMouse();
             }
         }
         
@@ -249,6 +221,7 @@
             }
         }
         
+        // ✅ Вызывается МНОГОКРАТНО (из потока обработки событий)
         public static void ProcessRemoteMouseMove(float normalizedDeltaX, float normalizedDeltaY)
         {
             if (!_useRemoteInput) return;
@@ -259,6 +232,7 @@
             float deltaX = normalizedDeltaX * REFERENCE_WIDTH;
             float deltaY = normalizedDeltaY * REFERENCE_HEIGHT;
             
+            // ✅ Накапливаем все дельты до следующего Update()
             lock (_mouseLock)
             {
                 _accumulatedRemoteDeltaX += deltaX;

@@ -31,7 +31,7 @@ public class RenderWindow : GameWindow
     private bool _capturingInput = false;
     
     // Throttling для событий мыши
-    private const int INPUT_SEND_RATE_MS = 8; // 125 Hz
+    private const int INPUT_SEND_RATE_MS = 1; // 125 Hz
     private DateTime _lastMouseMoveSent = DateTime.MinValue;
     private readonly HashSet<Keys> _pressedKeys = new();
     
@@ -374,27 +374,18 @@ public class RenderWindow : GameWindow
     // ========== СОБЫТИЯ МЫШИ ==========
 
 
-
     protected override void OnMouseMove(MouseMoveEventArgs e)
     {
         base.OnMouseMove(e);
 
         if (_capturingInput)
         {
-            var now = DateTime.Now;
-        
-            if ((now - _lastMouseMoveSent).TotalMilliseconds < INPUT_SEND_RATE_MS)
-                return;
-        
-            _lastMouseMoveSent = now;
-        
             float normalizedX = e.X / (float)Size.X;
             float normalizedY = e.Y / (float)Size.Y;
 
-            // ✅ ВЫЧИСЛЯЕМ ДЕЛЬТУ на клиенте
             float deltaX = 0;
             float deltaY = 0;
-        
+    
             if (!_firstMouseMove)
             {
                 deltaX = normalizedX - _lastMouseX;
@@ -404,7 +395,7 @@ public class RenderWindow : GameWindow
             {
                 _firstMouseMove = false;
             }
-        
+    
             _lastMouseX = normalizedX;
             _lastMouseY = normalizedY;
 
@@ -412,8 +403,8 @@ public class RenderWindow : GameWindow
             {
                 Type = (int)FrameReceiver.InputEventType.MouseMove,
                 KeyCode = 0,
-                MouseX = deltaX,  // ✅ Теперь это дельта!
-                MouseY = deltaY,  // ✅ Теперь это дельта!
+                MouseX = deltaX,
+                MouseY = deltaY,
                 MouseButton = 0,
                 WheelDelta = 0
             });

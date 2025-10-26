@@ -49,9 +49,9 @@ public class Window : GameWindow
 
     private FramebufferSenderMMF? _framebufferSender;
 
-    // Высокочастотное обновление Input
-    private Thread _inputUpdateThread;
-    private volatile bool _inputThreadRunning = false;
+    // ✅ УДАЛЁН высокочастотный поток - Input обновляется в OnUpdateFrame
+    // private Thread _inputUpdateThread;
+    // private volatile bool _inputThreadRunning = false;
 
     public Window(GameWindowSettings gws, NativeWindowSettings nws, List<MeshRenderer> allRenderers,
         string vertShaderPath, string fragShaderPath, string windowName,
@@ -133,23 +133,20 @@ public class Window : GameWindow
         {
             SetupContextFramebuffer();
 
+            // ✅ Включаем режим удалённого ввода ДО запуска sender
+            Input.SetRemoteInputMode(true);
+
             _framebufferSender ??= new FramebufferSenderMMF(_contextFramebufferWidth, _contextFramebufferHeight, 60);
             if (!_framebufferSender.IsRunning)
             {
                 if (!_framebufferSender.Start())
                     Console.WriteLine("Failed to start FramebufferSenderMMF");
+                else
+                {
+                    // ✅ Подписываемся на события ввода
+                    _framebufferSender.OnInputEventReceived += OnRemoteInputReceived;
+                }
             }
-
-            // Запускаем высокочастотное обновление Input (1000 Hz)
-            _inputThreadRunning = true;
-            _inputUpdateThread = new Thread(HighFrequencyInputUpdate)
-            {
-                IsBackground = true,
-                Name = "InputUpdateThread",
-                Priority = ThreadPriority.Highest
-            };
-            _inputUpdateThread.Start();
-            Console.WriteLine("[SERVER] High-frequency input update thread started (1000 Hz)");
         }
 
         _initialized = true;
@@ -195,37 +192,41 @@ public class Window : GameWindow
         OnFramebufferTextureChanged?.Invoke(_contextColorTexture);
     }
 
-    // НОВЫЙ МЕТОД: Высокочастотное обновление Input (1000 Hz)
-    private void HighFrequencyInputUpdate()
+    // ✅ Обработка удалённых событий ввода
+    private void OnRemoteInputReceived(FramebufferSenderMMF.InputEvent evt)
     {
-        while (_inputThreadRunning && !IsExiting)
+        switch (evt.Type)
         {
-            try
-            {
-                Input.Update();
-                Thread.Sleep(1); // 1000 Hz
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[SERVER] Input update error: {ex.Message}");
-            }
+            case FramebufferSenderMMF.InputEventType.KeyDown:
+                Input.ProcessRemoteKeyEvent((OpenTK.Windowing.GraphicsLibraryFramework.Keys)evt.KeyCode, true);
+                break;
+            
+            case FramebufferSenderMMF.InputEventType.KeyUp:
+                Input.ProcessRemoteKeyEvent((OpenTK.Windowing.GraphicsLibraryFramework.Keys)evt.KeyCode, false);
+                break;
+            
+            case FramebufferSenderMMF.InputEventType.MouseMove:
+                // ✅ evt.MouseX и MouseY уже являются нормализованными дельтами
+                Input.ProcessRemoteMouseMove(evt.MouseX, evt.MouseY);
+                break;
         }
-
-        Console.WriteLine("[SERVER] Input update thread stopped");
     }
 
     protected override void OnUpdateFrame(FrameEventArgs args)
     {
         base.OnUpdateFrame(args);
 
-        // В Standalone режиме обновляем Input как обычно
-        if (_renderMode != RenderMode.Context)
+        // ✅ Обновляем Input ОДИН РАЗ за кадр
+        if (_renderMode == RenderMode.Context)
         {
+            // Для Context режима используем удалённый ввод
+            Input.Update(); // Без параметров - обновляет remote input
+        }
+        else
+        {
+            // Для Standalone режима используем локальную клавиатуру
             Input.Update(KeyboardState);
         }
-
-        Input.Update(KeyboardState);
-        // В Context режиме Input обновляется в отдельном потоке
 
         float deltaTime = (float)args.Time;
 
@@ -245,8 +246,9 @@ public class Window : GameWindow
     protected override void OnMouseMove(MouseMoveEventArgs e)
     {
         base.OnMouseMove(e);
-        // Раскомментируйте для Standalone режима:
-        if (_renderMode != RenderMode.Context)
+        
+        // ✅ Только для Standalone режима
+        if (_renderMode == RenderMode.Standalone)
             Input.UpdateMouse(e.X, e.Y);
     }
 
@@ -334,14 +336,10 @@ public class Window : GameWindow
     {
         if (!_initialized) return;
 
-        // Останавливаем Input поток
-        _inputThreadRunning = false;
-        if (_inputUpdateThread != null && _inputUpdateThread.IsAlive)
+        // ✅ Отписываемся от событий
+        if (_framebufferSender != null)
         {
-            if (!_inputUpdateThread.Join(1000))
-            {
-                Console.WriteLine("[SERVER] Input update thread did not stop gracefully");
-            }
+            _framebufferSender.OnInputEventReceived -= OnRemoteInputReceived;
         }
 
         foreach (var vao in _vaoList) vao.Dispose();
