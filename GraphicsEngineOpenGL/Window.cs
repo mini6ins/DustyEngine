@@ -40,8 +40,8 @@ public class Window : GameWindow
     private int _contextFramebuffer;
     private int _contextColorTexture;
     private int _contextDepthTexture;
-    private int _contextFramebufferWidth = 1280;
-    private int _contextFramebufferHeight = 720;
+    public  static int ContextFramebufferWidth = 1280;
+    public static int ContextFramebufferHeight = 720;
 
     private bool _initialized = false;
 
@@ -136,7 +136,7 @@ public class Window : GameWindow
             // ✅ Включаем режим удалённого ввода ДО запуска sender
             Input.SetRemoteInputMode(true);
 
-            _framebufferSender ??= new FramebufferSenderMMF(_contextFramebufferWidth, _contextFramebufferHeight, 60);
+            _framebufferSender ??= new FramebufferSenderMMF(ContextFramebufferWidth, ContextFramebufferHeight, 60);
             if (!_framebufferSender.IsRunning)
             {
                 if (!_framebufferSender.Start())
@@ -160,7 +160,7 @@ public class Window : GameWindow
         _contextColorTexture = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2d, _contextColorTexture);
         GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba8,
-            _contextFramebufferWidth, _contextFramebufferHeight, 0, PixelFormat.Rgba, PixelType.UnsignedByte,
+            ContextFramebufferWidth, ContextFramebufferHeight, 0, PixelFormat.Rgba, PixelType.UnsignedByte,
             IntPtr.Zero);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
@@ -170,7 +170,7 @@ public class Window : GameWindow
         _contextDepthTexture = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2d, _contextDepthTexture);
         GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.DepthComponent24,
-            _contextFramebufferWidth, _contextFramebufferHeight, 0, PixelFormat.DepthComponent, PixelType.Float,
+            ContextFramebufferWidth, ContextFramebufferHeight, 0, PixelFormat.DepthComponent, PixelType.Float,
             IntPtr.Zero);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
@@ -182,12 +182,12 @@ public class Window : GameWindow
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
 
-        _camera.AspectRatio = (float)_contextFramebufferWidth / _contextFramebufferHeight;
+        _camera.AspectRatio = (float)ContextFramebufferWidth / ContextFramebufferHeight;
         _projection = _camera.GetProjectionMatrix();
 
-        float aspect = (float)_contextFramebufferWidth / _contextFramebufferHeight;
+        float aspect = (float)ContextFramebufferWidth / ContextFramebufferHeight;
         Console.WriteLine(
-            $"[SERVER] Context framebuffer: {_contextFramebufferWidth}x{_contextFramebufferHeight}, aspect: {aspect:F3}");
+            $"[SERVER] Context framebuffer: {ContextFramebufferWidth}x{ContextFramebufferHeight}, aspect: {aspect:F3}");
 
         OnFramebufferTextureChanged?.Invoke(_contextColorTexture);
     }
@@ -200,11 +200,11 @@ public class Window : GameWindow
             case FramebufferSenderMMF.InputEventType.KeyDown:
                 Input.ProcessRemoteKeyEvent((OpenTK.Windowing.GraphicsLibraryFramework.Keys)evt.KeyCode, true);
                 break;
-            
+
             case FramebufferSenderMMF.InputEventType.KeyUp:
                 Input.ProcessRemoteKeyEvent((OpenTK.Windowing.GraphicsLibraryFramework.Keys)evt.KeyCode, false);
                 break;
-            
+
             case FramebufferSenderMMF.InputEventType.MouseMove:
                 // ✅ evt.MouseX и MouseY уже являются нормализованными дельтами
                 Input.ProcessRemoteMouseMove(evt.MouseX, evt.MouseY);
@@ -246,7 +246,7 @@ public class Window : GameWindow
     protected override void OnMouseMove(MouseMoveEventArgs e)
     {
         base.OnMouseMove(e);
-        
+
         // ✅ Только для Standalone режима
         if (_renderMode == RenderMode.Standalone)
             Input.UpdateMouse(e.X, e.Y);
@@ -265,7 +265,7 @@ public class Window : GameWindow
     private void RenderToContext()
     {
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, _contextFramebuffer);
-        GL.Viewport(0, 0, _contextFramebufferWidth, _contextFramebufferHeight);
+        GL.Viewport(0, 0, ContextFramebufferWidth, ContextFramebufferHeight);
 
         GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
@@ -274,7 +274,7 @@ public class Window : GameWindow
 
         // отправляем БЕЗ флипа
         if (_framebufferSender?.IsRunning == true)
-            _framebufferSender.SendFramebuffer(_contextFramebuffer, _contextFramebufferWidth, _contextFramebufferHeight,
+            _framebufferSender.SendFramebuffer(_contextFramebuffer, ContextFramebufferWidth, ContextFramebufferHeight,
                 false);
 
         // очистка backbuffer

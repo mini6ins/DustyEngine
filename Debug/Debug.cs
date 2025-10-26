@@ -10,7 +10,7 @@ namespace DustyEngine
         private static LogLevel currentLogLevel = LogLevel.Info;
         private static bool writeToConsole = true;
         private static bool writeToFile = true;
-        private static bool IsDebugMode = false;
+        private static bool isDebugMode = false;
 
         public enum LogLevel
         {
@@ -35,7 +35,7 @@ namespace DustyEngine
             {
                 logMessages.Add(formattedMessage);
                 
-                if (IsDebugMode == false && isDebugMessage == true) return;
+                if (isDebugMode == false && isDebugMessage == true) return;
         
                 if (writeToConsole)
                 {
@@ -49,7 +49,7 @@ namespace DustyEngine
         public static LogLevel GetLogLevel() => currentLogLevel;
         public static void EnableConsoleLogging(bool enabled) => writeToConsole = enabled;
         public static void EnableFileLogging(bool enabled) => writeToFile = enabled;
-        public static void EnableDebugMode(bool enabled) => IsDebugMode = enabled;
+        public static void EnableDebugMode(bool enabled) => isDebugMode = enabled;
         public static void ShowLogs() => logMessages.ForEach(Console.WriteLine);
 
         public static void ClearLogs()

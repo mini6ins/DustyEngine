@@ -5,35 +5,35 @@ using Utils;
 
 namespace GameTestEngine.Assets;
 
-public class MoveBoxCode: MonoBehaviour
+public class MoveBoxCode : MonoBehaviour
 {
     private Transform _boxTransform;
-    private Vector3 direction = Vector3.Zero;
-    private float movementSpeed = 1f;
-    
+    private Vector3 _direction = Vector3.Zero;
+    private float _movementSpeed = 1f;
+
     private void Start()
     {
         _boxTransform = GetComponent<Transform>();
         Debug.Log(_boxTransform.ToString());
     }
-    
+
     public void Update()
     {
-        float rotationSpeed = 1f; // градусов в секунду
+        float rotationSpeed = 1f;
         _boxTransform.LocalRotation.Y += rotationSpeed * (float)Time.DeltaTime;
-        
-        direction = Vector3.Zero;
-        if (Input.IsKeyDown(KeyCode.I)) direction += _boxTransform.Forward;
+
+        _direction = Vector3.Zero;
+        if (Input.IsKeyDown(KeyCode.I)) _direction += _boxTransform.Forward;
         MoveBox();
     }
-    
-    
+
+
     private void MoveBox()
     {
-        if (direction.LengthSquared > 0f)
+        if (_direction.LengthSquared > 0f)
         {
-            direction = direction.Normalized();
-            _boxTransform.LocalPosition += direction * movementSpeed * Time.DeltaTime;
+            _direction = _direction.Normalized();
+            _boxTransform.LocalPosition += _direction * _movementSpeed * Time.DeltaTime;
         }
     }
 }

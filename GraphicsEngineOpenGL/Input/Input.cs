@@ -1,80 +1,70 @@
-﻿namespace Utils
+﻿using OpenTK.Windowing.GraphicsLibraryFramework;
+using Window = GraphicsEngineOpenGL.Window;
+
+namespace Utils
 {
     public static class Input
     {
-        private static OpenTK.Windowing.GraphicsLibraryFramework.KeyboardState? keyboardState;
-        private static OpenTK.Windowing.GraphicsLibraryFramework.KeyboardState? previousKeyboardState;
+        private static KeyboardState? keyboardState;
+        private static KeyboardState? previousKeyboardState;
         private static readonly HashSet<KeyCode> TriggeredKeys = [];
-        
-        private static readonly HashSet<OpenTK.Windowing.GraphicsLibraryFramework.Keys> _remoteKeysDown = new();
-        private static readonly HashSet<OpenTK.Windowing.GraphicsLibraryFramework.Keys> _previousRemoteKeysDown = new();
-        private static bool _useRemoteInput = false;
-        
+
+        private static readonly HashSet<Keys> RemoteKeysDown = [];
+        private static readonly HashSet<Keys> PreviousRemoteKeysDown = [];
+        private static bool useRemoteInput;
+
         private static bool firstMove = true;
         private static float lastX;
         private static float lastY;
-        private static (float X, float Y) currentDelta = (0, 0);
-        
-        // ✅ Разделяем накопленную дельту и текущую дельту
-        private static float _accumulatedRemoteDeltaX = 0;
-        private static float _accumulatedRemoteDeltaY = 0;
-        private static readonly object _mouseLock = new object();
+        private static (float X, float Y) currentDelta;
 
-        public static (float X, float Y) Delta
-        {
-            get
-            {
-                return currentDelta;
-            }
-        }
-        
-        // ✅ Вызывается ОДИН РАЗ за кадр для remote input
+        private static float accumulatedRemoteDeltaX, accumulatedRemoteDeltaY;
+        private static readonly object MouseLock = new();
+
+        public static (float X, float Y) Delta => currentDelta;
+
+
         public static void Update()
         {
-            if (_useRemoteInput)
-            {
-                _previousRemoteKeysDown.Clear();
-                foreach (var key in _remoteKeysDown)
-                    _previousRemoteKeysDown.Add(key);
+            if (!useRemoteInput) return;
 
-                // ✅ Берём накопленную дельту и сбрасываем её
-                lock (_mouseLock)
-                {
-                    currentDelta = (_accumulatedRemoteDeltaX, _accumulatedRemoteDeltaY);
-                    _accumulatedRemoteDeltaX = 0;
-                    _accumulatedRemoteDeltaY = 0;
-                }
+            PreviousRemoteKeysDown.Clear();
+            foreach (var key in RemoteKeysDown)
+                PreviousRemoteKeysDown.Add(key);
+
+            lock (MouseLock)
+            {
+                currentDelta = (accumulatedRemoteDeltaX, accumulatedRemoteDeltaY);
+                accumulatedRemoteDeltaX = 0;
+                accumulatedRemoteDeltaY = 0;
             }
         }
 
-        // ✅ Для standalone режима
-        public static void Update(OpenTK.Windowing.GraphicsLibraryFramework.KeyboardState newKeyboardState)
+        public static void Update(KeyboardState newKeyboardState)
         {
-            if (!_useRemoteInput)
-            {
-                previousKeyboardState = keyboardState;
-                keyboardState = newKeyboardState;
-            }
+            if (useRemoteInput) return;
+
+            previousKeyboardState = keyboardState;
+            keyboardState = newKeyboardState;
         }
 
         public static bool IsKeyDown(KeyCode keyCode)
         {
-            if (_useRemoteInput)
+            if (useRemoteInput)
             {
                 var key = ConvertKey(keyCode);
-                return _remoteKeysDown.Contains(key);
+                return RemoteKeysDown.Contains(key);
             }
 
-            if (keyboardState == null) return false;
-            return keyboardState.IsKeyDown(ConvertKey(keyCode));
+            return keyboardState != null && keyboardState.IsKeyDown(ConvertKey(keyCode));
         }
 
         public static bool IsKeyPressed(KeyCode keyCode)
         {
-            if (_useRemoteInput)
+            if (useRemoteInput)
             {
                 var key = ConvertKey(keyCode);
-                return _remoteKeysDown.Contains(key) && !_previousRemoteKeysDown.Contains(key);
+                return RemoteKeysDown.Contains(key) && !PreviousRemoteKeysDown.Contains(key);
             }
 
             if (keyboardState == null || previousKeyboardState == null) return false;
@@ -84,10 +74,10 @@
 
         public static bool IsKeyReleased(KeyCode keyCode)
         {
-            if (_useRemoteInput)
+            if (useRemoteInput)
             {
                 var key = ConvertKey(keyCode);
-                return !_remoteKeysDown.Contains(key) && _previousRemoteKeysDown.Contains(key);
+                return !RemoteKeysDown.Contains(key) && PreviousRemoteKeysDown.Contains(key);
             }
 
             if (keyboardState == null || previousKeyboardState == null) return false;
@@ -97,15 +87,14 @@
 
         public static bool IsKeyJustActivatedOnce(KeyCode keyCode)
         {
-            if (_useRemoteInput)
+            if (useRemoteInput)
             {
                 var key = ConvertKey(keyCode);
 
-                if (_remoteKeysDown.Contains(key))
+                if (RemoteKeysDown.Contains(key))
                 {
-                    if (!TriggeredKeys.Contains(keyCode))
+                    if (TriggeredKeys.Add(keyCode))
                     {
-                        TriggeredKeys.Add(keyCode);
                         return true;
                     }
                 }
@@ -123,9 +112,8 @@
 
             if (keyboardState.IsKeyDown(k))
             {
-                if (!TriggeredKeys.Contains(keyCode))
+                if (TriggeredKeys.Add(keyCode))
                 {
-                    TriggeredKeys.Add(keyCode);
                     return true;
                 }
             }
@@ -137,16 +125,14 @@
             return false;
         }
 
-        private static OpenTK.Windowing.GraphicsLibraryFramework.Keys ConvertKey(KeyCode keyCode)
+        private static Keys ConvertKey(KeyCode keyCode)
         {
-            return Enum.TryParse(keyCode.ToString(), out OpenTK.Windowing.GraphicsLibraryFramework.Keys result)
-                ? result
-                : OpenTK.Windowing.GraphicsLibraryFramework.Keys.Unknown;
+            return Enum.TryParse(keyCode.ToString(), out Keys result) ? result : Keys.Unknown;
         }
 
         public static void UpdateMouse(float x, float y)
         {
-            if (_useRemoteInput)
+            if (useRemoteInput)
                 return;
 
             if (firstMove)
@@ -169,15 +155,15 @@
             currentDelta = (0, 0);
         }
 
-        public static void FullResetMouse()
+        private static void FullResetMouse()
         {
             firstMove = true;
             currentDelta = (0, 0);
 
-            lock (_mouseLock)
+            lock (MouseLock)
             {
-                _accumulatedRemoteDeltaX = 0;
-                _accumulatedRemoteDeltaY = 0;
+                accumulatedRemoteDeltaX = 0;
+                accumulatedRemoteDeltaY = 0;
             }
         }
 
@@ -193,50 +179,38 @@
 
         public static void SetRemoteInputMode(bool enabled)
         {
-            _useRemoteInput = enabled;
+            useRemoteInput = enabled;
             if (enabled)
             {
-                Console.WriteLine("[INPUT] Remote input mode ENABLED");
-                // ✅ Сбрасываем состояние при переключении
                 FullResetMouse();
             }
             else
             {
-                Console.WriteLine("[INPUT] Remote input mode DISABLED");
-                _remoteKeysDown.Clear();
-                _previousRemoteKeysDown.Clear();
+                RemoteKeysDown.Clear();
+                PreviousRemoteKeysDown.Clear();
                 FullResetMouse();
             }
         }
-        
-        public static void ProcessRemoteKeyEvent(OpenTK.Windowing.GraphicsLibraryFramework.Keys key, bool isDown)
+
+        public static void ProcessRemoteKeyEvent(Keys key, bool isDown)
         {
             if (isDown)
-            {
-                _remoteKeysDown.Add(key);
-            }
+                RemoteKeysDown.Add(key);
             else
-            {
-                _remoteKeysDown.Remove(key);
-            }
+                RemoteKeysDown.Remove(key);
         }
-        
-        // ✅ Вызывается МНОГОКРАТНО (из потока обработки событий)
+
         public static void ProcessRemoteMouseMove(float normalizedDeltaX, float normalizedDeltaY)
         {
-            if (!_useRemoteInput) return;
-            
-            const float REFERENCE_WIDTH = 1280f;
-            const float REFERENCE_HEIGHT = 720f;
+            if (!useRemoteInput) return;
 
-            float deltaX = normalizedDeltaX * REFERENCE_WIDTH;
-            float deltaY = normalizedDeltaY * REFERENCE_HEIGHT;
-            
-            // ✅ Накапливаем все дельты до следующего Update()
-            lock (_mouseLock)
+            float deltaX = normalizedDeltaX * Window.ContextFramebufferWidth;
+            float deltaY = normalizedDeltaY * Window.ContextFramebufferHeight;
+
+            lock (MouseLock)
             {
-                _accumulatedRemoteDeltaX += deltaX;
-                _accumulatedRemoteDeltaY += deltaY;
+                accumulatedRemoteDeltaX += deltaX;
+                accumulatedRemoteDeltaY += deltaY;
             }
         }
     }
