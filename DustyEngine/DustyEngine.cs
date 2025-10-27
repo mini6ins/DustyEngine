@@ -40,11 +40,15 @@ namespace DustyEngine
             Debug.Log("Test FATAL", Debug.LogLevel.FatalError, true);
 
             if (SceneSerializer.LoadScene(out var loadedScene, settings.PathToScenes.FirstOrDefault())) return;
-            foreach (var method in new[] { "OnEnable", "Start" })
+
+            if (renderMode == RenderMode.Standalone)
             {
-                foreach (var gameObject in loadedScene.GameObjects)
+                foreach (var method in new[] { "OnEnable", "Start" })
                 {
-                    SceneManager.InvokeRecursive(gameObject, method);
+                    foreach (var gameObject in loadedScene.GameObjects)
+                    {
+                        SceneManager.InvokeRecursive(gameObject, method);
+                    }
                 }
             }
 
@@ -56,6 +60,7 @@ namespace DustyEngine
 
             Action gameLoopAction = () =>
             {
+                if(renderMode == RenderMode.Context) return;
                 GameLoop.ExecuteFrame(loadedScene);
                 Time.Tick();
             };

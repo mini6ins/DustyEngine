@@ -1,4 +1,5 @@
-﻿using DustyEngine.Components;
+﻿using DustyEngine;
+using DustyEngine.Components;
 using GraphicsEngineOpenGL.RenderUtils;
 using OpenTK.Graphics.OpenGL.Compatibility;
 using OpenTK.Mathematics;
@@ -29,6 +30,12 @@ public class Window : GameWindow
     private readonly string _windowName;
 
     private Camera _camera;
+    private EditorCamera _editorCamera;
+
+    private CameraBase ActiveCamera =>
+        (_renderMode == RenderMode.Context && _editorCamera != null) ? _editorCamera : _camera;
+
+
     private Matrix4 _projection;
     private CursorState _cursorState;
     private RenderMode _renderMode;
@@ -49,13 +56,14 @@ public class Window : GameWindow
 
     public Window(GameWindowSettings gws, NativeWindowSettings nws, List<MeshRenderer> allRenderers,
         string vertShaderPath, string fragShaderPath, string windowName,
-        Camera camera, bool isVsync = true, CursorState cursorState = CursorState.Normal,
+        Camera camera, EditorCamera editorCamera, bool isVsync = true, CursorState cursorState = CursorState.Normal,
         RenderMode renderMode = RenderMode.Context, FramebufferSenderMMF? framebufferSenderMmf = null)
         : base(gws, nws)
     {
         _windowName = windowName;
         Title = _windowName;
         _camera = camera;
+        _editorCamera = editorCamera;
         _cursorState = cursorState;
         _renderMode = renderMode;
         _framebufferSender = framebufferSenderMmf;
@@ -70,8 +78,35 @@ public class Window : GameWindow
 
     public void AddRenderer(MeshRenderer? meshRenderer)
     {
-        var mesh = meshRenderer?.GetMesh();
-        if (mesh?.Vertices == null) ;
+        if (meshRenderer == null)
+        {
+            Debug.Log("[AddRenderer] meshRenderer == null — skipping.");
+            return;
+        }
+
+        meshRenderer.EnsureLoaded();
+
+        var mesh = meshRenderer.GetMesh();
+        if (mesh == null || mesh.Vertices == null || mesh.Indices == null ||
+            mesh.Vertices.Length == 0 || mesh.Indices.Length == 0)
+        {
+            Debug.Log("[AddRenderer] Empty Mesh — skipping. " +
+                      "Make sure MeshRenderer loads a valid mesh or assign a default one.");
+            return;
+        }
+
+        if (meshRenderer.Parent == null)
+        {
+            Debug.Log("[AddRenderer] meshRenderer.Parent == null — skipping.");
+            return;
+        }
+
+        var transform = meshRenderer.Parent.GetComponent<Transform>();
+        if (transform == null)
+        {
+            Debug.Log("[AddRenderer] No Transform found on parent — skipping.");
+            return;
+        }
 
         var vao = new VAOManager(_shaderProgram);
         vao.CreateVAO(mesh.Vertices, mesh.Indices);
@@ -80,10 +115,11 @@ public class Window : GameWindow
         _sceneObjects.Add(new RenderableObject
         {
             VaoIndex = _vaoList.Count - 1,
-            Transform = meshRenderer.Parent.GetComponent<Transform>(),
+            Transform = transform,
             MeshRenderer = meshRenderer,
         });
     }
+
 
     public bool RemoveRenderer(int objectId)
     {
@@ -106,6 +142,14 @@ public class Window : GameWindow
     {
         base.OnLoad();
 
+        if (_renderMode == RenderMode.Context && _editorCamera != null)
+        {
+            var euler = _editorCamera.InternalTransform.LocalRotationQuat.ToEulerAngles();
+            _edPitch = euler.X * (180f / MathF.PI);
+            _edYaw = euler.Y * (180f / MathF.PI);
+        }
+
+
         GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
         GL.Enable(EnableCap.CullFace);
         GL.CullFace(TriangleFace.Back);
@@ -116,8 +160,8 @@ public class Window : GameWindow
         CursorState = _cursorState;
         GL.Viewport(0, 0, FramebufferSize.X, FramebufferSize.Y);
 
-        _camera.AspectRatio = Size.X / (float)Size.Y;
-        _projection = _camera.GetProjectionMatrix();
+        ActiveCamera.AspectRatio = Size.X / (float)Size.Y;
+        _projection = ActiveCamera.GetProjectionMatrix();
 
         if (_renderMode == RenderMode.Context)
         {
@@ -168,8 +212,8 @@ public class Window : GameWindow
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
 
-        _camera.AspectRatio = (float)ContextFramebufferWidth / ContextFramebufferHeight;
-        _projection = _camera.GetProjectionMatrix();
+        ActiveCamera.AspectRatio = (float)ContextFramebufferWidth / ContextFramebufferHeight;
+        _projection = ActiveCamera.GetProjectionMatrix();
     }
 
     private void OnRemoteInputReceived(MMFShared.InputEvent evt)
@@ -190,6 +234,14 @@ public class Window : GameWindow
         }
     }
 
+    private float _edYaw = 0f;
+    private float _edPitch = 0f;
+    private float _edSpeed = 8f;
+    private float _edMouseSensitivity = 0.15f;
+    private float _edSmoothDX = 0f;
+    private float _edSmoothDY = 0f;
+    private const float _edSmoothing = 0.3f;
+
     protected override void OnUpdateFrame(FrameEventArgs args)
     {
         base.OnUpdateFrame(args);
@@ -199,13 +251,66 @@ public class Window : GameWindow
         else
             Input.Update(KeyboardState);
 
-        float deltaTime = (float)args.Time;
+        float dt = (float)args.Time;
 
-        _frameTime += deltaTime;
+        if (_renderMode == RenderMode.Context && _editorCamera is EditorCamera ec)
+        {
+            if (Input.IsMouseButtonDown(Utils.MouseButton.Middle))
+            {
+                (float dx, float dy) = Input.Delta;
+                _edSmoothDX = _edSmoothDX * _edSmoothing + dx * (1f - _edSmoothing);
+                _edSmoothDY = _edSmoothDY * _edSmoothing + dy * (1f - _edSmoothing);
+
+                const float deadZone = 0.001f;
+                if (System.Math.Abs(_edSmoothDX) > deadZone || System.Math.Abs(_edSmoothDY) > deadZone)
+                {
+                    _edYaw -= _edSmoothDX * _edMouseSensitivity;
+                    _edPitch -= _edSmoothDY * _edMouseSensitivity;
+                    _edPitch = System.Math.Clamp(_edPitch, -89f, 89f);
+
+                    float pitchRad = _edPitch * (MathF.PI / 180f);
+                    float yawRad = _edYaw * (MathF.PI / 180f);
+
+                    var currentRight = ec.InternalTransform.LocalRotationQuat.Rotate(
+                        new DustyEngine.Engine.Math.Vectors.Vector3(1f, 0f, 0f)
+                    );
+                    var qPitch = Quaternion.FromAxisAngle(currentRight, pitchRad);
+
+                    var localUp = qPitch.Rotate(new DustyEngine.Engine.Math.Vectors.Vector3(0f, 1f, 0f));
+                    var qYaw = Quaternion.FromAxisAngle(localUp, yawRad);
+
+                    ec.InternalTransform.LocalRotationQuat = qYaw * qPitch;
+                }
+            }
+
+            Input.ResetMouse();
+
+            var fwd = ec.InternalTransform.Forward;
+            var right = ec.InternalTransform.Right;
+            var up = ec.InternalTransform.Up;
+
+            var dir = DustyEngine.Engine.Math.Vectors.Vector3.Zero;
+            if (Input.IsKeyDown(KeyCode.W)) dir += fwd;
+            if (Input.IsKeyDown(KeyCode.S)) dir -= fwd;
+            if (Input.IsKeyDown(KeyCode.A)) dir -= right;
+            if (Input.IsKeyDown(KeyCode.D)) dir += right;
+            if (Input.IsKeyDown(KeyCode.Space)) dir += up;
+            if (Input.IsKeyDown(KeyCode.LeftShift)) dir -= up;
+
+            if (dir.LengthSquared > 0f)
+            {
+                dir = dir.Normalized();
+                ec.InternalTransform.LocalPosition += dir * _edSpeed * dt;
+            }
+        }
+
+        _frameTime += dt;
         _fps++;
         if (_frameTime >= 1.0f)
         {
-            Title = $"{_windowName} : FPS - {_fps} | Objects: {_sceneObjects.Count} | Mode: {_renderMode}";
+            var camTag = (_renderMode == RenderMode.Context && _editorCamera != null) ? "EditorCam" : "SceneCam";
+            Title =
+                $"{_windowName} : FPS - {_fps} | Objects: {_sceneObjects.Count} | Mode: {_renderMode} | Cam: {camTag}";
             _frameTime = 0.0f;
             _fps = 0;
         }
@@ -269,9 +374,10 @@ public class Window : GameWindow
     {
         _shaderProgram.ActiveProgram();
 
-        var viewMatrix = _camera.GetViewMatrix();
+        var viewMatrix = ActiveCamera.GetViewMatrix();
         _shaderProgram.SetUniform("uView", viewMatrix);
         _shaderProgram.SetUniform("uProjection", _projection);
+
 
         foreach (var obj in _sceneObjects)
             if (obj.MeshRenderer.IsActiveAndEnabled)

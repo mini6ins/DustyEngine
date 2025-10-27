@@ -7,7 +7,7 @@ internal static class Program
 {
     private static volatile bool _stopping;
     private static string projectPath;
-    private static RenderMode renderMode = RenderMode.Context;
+    private static RenderMode renderMode = RenderMode.Standalone;
 
     static int Main(string[] args)
     {

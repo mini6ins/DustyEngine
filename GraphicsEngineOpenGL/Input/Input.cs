@@ -3,6 +3,13 @@ using Window = GraphicsEngineOpenGL.Window;
 
 namespace Utils
 {
+    public enum MouseButton
+    {
+        Left = 0,
+        Right = 1,
+        Middle = 2
+    }
+
     public static class Input
     {
         private static KeyboardState? keyboardState;
@@ -11,6 +18,7 @@ namespace Utils
 
         private static readonly HashSet<Keys> RemoteKeysDown = [];
         private static readonly HashSet<Keys> PreviousRemoteKeysDown = [];
+        private static readonly HashSet<MouseButton> RemoteMouseButtonsDown = [];
         private static bool useRemoteInput;
 
         private static bool firstMove = true;
@@ -22,7 +30,6 @@ namespace Utils
         private static readonly object MouseLock = new();
 
         public static (float X, float Y) Delta => currentDelta;
-
 
         public static void Update()
         {
@@ -125,6 +132,14 @@ namespace Utils
             return false;
         }
 
+        public static bool IsMouseButtonDown(MouseButton button)
+        {
+            if (useRemoteInput)
+                return RemoteMouseButtonsDown.Contains(button);
+
+            return false;
+        }
+
         private static Keys ConvertKey(KeyCode keyCode)
         {
             return Enum.TryParse(keyCode.ToString(), out Keys result) ? result : Keys.Unknown;
@@ -188,6 +203,7 @@ namespace Utils
             {
                 RemoteKeysDown.Clear();
                 PreviousRemoteKeysDown.Clear();
+                RemoteMouseButtonsDown.Clear();
                 FullResetMouse();
             }
         }
@@ -198,6 +214,14 @@ namespace Utils
                 RemoteKeysDown.Add(key);
             else
                 RemoteKeysDown.Remove(key);
+        }
+
+        public static void ProcessRemoteMouseButton(MouseButton button, bool isDown)
+        {
+            if (isDown)
+                RemoteMouseButtonsDown.Add(button);
+            else
+                RemoteMouseButtonsDown.Remove(button);
         }
 
         public static void ProcessRemoteMouseMove(float normalizedDeltaX, float normalizedDeltaY)
