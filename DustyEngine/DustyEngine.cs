@@ -60,7 +60,7 @@ namespace DustyEngine
 
             Action gameLoopAction = () =>
             {
-                if(renderMode == RenderMode.Context) return;
+                if(renderMode == RenderMode.Embedded) return;
                 GameLoop.ExecuteFrame(loadedScene);
                 Time.Tick();
             };

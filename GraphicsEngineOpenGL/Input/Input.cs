@@ -14,6 +14,8 @@ namespace Utils
     {
         private static KeyboardState? keyboardState;
         private static KeyboardState? previousKeyboardState;
+        private static MouseState? mouseState;
+        private static MouseState? previousMouseState;
         private static readonly HashSet<KeyCode> TriggeredKeys = [];
 
         private static readonly HashSet<Keys> RemoteKeysDown = [];
@@ -53,6 +55,14 @@ namespace Utils
 
             previousKeyboardState = keyboardState;
             keyboardState = newKeyboardState;
+        }
+
+        public static void UpdateMouseState(MouseState newMouseState)
+        {
+            if (useRemoteInput) return;
+
+            previousMouseState = mouseState;
+            mouseState = newMouseState;
         }
 
         public static bool IsKeyDown(KeyCode keyCode)
@@ -137,7 +147,36 @@ namespace Utils
             if (useRemoteInput)
                 return RemoteMouseButtonsDown.Contains(button);
 
-            return false;
+            if (mouseState == null)
+                return false;
+
+            return button switch
+            {
+                MouseButton.Left => mouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Left),
+                MouseButton.Right => mouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Right),
+                MouseButton.Middle => mouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Middle),
+                _ => false
+            };
+        }
+
+        public static bool IsMouseButtonPressed(MouseButton button)
+        {
+            if (useRemoteInput)
+                return false; // Для remote режима можно добавить отдельную логику
+
+            if (mouseState == null || previousMouseState == null)
+                return false;
+
+            return button switch
+            {
+                MouseButton.Left => mouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Left) &&
+                                   !previousMouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Left),
+                MouseButton.Right => mouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Right) &&
+                                    !previousMouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Right),
+                MouseButton.Middle => mouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Middle) &&
+                                     !previousMouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Middle),
+                _ => false
+            };
         }
 
         private static Keys ConvertKey(KeyCode keyCode)

@@ -20,7 +20,7 @@ public class GraphicsEngineOpenGl
         string vertShaderPath, string fragShaderPath, bool vsync, RenderMode renderMode)
     {
         Debug.Log("GraphicsEngineOpenGl is working", Debug.LogLevel.Info, true);
-        
+
         int contextWidth = 1280;
         int contextHeight = 720;
 
@@ -29,42 +29,43 @@ public class GraphicsEngineOpenGl
             ClientSize = new Vector2i(contextWidth, contextHeight),
             Title = programName,
         };
-        
+
         _allRenderers.Clear();
         foreach (var obj in scene.GameObjects)
             SceneManager.CollectMeshRenderers(obj, _allRenderers);
 
         Debug.Log($"Total Meshes: {_allRenderers.Count}", Debug.LogLevel.Info, true);
-        
-        _sender = new FramebufferSenderMMF(contextWidth, contextHeight, 200);
-        if (!_sender.Start())
-        {
-            Debug.Log("Failed to start FramebufferSenderMMF", Debug.LogLevel.Error, true);
-        }
-        else
-        {
-            Debug.Log($"FramebufferSenderMMF started: {contextWidth}x{contextHeight}", Debug.LogLevel.Info, true);
-            _sender.OnInputEventReceived += HandleRemoteInput;
 
-            if (renderMode == RenderMode.Context)
-            {
-                Input.SetRemoteInputMode(true);
-                Debug.Log("Remote input mode ENABLED", Debug.LogLevel.Info, true);
-            }
-        }
-        
+        // // Настройка для Context режима (с отдельным процессом)
+        // if (renderMode == RenderMode.Context)
+        // {
+        //     _sender = new FramebufferSenderMMF(contextWidth, contextHeight, 200);
+        //     if (!_sender.Start())
+        //     {
+        //         Debug.Log("Failed to start FramebufferSenderMMF", Debug.LogLevel.Error, true);
+        //     }
+        //     else
+        //     {
+        //         Debug.Log($"FramebufferSenderMMF started: {contextWidth}x{contextHeight}", Debug.LogLevel.Info, true);
+        //         _sender.OnInputEventReceived += HandleRemoteInput;
+        //
+        //         Input.SetRemoteInputMode(true);
+        //         Debug.Log("Remote input mode ENABLED", Debug.LogLevel.Info, true);
+        //     }
+        // }
+
         Camera sceneCamera = SceneManager.FindCamera(scene);
-        
+
         EditorCamera? editorCamera = null;
-        if (renderMode == RenderMode.Context)
+        if ( renderMode == RenderMode.Embedded)
         {
             var ec = new EditorCamera
             {
                 AspectRatio = contextWidth / (float)contextHeight
             };
-            
+
             ec.InternalTransform.LocalPosition = new V3(0f, 2.5f, 5f);
-            ec.InternalTransform.LocalRotation = new V3(0f, 0f, 0f); 
+            ec.InternalTransform.LocalRotation = new V3(0f, 0f, 0f);
 
             editorCamera = ec;
         }
@@ -76,16 +77,22 @@ public class GraphicsEngineOpenGl
             vertShaderPath,
             fragShaderPath,
             programName,
-            sceneCamera,  
-            editorCamera, 
+            sceneCamera,
+            editorCamera,
             vsync,
             CursorState.Normal,
             renderMode,
             _sender
         );
 
-        if (renderMode == RenderMode.Context)
-            _window.IsVisible = false;
+        // Для Context режима окно скрыто, для Embedded - видимо
+        // if (renderMode == RenderMode.Context)
+        //     _window.IsVisible = false;
+         if (renderMode == RenderMode.Embedded)
+        {
+            _window.IsVisible = true;
+            Debug.Log("Embedded mode: ImGui will render over OpenGL scene", Debug.LogLevel.Info, true);
+        }
 
         _window.UpdateFrame += _ => { updateCallback?.Invoke(); };
 

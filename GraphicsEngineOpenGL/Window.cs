@@ -1,6 +1,7 @@
 ﻿using DustyEngine;
 using DustyEngine.Components;
 using GraphicsEngineOpenGL.RenderUtils;
+using ImGuiNET;
 using OpenTK.Graphics.OpenGL.Compatibility;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
@@ -20,7 +21,7 @@ public class RenderableObject
 public enum RenderMode
 {
     Standalone,
-    Context
+    Embedded // Режим с ImGui поверх рендера
 }
 
 public class Window : GameWindow
@@ -33,8 +34,7 @@ public class Window : GameWindow
     private EditorCamera _editorCamera;
 
     private CameraBase ActiveCamera =>
-        (_renderMode == RenderMode.Context && _editorCamera != null) ? _editorCamera : _camera;
-
+        ((_renderMode == RenderMode.Embedded) && _editorCamera != null) ? _editorCamera : _camera;
 
     private Matrix4 _projection;
     private CursorState _cursorState;
@@ -50,14 +50,27 @@ public class Window : GameWindow
     public static int ContextFramebufferWidth = 1280;
     public static int ContextFramebufferHeight = 720;
 
+    // Framebuffer для Embedded режима (рендер в ImGui)
+    private int _sceneFramebuffer;
+    private int _sceneColorTexture;
+    private int _sceneDepthTexture;
+    private int _sceneWidth = 1280;
+    private int _sceneHeight = 720;
+
     private bool _initialized;
 
     private FramebufferSenderMMF? _framebufferSender;
 
+    // ImGui для Embedded режима
+    private ImGuiManager? _imguiManager;
+    private bool _showDemoWindow = true;
+    private bool _showSceneStats = true;
+    private bool _showSceneViewport = true;
+
     public Window(GameWindowSettings gws, NativeWindowSettings nws, List<MeshRenderer> allRenderers,
         string vertShaderPath, string fragShaderPath, string windowName,
         Camera camera, EditorCamera editorCamera, bool isVsync = true, CursorState cursorState = CursorState.Normal,
-        RenderMode renderMode = RenderMode.Context, FramebufferSenderMMF? framebufferSenderMmf = null)
+        RenderMode renderMode = RenderMode.Embedded, FramebufferSenderMMF? framebufferSenderMmf = null)
         : base(gws, nws)
     {
         _windowName = windowName;
@@ -120,7 +133,6 @@ public class Window : GameWindow
         });
     }
 
-
     public bool RemoveRenderer(int objectId)
     {
         if (objectId < 0 || objectId >= _sceneObjects.Count) return false;
@@ -142,13 +154,12 @@ public class Window : GameWindow
     {
         base.OnLoad();
 
-        if (_renderMode == RenderMode.Context && _editorCamera != null)
+        if ((_renderMode == RenderMode.Embedded) && _editorCamera != null)
         {
             var euler = _editorCamera.InternalTransform.LocalRotationQuat.ToEulerAngles();
             _edPitch = euler.X * (180f / MathF.PI);
             _edYaw = euler.Y * (180f / MathF.PI);
         }
-
 
         GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
         GL.Enable(EnableCap.CullFace);
@@ -163,20 +174,29 @@ public class Window : GameWindow
         ActiveCamera.AspectRatio = Size.X / (float)Size.Y;
         _projection = ActiveCamera.GetProjectionMatrix();
 
-        if (_renderMode == RenderMode.Context)
+        // if (_renderMode == RenderMode.Context)
+        // {
+        //     SetupContextFramebuffer();
+        //     Input.SetRemoteInputMode(true);
+        //
+        //     _framebufferSender ??= new FramebufferSenderMMF(ContextFramebufferWidth, ContextFramebufferHeight, 60);
+        //     if (!_framebufferSender.IsRunning)
+        //     {
+        //         if (_framebufferSender.Start())
+        //         {
+        //             _framebufferSender.OnInputEventReceived += OnRemoteInputReceived;
+        //         }
+        //     }
+        // }
+
+        // Инициализация ImGui для Embedded режима
+        if (_renderMode == RenderMode.Embedded)
         {
-            SetupContextFramebuffer();
+            SetupSceneFramebuffer();
 
-            Input.SetRemoteInputMode(true);
-
-            _framebufferSender ??= new FramebufferSenderMMF(ContextFramebufferWidth, ContextFramebufferHeight, 60);
-            if (!_framebufferSender.IsRunning)
-            {
-                if (_framebufferSender.Start())
-                {
-                    _framebufferSender.OnInputEventReceived += OnRemoteInputReceived;
-                }
-            }
+            _imguiManager = new ImGuiManager();
+            _imguiManager.Initialize(this);
+            Debug.Log("ImGui initialized for Embedded mode", Debug.LogLevel.Info, true);
         }
 
         _initialized = true;
@@ -216,6 +236,43 @@ public class Window : GameWindow
         _projection = ActiveCamera.GetProjectionMatrix();
     }
 
+    private void SetupSceneFramebuffer()
+    {
+        _sceneFramebuffer = GL.GenFramebuffer();
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, _sceneFramebuffer);
+
+        _sceneColorTexture = GL.GenTexture();
+        GL.BindTexture(TextureTarget.Texture2d, _sceneColorTexture);
+        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba8,
+            _sceneWidth, _sceneHeight, 0, PixelFormat.Rgba, PixelType.UnsignedByte,
+            IntPtr.Zero);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0,
+            TextureTarget.Texture2d, _sceneColorTexture, 0);
+
+        _sceneDepthTexture = GL.GenTexture();
+        GL.BindTexture(TextureTarget.Texture2d, _sceneDepthTexture);
+        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.DepthComponent24,
+            _sceneWidth, _sceneHeight, 0, PixelFormat.DepthComponent, PixelType.Float,
+            IntPtr.Zero);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment,
+            TextureTarget.Texture2d, _sceneDepthTexture, 0);
+
+        if (GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer) != FramebufferStatus.FramebufferComplete)
+            throw new Exception("Scene framebuffer не готов!");
+
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+
+        ActiveCamera.AspectRatio = (float)_sceneWidth / _sceneHeight;
+        _projection = ActiveCamera.GetProjectionMatrix();
+    }
+
+    // Фиксированный размер не меняется
+    // private void ResizeSceneFramebuffer(int width, int height) - больше не нужен
+
     private void OnRemoteInputReceived(MMFShared.InputEvent evt)
     {
         switch ((MMFShared.InputEventType)evt.Type)
@@ -242,20 +299,30 @@ public class Window : GameWindow
     private float _edSmoothDY = 0f;
     private const float _edSmoothing = 0.3f;
 
+    // Для отслеживания фокуса viewport
+    private bool _isViewportHovered = false;
+    private bool _isViewportFocused = false;
+
     protected override void OnUpdateFrame(FrameEventArgs args)
     {
         base.OnUpdateFrame(args);
 
-        if (_renderMode == RenderMode.Context)
-            Input.Update();
-        else
-            Input.Update(KeyboardState);
+        // if (_renderMode == RenderMode.Context)
+        //     Input.Update();
+        // else
+        // {
+        Input.Update(KeyboardState);
+        Input.UpdateMouseState(MouseState);
+        // }
 
         float dt = (float)args.Time;
 
-        if (_renderMode == RenderMode.Context && _editorCamera is EditorCamera ec)
+        if ((_renderMode == RenderMode.Embedded) && _editorCamera is EditorCamera ec)
         {
-            if (Input.IsMouseButtonDown(Utils.MouseButton.Middle))
+            // Проверяем фокус viewport для Embedded режима
+            bool canControl = (_renderMode == RenderMode.Embedded && _isViewportHovered);
+
+            if (canControl && Input.IsMouseButtonDown(Utils.MouseButton.Middle))
             {
                 (float dx, float dy) = Input.Delta;
                 _edSmoothDX = _edSmoothDX * _edSmoothing + dx * (1f - _edSmoothing);
@@ -283,32 +350,35 @@ public class Window : GameWindow
                 }
             }
 
-            Input.ResetMouse();
-
-            var fwd = ec.InternalTransform.Forward;
-            var right = ec.InternalTransform.Right;
-            var up = ec.InternalTransform.Up;
-
-            var dir = DustyEngine.Engine.Math.Vectors.Vector3.Zero;
-            if (Input.IsKeyDown(KeyCode.W)) dir += fwd;
-            if (Input.IsKeyDown(KeyCode.S)) dir -= fwd;
-            if (Input.IsKeyDown(KeyCode.A)) dir -= right;
-            if (Input.IsKeyDown(KeyCode.D)) dir += right;
-            if (Input.IsKeyDown(KeyCode.Space)) dir += up;
-            if (Input.IsKeyDown(KeyCode.LeftShift)) dir -= up;
-
-            if (dir.LengthSquared > 0f)
+            if (canControl)
             {
-                dir = dir.Normalized();
-                ec.InternalTransform.LocalPosition += dir * _edSpeed * dt;
+                var fwd = ec.InternalTransform.Forward;
+                var right = ec.InternalTransform.Right;
+                var up = ec.InternalTransform.Up;
+
+                var dir = DustyEngine.Engine.Math.Vectors.Vector3.Zero;
+                if (Input.IsKeyDown(KeyCode.W)) dir += fwd;
+                if (Input.IsKeyDown(KeyCode.S)) dir -= fwd;
+                if (Input.IsKeyDown(KeyCode.A)) dir -= right;
+                if (Input.IsKeyDown(KeyCode.D)) dir += right;
+                if (Input.IsKeyDown(KeyCode.Space)) dir += up;
+                if (Input.IsKeyDown(KeyCode.LeftShift)) dir -= up;
+
+                if (dir.LengthSquared > 0f)
+                {
+                    dir = dir.Normalized();
+                    ec.InternalTransform.LocalPosition += dir * _edSpeed * dt;
+                }
             }
+
+            Input.ResetMouse();
         }
 
         _frameTime += dt;
         _fps++;
         if (_frameTime >= 1.0f)
         {
-            var camTag = (_renderMode == RenderMode.Context && _editorCamera != null) ? "EditorCam" : "SceneCam";
+            var camTag = ((_renderMode == RenderMode.Embedded) && _editorCamera != null) ? "EditorCam" : "SceneCam";
             Title =
                 $"{_windowName} : FPS - {_fps} | Objects: {_sceneObjects.Count} | Mode: {_renderMode} | Cam: {camTag}";
             _frameTime = 0.0f;
@@ -323,7 +393,7 @@ public class Window : GameWindow
     {
         base.OnMouseMove(e);
 
-        if (_renderMode == RenderMode.Standalone)
+        if (_renderMode == RenderMode.Standalone || _renderMode == RenderMode.Embedded)
             Input.UpdateMouse(e.X, e.Y);
     }
 
@@ -331,8 +401,10 @@ public class Window : GameWindow
     {
         base.OnRenderFrame(args);
 
-        if (_renderMode == RenderMode.Context)
-            RenderToContext();
+        // if (_renderMode == RenderMode.Context)
+        //     RenderToContext();
+         if (_renderMode == RenderMode.Embedded)
+            RenderEmbedded();
         else
             RenderStandalone();
 
@@ -359,6 +431,85 @@ public class Window : GameWindow
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
     }
 
+    private void RenderEmbedded()
+    {
+        // Рендерим OpenGL сцену в отдельный framebuffer c  
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, _sceneFramebuffer);
+        GL.Viewport(0, 0, _sceneWidth, _sceneHeight);
+
+        GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
+        GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+
+        RenderScene();
+
+        // Переключаемся на основной framebuffer для ImGui
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+        GL.Viewport(0, 0, FramebufferSize.X, FramebufferSize.Y);
+
+        // Очищаем фон окна
+        GL.ClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+        GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+
+        // Рендерим ImGui интерфейс с viewport'ом сцены
+        if (_imguiManager != null)
+        {
+            _imguiManager.NewFrame();
+            RenderImGuiInterface();
+            _imguiManager.Render();
+        }
+    }
+
+    private void RenderImGuiInterface()
+    {
+        if (_showSceneViewport)
+        {
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, System.Numerics.Vector2.Zero);
+
+            if (ImGui.Begin("Scene Viewport", ref _showSceneViewport))
+            {
+                // Отслеживаем фокус окна
+                _isViewportHovered = ImGui.IsWindowHovered();
+                _isViewportFocused = ImGui.IsWindowFocused();
+
+                var viewportSize = ImGui.GetContentRegionAvail();
+
+                // Фиксированное соотношение сторон 16:9 (1280x720)
+                const float targetAspect = 1280f / 720f;
+                float availableAspect = viewportSize.X / viewportSize.Y;
+
+                System.Numerics.Vector2 imageSize;
+                System.Numerics.Vector2 padding = System.Numerics.Vector2.Zero;
+
+                if (availableAspect > targetAspect)
+                {
+                    // Окно шире - добавляем боковые полосы
+                    imageSize = new System.Numerics.Vector2(viewportSize.Y * targetAspect, viewportSize.Y);
+                    padding = new System.Numerics.Vector2((viewportSize.X - imageSize.X) * 0.5f, 0);
+                }
+                else
+                {
+                    // Окно выше - добавляем верхние/нижние полосы
+                    imageSize = new System.Numerics.Vector2(viewportSize.X, viewportSize.X / targetAspect);
+                    padding = new System.Numerics.Vector2(0, (viewportSize.Y - imageSize.Y) * 0.5f);
+                }
+
+                // Центрируем изображение с padding
+                ImGui.SetCursorPos(ImGui.GetCursorPos() + padding);
+
+                // Отображаем текстуру сцены
+                ImGui.Image(
+                    (IntPtr)_sceneColorTexture,
+                    imageSize,
+                    new System.Numerics.Vector2(0, 1), // UV0 - перевернуто по Y
+                    new System.Numerics.Vector2(1, 0) // UV1
+                );
+            }
+
+            ImGui.End();
+            ImGui.PopStyleVar();
+        }
+    }
+
     private void RenderStandalone()
     {
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
@@ -377,7 +528,6 @@ public class Window : GameWindow
         var viewMatrix = ActiveCamera.GetViewMatrix();
         _shaderProgram.SetUniform("uView", viewMatrix);
         _shaderProgram.SetUniform("uProjection", _projection);
-
 
         foreach (var obj in _sceneObjects)
             if (obj.MeshRenderer.IsActiveAndEnabled)
@@ -420,13 +570,28 @@ public class Window : GameWindow
 
         _shaderProgram.DeleteProgram();
 
-        if (_renderMode == RenderMode.Context)
-        {
-            GL.DeleteFramebuffer(_contextFramebuffer);
-            GL.DeleteTexture(_contextColorTexture);
-            GL.DeleteTexture(_contextDepthTexture);
+        // if (_renderMode == RenderMode.Context)
+        // {
+        //     if (_contextFramebuffer != 0)
+        //     {
+        //         GL.DeleteFramebuffer(_contextFramebuffer);
+        //         GL.DeleteTexture(_contextColorTexture);
+        //         GL.DeleteTexture(_contextDepthTexture);
+        //     }
+        //
+        //     _framebufferSender?.Dispose();
+        // }
 
-            _framebufferSender?.Dispose();
+        if (_renderMode == RenderMode.Embedded)
+        {
+            if (_sceneFramebuffer != 0)
+            {
+                GL.DeleteFramebuffer(_sceneFramebuffer);
+                GL.DeleteTexture(_sceneColorTexture);
+                GL.DeleteTexture(_sceneDepthTexture);
+            }
+
+            _imguiManager?.Shutdown();
         }
 
         _initialized = false;
