@@ -60,13 +60,13 @@ namespace DustyEngine
 
             Action gameLoopAction = () =>
             {
-                if(renderMode == RenderMode.Embedded) return;
+                if(renderMode == RenderMode.Editor) return;
                 GameLoop.ExecuteFrame(loadedScene);
                 Time.Tick();
             };
             
             graphicsEngineOpenGl.RunMainLoop(loadedScene, gameLoopAction,
-                settings.ScreenSize, settings.ProjectName, settings.PathToVertShader,
+                settings.ScreenSize.ToOpenTK(), settings.ProjectName, settings.PathToVertShader,
                 settings.PathToFragShader, settings.Vsync, renderMode);
         }
     }

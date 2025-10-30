@@ -8,7 +8,7 @@ internal static class Program
     private static volatile bool _stopping;
     private static string projectPath;
     
-    private static RenderMode renderMode = RenderMode.Embedded ;
+    private static RenderMode renderMode = RenderMode.Editor ;
 
     static int Main(string[] args)
     {
@@ -53,11 +53,6 @@ internal static class Program
         {
             Console.Error.WriteLine(ex.ToString());
             return 1;
-        }
-        finally
-        {
-            // engine.Stop();
-            // engine.Dispose();
         }
     }
 }

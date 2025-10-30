@@ -11,8 +11,8 @@
   "LogToConsole": true,
   "LogToFile": true,
   "ScreenSize": {
-    "X": 800,
-    "Y": 600
+    "X": 1280,
+    "Y": 720
   },
   "Vsync": true
 }

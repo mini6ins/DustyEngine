@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Utils;
 
 namespace DustyEngine;
 
@@ -13,7 +14,7 @@ public class ProjectSettings
     public Debug.LogLevel LogLevel { get; set; }
     public bool LogToConsole { get; set; }
     public bool LogToFile { get; set; }
-    public Vector2 ScreenSize { get; set; }
+    public Vector2i ScreenSize { get; set; }
     public bool Vsync { get; set; }
 
 
