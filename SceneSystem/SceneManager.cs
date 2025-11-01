@@ -6,10 +6,7 @@ public static class SceneManager
 {
     private static readonly List<Scene> sceneList = [];
     private static Scene? currentScene;
-    public static Action<MeshRenderer> AddRenderer2= (renderer) =>
-    {
-    
-    };
+    public static Action<MeshRenderer> AddRenderer2 = (renderer) => { };
 
     public static Scene? CurrentScene
     {
@@ -121,23 +118,24 @@ public static class SceneManager
         }
     }
 
-    public static Camera? FindCamera(Scene? scene = null)
+    public static List<Camera>? FindCameras()
     {
-        var targetScene = scene ?? CurrentScene;
-        if (targetScene == null)
+        if (CurrentScene == null)
         {
             Debug.Log("[SceneManager] No scene provided and no scenes available!", Debug.LogLevel.Warning, false);
             return null;
         }
 
-        foreach (var obj in targetScene.GameObjects)
+        List<Camera> cameras = new List<Camera>();
+
+        foreach (var obj in CurrentScene.GameObjects)
         {
             var camera = FindCameraRecursive(obj);
             if (camera != null)
-                return camera;
+                cameras.Add(camera);
         }
 
-        return null;
+        return cameras;
     }
 
     private static Camera? FindCameraRecursive(GameObject obj)
@@ -257,7 +255,7 @@ public static class SceneManager
     }
 
     public static IReadOnlyList<Scene> GetAllScenes() => sceneList.AsReadOnly();
-    
+
     public static void InvokeRecursive(GameObject gameObject, string methodName)
     {
         if (gameObject.IsActive)

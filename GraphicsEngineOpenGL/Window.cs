@@ -1,5 +1,6 @@
 ﻿using DustyEngine;
 using DustyEngine.Components;
+using DustyEngine.Scene;
 using GraphicsEngineOpenGL.RenderUtils;
 using ImGuiNET;
 using OpenTK.Graphics.OpenGL.Compatibility;
@@ -29,55 +30,80 @@ public class Window : GameWindow
 {
     private readonly string _windowName;
 
-    private Camera _camera;
-    private EditorCamera _editorCamera;
-    private CameraBase ActiveCamera => ((_renderMode == RenderMode.Editor) && _editorCamera != null) ? _editorCamera : _camera;
+    private readonly List<Camera> _sceneCameras;
+    private readonly EditorCamera _editorCamera;
+    private CameraBase ActiveCamera => ((_renderMode == RenderMode.Editor) && _editorCamera != null) ? _editorCamera : _sceneCameras.First();
 
     private Matrix4 _projection;
     
-    private CursorState _cursorState;
-    private RenderMode _renderMode;
+    private readonly CursorState _cursorState;
+    private readonly RenderMode _renderMode;
 
-    private ShaderProgram _shaderProgram;
+    private readonly ShaderProgram _shaderProgram;
     private readonly List<VAOManager> _vaoList = [];
     private readonly List<RenderableObject> _sceneObjects = [];
-
+    
+    private readonly List<MeshRenderer> _allRenderers = [];
     
     private int _sceneFramebuffer;
     private int _sceneColorTexture;
     private int _sceneDepthTexture;
-    private int _sceneWidth = 1280;
-    private int _sceneHeight = 720;
+    
+    private readonly int _sceneWindowWidth;
+    private readonly int _sceneWindowHeight;
 
     private bool _initialized;
 
     private ImGuiManager? _imguiManager;
-    private bool _showDemoWindow = true;
-    private bool _showSceneStats = true;
     private bool _showSceneViewport = true;
+    
+    
 
-    public Window(GameWindowSettings gws, NativeWindowSettings nws, List<MeshRenderer> allRenderers,
-        string vertShaderPath, string fragShaderPath, string windowName,
-        Camera camera, EditorCamera editorCamera, bool isVsync = true, CursorState cursorState = CursorState.Normal,
+    public Window(GameWindowSettings gws, NativeWindowSettings nws, Scene scene,
+        string vertShaderPath, string fragShaderPath, string windowName, bool isVsync = true, CursorState cursorState = CursorState.Normal,
         RenderMode renderMode = RenderMode.Editor)
         : base(gws, nws)
     {
         _windowName = windowName;
         Title = _windowName;
-        _camera = camera;
-        _editorCamera = editorCamera;
+        
         _cursorState = cursorState;
         _renderMode = renderMode;
 
-        _sceneHeight = nws.ClientSize.Y;
-        _sceneWidth = nws.ClientSize.X;
+        _sceneWindowHeight = nws.ClientSize.Y;
+        _sceneWindowWidth = nws.ClientSize.X;
 
         VSync = isVsync ? VSyncMode.On : VSyncMode.Off;
-
+        
         _shaderProgram = new ShaderProgram(vertShaderPath, fragShaderPath);
 
-        foreach (var meshRenderer in allRenderers)
+        _sceneCameras = SceneManager.FindCameras();;
+        
+        
+        EditorCamera? editorCamera = null;
+        if (renderMode == RenderMode.Editor)
+        {
+            var ec = new EditorCamera
+            {
+                AspectRatio = nws.ClientSize.X / nws.ClientSize.Y
+            };
+
+            ec.InternalTransform.LocalPosition = new Vector3(0f, 2.5f, 5f);
+            ec.InternalTransform.LocalRotation = new Vector3(0f, 0f, 0f);
+
+            _editorCamera = ec;
+        }
+        
+        
+        _allRenderers.Clear();
+        foreach (var obj in scene.GameObjects) 
+            SceneManager.CollectMeshRenderers(obj, _allRenderers);
+        
+        Debug.Log($"Total Meshes: {_allRenderers.Count}", Debug.LogLevel.Info, true);
+        
+        foreach (var meshRenderer in _allRenderers)
             AddRenderer(meshRenderer);
+        
     }
 
     public void AddRenderer(MeshRenderer? meshRenderer)
@@ -187,7 +213,7 @@ public class Window : GameWindow
         _sceneColorTexture = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2d, _sceneColorTexture);
         GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba8,
-            _sceneWidth, _sceneHeight, 0, PixelFormat.Rgba, PixelType.UnsignedByte,
+            _sceneWindowWidth, _sceneWindowHeight, 0, PixelFormat.Rgba, PixelType.UnsignedByte,
             IntPtr.Zero);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
@@ -197,7 +223,7 @@ public class Window : GameWindow
         _sceneDepthTexture = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2d, _sceneDepthTexture);
         GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.DepthComponent24,
-            _sceneWidth, _sceneHeight, 0, PixelFormat.DepthComponent, PixelType.Float,
+            _sceneWindowWidth, _sceneWindowHeight, 0, PixelFormat.DepthComponent, PixelType.Float,
             IntPtr.Zero);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
@@ -209,7 +235,7 @@ public class Window : GameWindow
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
 
-        ActiveCamera.AspectRatio = (float)_sceneWidth / _sceneHeight;
+        ActiveCamera.AspectRatio = (float)_sceneWindowWidth / _sceneWindowHeight;
         _projection = ActiveCamera.GetProjectionMatrix();
     }
 
@@ -322,7 +348,7 @@ public class Window : GameWindow
     private void RenderEditor()
     {
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, _sceneFramebuffer);
-        GL.Viewport(0, 0, _sceneWidth, _sceneHeight);
+        GL.Viewport(0, 0, _sceneWindowWidth, _sceneWindowHeight);
 
         GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);

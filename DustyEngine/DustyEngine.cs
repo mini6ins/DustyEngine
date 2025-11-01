@@ -8,7 +8,7 @@ namespace DustyEngine
     {
         public static string ProjectFolderPath { get; set; }
         private static ProjectSettings settings = new(); 
-        private static GraphicsEngineOpenGl graphicsEngineOpenGl;
+        private static IRenderer graphicsEngineOpenGl;
 
         private static Action<MeshRenderer> AddRenderer = (renderer) => { graphicsEngineOpenGl.AddRenderer(renderer); };
 
