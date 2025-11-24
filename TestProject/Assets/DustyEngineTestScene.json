@@ -32,7 +32,7 @@
         },
         {
           "Type": "MeshRenderer",
-          "Path": "/home/maksym/github/DustyEngine/TestProject/Assets/cube.obj",
+          "Path": "/home/maksym/DustyEngine/TestProject/Assets/cube.obj",
           "Enabled": true,
           "Name": "\u003CNo GameObject\u003E"
         },
@@ -76,7 +76,7 @@
         },
         {
           "Type": "MeshRenderer",
-          "Path": "/home/maksym/github/DustyEngine/TestProject/Assets/TeddyBear.obj",
+          "Path": "/home/maksym/DustyEngine/TestProject/Assets/TeddyBear.obj",
           "Enabled": true,
           "Name": "\u003CNo GameObject\u003E"
         }

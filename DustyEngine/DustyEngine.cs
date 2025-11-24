@@ -23,9 +23,9 @@ namespace DustyEngine
             }
 
             ProjectFolderPath = path;
-
             settings = ProjectSettings.DeserializeProjectSettings(ProjectFolderPath);
-
+            
+    
             Debug.EnableDebugMode(settings.Debug);
             Debug.SetLogLevel(settings.LogLevel);
             Debug.EnableConsoleLogging(settings.LogToConsole);

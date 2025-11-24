@@ -15,6 +15,12 @@
       <PackageReference Include="OpenTK" Version="5.0.0-pre.15" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Reference Include="StreamJsonRpc">
+        <HintPath>..\..\.nuget\packages\streamjsonrpc\2.23.32-alpha\lib\net8.0\StreamJsonRpc.dll</HintPath>
+      </Reference>
+    </ItemGroup>
+
 
     <PropertyGroup>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>

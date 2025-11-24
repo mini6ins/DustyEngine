@@ -6,7 +6,7 @@ namespace DustyEngine.Runner;
 internal static class Program
 {
     private static volatile bool _stopping;
-    private static string projectPath;
+    private static string projectPath = "/home/maksym/DustyEngine/TestProject";
     
     private static RenderMode renderMode = RenderMode.Editor ;
 
@@ -15,7 +15,7 @@ internal static class Program
         if (args.Length < 1)
         {
             Console.Error.WriteLine("Usage: DustyEngine.Runner <ProjectPath> [RenderMode]");
-            projectPath = "/home/maksym/github/DustyEngine/TestProject";
+            projectPath = "/home/maksym/DustyEngine/TestProject";
             // return 2;
         }
         else
