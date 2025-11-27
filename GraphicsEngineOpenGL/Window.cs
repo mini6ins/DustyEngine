@@ -8,6 +8,10 @@ using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using Utils;
 using Vector3 = DustyEngine.Engine.Math.Vectors.Vector3;
+using DustyEngine.Runner;
+using System.IO.Pipes;
+using StreamJsonRpc;
+using Buffer = System.Buffer;
 
 namespace GraphicsEngineOpenGL;
 
@@ -15,7 +19,7 @@ public class RenderableObject
 {
     public int VaoIndex;
     public Transform Transform = new();
-    public MeshRenderer MeshRenderer;
+    public MeshRenderer MeshRenderer = null!;
 }
 
 public enum RenderMode
@@ -29,7 +33,7 @@ public class Window : GameWindow
     private readonly string _windowName;
 
     private readonly List<Camera> _sceneCameras;
-    private readonly EditorCamera _editorCamera;
+    private readonly EditorCamera? _editorCamera;
     private CameraBase ActiveCamera => ((_renderMode == RenderMode.Editor) && _editorCamera != null) ? _editorCamera : _sceneCameras.First();
 
     private Matrix4 _projection;
@@ -45,9 +49,28 @@ public class Window : GameWindow
 
     private bool _initialized;
 
+    // RPC Server для Editor mode (отдаем кадры клиентам)
+    private Thread? _rpcServerThread;
+    private volatile bool _rpcServerRunning = false;
+    private int _connectedClients = 0;
+    
+    // Frame buffer для RPC клиентов
+    private readonly FrameData[] _frameBuffer = new FrameData[3];
+    private int _writeIndex = 0;
+    private readonly object _bufferLock = new object();
+    private System.Diagnostics.Stopwatch _frameStopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+    private float _edYaw = 0f;
+    private float _edPitch = 0f;
+    private float _edSpeed = 8f;
+    private float _edMouseSensitivity = 0.15f;
+    private float _edSmoothDX = 0f;
+    private float _edSmoothDY = 0f;
+    private const float _edSmoothing = 0.3f;
+
     public Window(GameWindowSettings gws, NativeWindowSettings nws, Scene scene,
-        string vertShaderPath, string fragShaderPath, string windowName, bool isVsync = true, CursorState cursorState = CursorState.Normal,
-        RenderMode renderMode = RenderMode.Editor)
+        string vertShaderPath, string fragShaderPath, string windowName, bool isVsync = true, 
+        CursorState cursorState = CursorState.Normal, RenderMode renderMode = RenderMode.Editor)
         : base(gws, nws)
     {
         _windowName = windowName;
@@ -62,12 +85,11 @@ public class Window : GameWindow
 
         _sceneCameras = SceneManager.FindCameras();
         
-        EditorCamera? editorCamera = null;
         if (renderMode == RenderMode.Editor)
         {
             var ec = new EditorCamera
             {
-                AspectRatio = nws.ClientSize.X / nws.ClientSize.Y
+                AspectRatio = nws.ClientSize.X / (float)nws.ClientSize.Y
             };
 
             ec.InternalTransform.LocalPosition = new Vector3(0f, 2.5f, 5f);
@@ -84,6 +106,21 @@ public class Window : GameWindow
         
         foreach (var meshRenderer in _allRenderers)
             AddRenderer(meshRenderer);
+
+        // Инициализация frame buffer для RPC
+        if (_renderMode == RenderMode.Editor)
+        {
+            int pixelCount = nws.ClientSize.X * nws.ClientSize.Y * 4;
+            for (int i = 0; i < _frameBuffer.Length; i++)
+            {
+                _frameBuffer[i] = new FrameData
+                {
+                    Width = nws.ClientSize.X,
+                    Height = nws.ClientSize.Y,
+                    PixelData = new byte[pixelCount]
+                };
+            }
+        }
     }
 
     public void AddRenderer(MeshRenderer? meshRenderer)
@@ -171,16 +208,162 @@ public class Window : GameWindow
         ActiveCamera.AspectRatio = Size.X / (float)Size.Y;
         _projection = ActiveCamera.GetProjectionMatrix();
 
+        // Запуск RPC сервера для Editor mode
+        if (_renderMode == RenderMode.Editor)
+        {
+            StartRpcServer();
+        }
+
         _initialized = true;
     }
 
-    private float _edYaw = 0f;
-    private float _edPitch = 0f;
-    private float _edSpeed = 8f;
-    private float _edMouseSensitivity = 0.15f;
-    private float _edSmoothDX = 0f;
-    private float _edSmoothDY = 0f;
-    private const float _edSmoothing = 0.3f;
+    /// <summary>
+    /// Запуск RPC сервера для отдачи кадров клиентам
+    /// </summary>
+    private void StartRpcServer()
+    {
+        _rpcServerRunning = true;
+        _rpcServerThread = new Thread(RpcServerLoop)
+        {
+            Name = "RPC Server Thread",
+            IsBackground = true
+        };
+        _rpcServerThread.Start();
+        
+        Console.WriteLine("===========================================");
+        Console.WriteLine("RPC Server started!");
+        Console.WriteLine("Clients can connect to: StreamJsonRpcSamplePipe");
+        Console.WriteLine("===========================================");
+    }
+
+    /// <summary>
+    /// RPC Server loop - принимает подключения клиентов
+    /// </summary>
+    private async void RpcServerLoop()
+    {
+        int clientId = 0;
+
+        while (_rpcServerRunning)
+        {
+            try
+            {
+                Console.WriteLine($"[RPC Server] Waiting for client connection...");
+
+                var stream = new NamedPipeServerStream("StreamJsonRpcSamplePipe", 
+                    PipeDirection.InOut,
+                    NamedPipeServerStream.MaxAllowedServerInstances, 
+                    PipeTransmissionMode.Byte,
+                    PipeOptions.Asynchronous);
+
+                await stream.WaitForConnectionAsync();
+
+                int currentClientId = ++clientId;
+                _connectedClients++;
+                Console.WriteLine($"[RPC Server] Client #{currentClientId} connected! Total clients: {_connectedClients}");
+                
+                // Обработка клиента в отдельной задаче
+                _ = Task.Run(() => HandleRpcClient(stream, currentClientId));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[RPC Server] Error in main loop: {ex.Message}");
+                await Task.Delay(1000);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Обработка RPC клиента
+    /// </summary>
+    private async Task HandleRpcClient(NamedPipeServerStream stream, int clientId)
+    {
+        try
+        {
+            await using (stream)
+            {
+                // Создаем изолированный RPC сервис
+                var rpcService = new RpcService(
+                    getFrameData: GetCurrentFrame,
+                    onKeyPress: HandleKeyFromClient,
+                    onMouseMove: HandleMouseMoveFromClient,
+                    onMouseClick: HandleMouseClickFromClient
+                );
+
+                // Attach только RpcService, не Window!
+                var jsonRpc = JsonRpc.Attach(stream, rpcService);
+                Console.WriteLine($"[RPC Server] JSON-RPC attached for client #{clientId}");
+
+                jsonRpc.Disconnected += (sender, args) =>
+                {
+                    _connectedClients--;
+                    Console.WriteLine($"[RPC Server] Client #{clientId} disconnected: {args.Reason}. Remaining: {_connectedClients}");
+                };
+
+                await jsonRpc.Completion;
+            }
+        }
+        catch (Exception ex)
+        {
+            _connectedClients--;
+            Console.WriteLine($"[RPC Server] Error handling client #{clientId}: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Получить текущий кадр для RPC
+    /// </summary>
+    private FrameData GetCurrentFrame()
+    {
+        if (!_initialized)
+        {
+            return new FrameData
+            {
+                Width = FramebufferSize.X,
+                Height = FramebufferSize.Y,
+                PixelData = Array.Empty<byte>()
+            };
+        }
+
+        // Читаем последний готовый кадр
+        int safeReadIndex = (_writeIndex - 1 + _frameBuffer.Length) % _frameBuffer.Length;
+        var source = _frameBuffer[safeReadIndex];
+
+        var result = new FrameData
+        {
+            Width = source.Width,
+            Height = source.Height,
+            Timestamp = source.Timestamp,
+            PixelData = new byte[source.PixelData.Length]
+        };
+
+        Buffer.BlockCopy(source.PixelData, 0, result.PixelData, 0, source.PixelData.Length);
+
+        return result;
+    }
+
+    /// <summary>
+    /// Обработка нажатия клавиши от RPC клиента
+    /// </summary>
+    private void HandleKeyFromClient(string key)
+    {
+        // TODO: можно передавать события в движок
+    }
+
+    /// <summary>
+    /// Обработка движения мыши от RPC клиента
+    /// </summary>
+    private void HandleMouseMoveFromClient(float normalizedX, float normalizedY)
+    {
+        // TODO: можно передавать события в движок
+    }
+
+    /// <summary>
+    /// Обработка клика мыши от RPC клиента
+    /// </summary>
+    private void HandleMouseClickFromClient(float normalizedX, float normalizedY, int button)
+    {
+        // TODO: можно передавать события в движок
+    }
 
     protected override void OnUpdateFrame(FrameEventArgs args)
     {
@@ -190,6 +373,12 @@ public class Window : GameWindow
         Input.UpdateMouseState(MouseState);
         
         EditorCameraMovement(args);
+        
+        // Обновляем заголовок с количеством клиентов
+        if (_renderMode == RenderMode.Editor)
+        {
+            Title = $"{_windowName} - Editor Mode - RPC Clients: {_connectedClients}";
+        }
     }
 
     private void EditorCameraMovement(FrameEventArgs args)
@@ -270,7 +459,39 @@ public class Window : GameWindow
 
         RenderScene();
 
+        // Захват кадра для RPC клиентов (если они есть)
+        if (_renderMode == RenderMode.Editor && _connectedClients > 0)
+        {
+            CaptureFrameForRpc();
+        }
+
         SwapBuffers();
+    }
+
+    /// <summary>
+    /// Захват кадра для отправки RPC клиентам
+    /// </summary>
+    private void CaptureFrameForRpc()
+    {
+        try
+        {
+            float currentTime = (float)_frameStopwatch.Elapsed.TotalSeconds;
+            int currentWrite = _writeIndex;
+
+            // Читаем пиксели из текущего framebuffer
+            GL.ReadPixels(0, 0, FramebufferSize.X, FramebufferSize.Y,
+                PixelFormat.Rgba, PixelType.UnsignedByte, _frameBuffer[currentWrite].PixelData);
+
+            _frameBuffer[currentWrite].Timestamp = currentTime;
+            _frameBuffer[currentWrite].Width = FramebufferSize.X;
+            _frameBuffer[currentWrite].Height = FramebufferSize.Y;
+
+            _writeIndex = (currentWrite + 1) % _frameBuffer.Length;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[RPC] Error capturing frame: {ex.Message}");
+        }
     }
 
     private void RenderScene()
@@ -311,6 +532,10 @@ public class Window : GameWindow
     protected override void OnUnload()
     {
         if (!_initialized) return;
+
+        // Остановка RPC сервера
+        _rpcServerRunning = false;
+        _rpcServerThread?.Join(TimeSpan.FromSeconds(2));
 
         foreach (var vao in _vaoList)
             vao.Dispose();

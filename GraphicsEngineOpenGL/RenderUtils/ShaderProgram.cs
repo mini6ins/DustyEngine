@@ -7,41 +7,41 @@ namespace GraphicsEngineOpenGL.RenderUtils;
 
 public class ShaderProgram
 {
-    private readonly int _program = 0;
+    public readonly int Program = 0;
 
     public ShaderProgram(string vertexFile, string fragmentFile)
     {
         var vertexShader = CreateShader(ShaderType.VertexShader, vertexFile);
         var fragmentShader = CreateShader(ShaderType.FragmentShader, fragmentFile);
 
-        _program = GL.CreateProgram();
-        GL.AttachShader(_program, vertexShader);
-        GL.AttachShader(_program, fragmentShader);
+        Program = GL.CreateProgram();
+        GL.AttachShader(Program, vertexShader);
+        GL.AttachShader(Program, fragmentShader);
 
-        GL.LinkProgram(_program);
+        GL.LinkProgram(Program);
 
 
         DeleteShader(vertexShader);
         DeleteShader(fragmentShader);
     }
 
-    public void ActiveProgram() => GL.UseProgram(_program);
+    public void ActiveProgram() => GL.UseProgram(Program);
 
     public void DeactiveProgram() => GL.UseProgram(0);
 
-    public void DeleteProgram() => GL.DeleteProgram(_program);
+    public void DeleteProgram() => GL.DeleteProgram(Program);
 
-    public int GetAttribProgram(string name) => GL.GetAttribLocation(_program, name);
+    public int GetAttribProgram(string name) => GL.GetAttribLocation(Program, name);
 
     public int GetAttribLocation(string name)
     {
-        int location = GL.GetAttribLocation(_program, name);
+        int location = GL.GetAttribLocation(Program, name);
         return location;
     }
 
     public int GetUniformLocation(string name)
     {
-        int location = GL.GetUniformLocation(_program, name);
+        int location = GL.GetUniformLocation(Program, name);
         if (location == -1)
             throw new Exception($"Uniform {name} not found in the shader program.");
         return location;
@@ -49,7 +49,7 @@ public class ShaderProgram
 
     public void SetUniform4(string name, Vector4 vec)
     {
-        int location = GL.GetUniformLocation(_program, name);
+        int location = GL.GetUniformLocation(Program, name);
         GL.Uniform4f(location, vec.X, vec.Y, vec.Z, vec.W);
     }
 
@@ -77,7 +77,7 @@ public class ShaderProgram
 
     private void DeleteShader(int shader)
     {
-        GL.DetachShader(_program, shader);
+        GL.DetachShader(Program, shader);
         GL.DeleteShader(shader);
     }
 }
