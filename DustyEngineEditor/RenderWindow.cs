@@ -78,18 +78,18 @@ public class RenderWindow : GameWindow
             try
             {
                 var frame = await _remoteRenderer.GetFrameData(_time);
+                
                 if (frame?.PixelData?.Length > 0)
                 {
-                    bool isNewFrame = Math.Abs(frame.Timestamp - _lastReceivedTimestamp) > 0.0001f;
-                    if (isNewFrame)
-                    {
-                        int writeIndex = (_readyBufferIndex + 1) % 3;
-                        _frameBuffer[writeIndex] = frame;
-                        _readyBufferIndex = writeIndex;
-                        _lastReceivedTimestamp = frame.Timestamp;
-                        _framesReceived++;
-                    }
+                    // ✅ Всегда обновляем кадр
+                    int writeIndex = 1 - _readyBufferIndex;
+                    _frameBuffer[writeIndex] = frame;
+                    _readyBufferIndex = writeIndex;
+                    _lastReceivedTimestamp = frame.Timestamp;
+                    _framesReceived++;
                 }
+                
+                // ✅ Минимальная задержка для предотвращения 100% CPU
                 await Task.Delay(1, _cts.Token);
             }
             catch (OperationCanceledException)
@@ -99,20 +99,24 @@ public class RenderWindow : GameWindow
             catch (Exception ex)
             {
                 Console.WriteLine($"Error fetching frame: {ex.Message}");
-                await Task.Delay(5, _cts.Token);
+                await Task.Delay(16, _cts.Token);
             }
         }
     }
 
+    
     protected override void OnUpdateFrame(FrameEventArgs args)
     {
         base.OnUpdateFrame(args);
         _time += (float)args.Time;
+        
+        // ✅ Берем последний полученный кадр
         var frameToUpdate = _frameBuffer[_readyBufferIndex];
         if (frameToUpdate?.PixelData?.Length > 0)
         {
             UpdateTexture(frameToUpdate);
         }
+        
         var now = DateTime.Now;
         if ((now - _lastStatsTime).TotalSeconds >= 1.0)
         {
@@ -122,12 +126,12 @@ public class RenderWindow : GameWindow
             _framesDisplayed = 0;
             _lastStatsTime = now;
         }
+        
         if (KeyboardState.IsKeyDown(Keys.Escape))
         {
             Close();
         }
         
-        // ✅ Альтернативный метод: используем OpenTK напрямую для функциональных клавиш
         if (_isRemoteWindowFocused)
         {
             CheckFunctionKeysRaw();
@@ -185,14 +189,17 @@ public class RenderWindow : GameWindow
         try
         {
             GL.BindTexture(TextureTarget.Texture2d, _texture);
+            
             if (_currentTextureWidth != frameData.Width || _currentTextureHeight != frameData.Height)
             {
                 _currentTextureWidth = frameData.Width;
                 _currentTextureHeight = frameData.Height;
             }
+            
             GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba,
                 frameData.Width, frameData.Height, 0,
                 PixelFormat.Rgba, PixelType.UnsignedByte, frameData.PixelData);
+            
             GL.BindTexture(TextureTarget.Texture2d, 0);
         }
         catch (Exception ex)

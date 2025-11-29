@@ -49,11 +49,16 @@ public class Window : GameWindow
     private int _connectedClients = 0;
     
     // Frame buffer
-    private readonly FrameData[] _frameBuffer = new FrameData[3];
-    private int _writeIndex = 0;
-    private readonly object _bufferLock = new object();
+    private class FrameSlot
+    {
+        public FrameData Frame = new();
+        public volatile bool IsReady = false;
+    }
+    
+    private readonly FrameSlot[] _frameSlots = new FrameSlot[2]; // ✅ Двойная буферизация
+    private volatile int _latestFrameIndex = 0;
+    private readonly object _frameLock = new object();
     private System.Diagnostics.Stopwatch _frameStopwatch = System.Diagnostics.Stopwatch.StartNew();
-
     // Camera
     private float _edYaw = 0f;
     private float _edPitch = 0f;
@@ -63,6 +68,7 @@ public class Window : GameWindow
     private float _edSmoothDY = 0f;
     private const float _edSmoothing = 0.7f; // ✅ Увеличено с 0.3 до 0.7 для большей плавности
 
+    
 
     public Window(GameWindowSettings gws, NativeWindowSettings nws, Scene scene,
         string vertShaderPath, string fragShaderPath, string windowName, bool isVsync = true, 
@@ -97,16 +103,20 @@ public class Window : GameWindow
         foreach (var meshRenderer in _allRenderers)
             AddRenderer(meshRenderer);
 
+         
         if (_renderMode == RenderMode.Editor)
         {
             int pixelCount = nws.ClientSize.X * nws.ClientSize.Y * 4;
-            for (int i = 0; i < _frameBuffer.Length; i++)
+            for (int i = 0; i < _frameSlots.Length; i++)
             {
-                _frameBuffer[i] = new FrameData
+                _frameSlots[i] = new FrameSlot
                 {
-                    Width = nws.ClientSize.X,
-                    Height = nws.ClientSize.Y,
-                    PixelData = new byte[pixelCount]
+                    Frame = new FrameData
+                    {
+                        Width = nws.ClientSize.X,
+                        Height = nws.ClientSize.Y,
+                        PixelData = new byte[pixelCount]
+                    }
                 };
             }
         }
@@ -279,8 +289,20 @@ public class Window : GameWindow
                 PixelData = Array.Empty<byte>()
             };
         }
-        int safeReadIndex = (_writeIndex - 1 + _frameBuffer.Length) % _frameBuffer.Length;
-        var source = _frameBuffer[safeReadIndex];
+        
+        var slot = _frameSlots[_latestFrameIndex];
+        
+        if (!slot.IsReady)
+        {
+            return new FrameData
+            {
+                Width = FramebufferSize.X,
+                Height = FramebufferSize.Y,
+                PixelData = Array.Empty<byte>()
+            };
+        }
+        
+        var source = slot.Frame;
         var result = new FrameData
         {
             Width = source.Width,
@@ -288,6 +310,7 @@ public class Window : GameWindow
             Timestamp = source.Timestamp,
             PixelData = new byte[source.PixelData.Length]
         };
+        
         Buffer.BlockCopy(source.PixelData, 0, result.PixelData, 0, source.PixelData.Length);
         return result;
     }
@@ -454,12 +477,15 @@ public class Window : GameWindow
     protected override void OnRenderFrame(FrameEventArgs args)
     {
         base.OnRenderFrame(args);
+        
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
         GL.Viewport(0, 0, FramebufferSize.X, FramebufferSize.Y);
         GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+        
         RenderScene();
         
+        // ✅ Захват ПОСЛЕ рендеринга, перед SwapBuffers
         if (_renderMode == RenderMode.Editor && _connectedClients > 0)
         {
             CaptureFrameForRpc();
@@ -472,14 +498,29 @@ public class Window : GameWindow
     {
         try
         {
-            float currentTime = (float)_frameStopwatch.Elapsed.TotalSeconds;
-            int currentWrite = _writeIndex;
+            // Определяем индекс для записи (противоположный от читаемого)
+            int writeIndex = 1 - _latestFrameIndex;
+            var slot = _frameSlots[writeIndex];
+            var targetBuffer = slot.Frame;
+            
+            // Проверка размера буфера
+            int expectedSize = FramebufferSize.X * FramebufferSize.Y * 4;
+            if (targetBuffer.PixelData.Length != expectedSize)
+            {
+                targetBuffer.PixelData = new byte[expectedSize];
+            }
+            
+            // ✅ Захват кадра
             GL.ReadPixels(0, 0, FramebufferSize.X, FramebufferSize.Y,
-                PixelFormat.Rgba, PixelType.UnsignedByte, _frameBuffer[currentWrite].PixelData);
-            _frameBuffer[currentWrite].Timestamp = currentTime;
-            _frameBuffer[currentWrite].Width = FramebufferSize.X;
-            _frameBuffer[currentWrite].Height = FramebufferSize.Y;
-            _writeIndex = (currentWrite + 1) % _frameBuffer.Length;
+                PixelFormat.Rgba, PixelType.UnsignedByte, targetBuffer.PixelData);
+            
+            targetBuffer.Timestamp = (float)_frameStopwatch.Elapsed.TotalSeconds;
+            targetBuffer.Width = FramebufferSize.X;
+            targetBuffer.Height = FramebufferSize.Y;
+            
+            // ✅ Атомарное переключение буфера
+            slot.IsReady = true;
+            _latestFrameIndex = writeIndex;
         }
         catch (Exception ex)
         {

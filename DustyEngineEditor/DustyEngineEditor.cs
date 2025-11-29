@@ -48,6 +48,7 @@ class Client
 
             psi.ArgumentList.Add(ProjectPath);
             psi.ArgumentList.Add("Editor");
+            // psi.ArgumentList.Add("Standalone");
 
             
             _engineProcess = new Process { StartInfo = psi, EnableRaisingEvents = true };
