@@ -3,35 +3,46 @@ using System.IO.Pipes;
 using System.Reflection;
 using StreamJsonRpc;
 
-class Client
+
+class Runner
+{
+    private static void Main(string[] args) => new DustyEngineEditor().RunEditor();
+}
+
+class DustyEngineEditor
 {
     private const string ProjectPath = "/home/maksym/DustyEngine/TestProject";
-    private static readonly string RunnerPath = "/home/maksym/DustyEngine/Runner/bin/Debug/net9.0/Runner";
-    
-    private static Process? _engineProcess;
-    private static volatile bool _engineRunning;
-    
-    private static void Main(string[] args)
-    {
-    
-        StartEngineProcess();
+    private readonly string RunnerPath = "/home/maksym/DustyEngine/Runner/bin/Debug/net9.0/Runner";
 
-        
+    private Process? _engineProcess;
+    private volatile bool _engineRunning;
+
+
+    public void RunEditor()
+    {
+        StartEngineProcess();
+        ConnectToEngineByStreamJsonRpc();
+    }
+
+    private void ConnectToEngineByStreamJsonRpc()
+    {
         Console.Title = Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location);
-        Console.WriteLine("Connecting to server...");
-        var stream = new NamedPipeClientStream(".", "StreamJsonRpcSamplePipe", PipeDirection.InOut, PipeOptions.Asynchronous);
+
+        var stream = new NamedPipeClientStream(".", "StreamJsonRpcSamplePipe", PipeDirection.InOut,
+            PipeOptions.Asynchronous);
         stream.Connect();
-        Console.WriteLine("Connected. Starting render client...");
+
         var jsonRpc = JsonRpc.Attach(stream);
         var renderer = jsonRpc.Attach<IRemoteRenderer>();
         using (RenderWindow clientWindow = new RenderWindow(renderer))
         {
             clientWindow.Run();
         }
+
         stream.Dispose();
-        Console.WriteLine("Terminating stream...");
     }
-    private static void StartEngineProcess()
+
+    private void StartEngineProcess()
     {
         if (_engineRunning) return;
 
@@ -50,7 +61,7 @@ class Client
             psi.ArgumentList.Add("Editor");
             // psi.ArgumentList.Add("Standalone");
 
-            
+
             _engineProcess = new Process { StartInfo = psi, EnableRaisingEvents = true };
 
             _engineProcess.Exited += (_, __) => { _engineRunning = false; };
@@ -66,7 +77,6 @@ class Client
             _engineRunning = false;
         }
     }
-   
 }
 
 public interface IRemoteRenderer
@@ -76,9 +86,7 @@ public interface IRemoteRenderer
     void OnKeyUp(string key);
     void OnMouseDown(float normalizedX, float normalizedY, int button);
     void OnMouseUp(float normalizedX, float normalizedY, int button);
-    void OnMouseMove(float normalizedX, float normalizedY); // Deprecated
-    void OnMouseMoveDelta(float deltaX, float deltaY); // ✅ Новый метод
-    void OnKeyPress(string key);
+    void OnMouseMoveDelta(float deltaX, float deltaY); 
     void OnMouseClick(float normalizedX, float normalizedY, int button);
 }
 
