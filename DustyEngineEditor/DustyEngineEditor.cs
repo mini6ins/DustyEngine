@@ -18,7 +18,6 @@ class Client
         {
             clientWindow.Run();
         }
-
         stream.Dispose();
         Console.WriteLine("Terminating stream...");
     }
