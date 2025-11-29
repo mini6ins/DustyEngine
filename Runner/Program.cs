@@ -7,20 +7,15 @@ internal static class Program
 {
     private static volatile bool _stopping;
     private static string projectPath = "/home/maksym/DustyEngine/TestProject";
-    
-    private static RenderMode renderMode = RenderMode.Editor ;
+
+    private static RenderMode renderMode = RenderMode.Standalone;
 
     static int Main(string[] args)
     {
         if (args.Length < 1)
         {
             Console.Error.WriteLine("Usage: DustyEngine.Runner <ProjectPath> [RenderMode]");
-            projectPath = "/home/maksym/DustyEngine/TestProject";
-            // return 2;
-        }
-        else
-        {
-            projectPath = args[0];
+            return 2;
         }
 
 
