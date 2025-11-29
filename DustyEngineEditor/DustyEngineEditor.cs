@@ -34,7 +34,7 @@ class DustyEngineEditor
 
         var jsonRpc = JsonRpc.Attach(stream);
         var renderer = jsonRpc.Attach<IRemoteRenderer>();
-        using (RenderWindow clientWindow = new RenderWindow(renderer))
+        using (ViewportRenderer clientWindow = new ViewportRenderer(renderer))
         {
             clientWindow.Run();
         }

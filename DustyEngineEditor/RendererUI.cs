@@ -1,144 +1,140 @@
-using ImGui_OpenTK.Backends;
 using ImGuiNET;
-using OpenTK.Graphics.OpenGL.Compatibility;
-using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using Vector2 = System.Numerics.Vector2;
 using Vector4 = System.Numerics.Vector4;
 
-public class RenderWindow : GameWindow
+public class RendererUI
 {
     private IRemoteRenderer _remoteRenderer;
-    private int _texture;
-    private float _time = 0f;
-    private FrameData?[] _frameBuffer = new FrameData?[3];
-    private volatile int _readyBufferIndex = 0;
-    private CancellationTokenSource _cts = new CancellationTokenSource();
-    private Task? _fetcherTask;
-    private int _framesReceived = 0;
-    private int _framesDisplayed = 0;
-    private DateTime _lastStatsTime = DateTime.Now;
-    private float _lastReceivedTimestamp = -1f;
+    private GameWindow _window;
+    
     private readonly HashSet<ImGuiKey> _pressedKeys = new HashSet<ImGuiKey>();
     private readonly HashSet<ImGuiMouseButton> _pressedMouseButtons = new HashSet<ImGuiMouseButton>();
+    private readonly HashSet<Keys> _pressedRawKeys = new HashSet<Keys>();
+    
     private Vector2 _lastMousePos = Vector2.Zero;
-    private bool _showHelp = true;
     private bool _isRemoteWindowFocused = false;
-    private int _currentTextureWidth = 0;
-    private int _currentTextureHeight = 0;
+    
+    public bool ShowHelp { get; private set; } = true;
 
-    public RenderWindow(IRemoteRenderer remoteRenderer)
-        : base(GameWindowSettings.Default,
-            new NativeWindowSettings()
-            {
-                Size = new Vector2i(1024, 768),
-                Title = "Remote Renderer Client",
-                API = ContextAPI.OpenGL,
-                APIVersion = new Version(3, 3),
-                Flags = ContextFlags.Default
-            })
+    public RendererUI(IRemoteRenderer remoteRenderer, GameWindow window)
     {
         _remoteRenderer = remoteRenderer;
-        UpdateFrequency = 200;
+        _window = window;
     }
 
-    protected override void OnLoad()
+    public void Update(KeyboardState keyboardState)
     {
-        base.OnLoad();
-        GL.ClearColor(0.15f, 0.15f, 0.15f, 1.0f);
-        ImGui.CreateContext();
-        var io = ImGui.GetIO();
-        io.ConfigFlags |= ImGuiConfigFlags.DockingEnable;
-        ImGui.StyleColorsDark();
-        ImguiImplOpenTK4.Init(this);
-        ImguiImplOpenGL3.Init();
-        _texture = GL.GenTexture();
-        GL.BindTexture(TextureTarget.Texture2d, _texture);
-        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
-        byte[] px = new byte[] { 32, 32, 32, 255 };
-        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba, 1, 1, 0,
-            PixelFormat.Rgba, PixelType.UnsignedByte, px);
-        _currentTextureWidth = 1;
-        _currentTextureHeight = 1;
-        _fetcherTask = Task.Run(FetchFramesLoop);
-        Console.WriteLine("Client ready. WASD to move camera, mouse to rotate.");
-    }
-
-    private async Task FetchFramesLoop()
-    {
-        while (!_cts.Token.IsCancellationRequested)
+        if (_isRemoteWindowFocused)
         {
-            try
-            {
-                var frame = await _remoteRenderer.GetFrameData(_time);
-
-                if (frame?.PixelData?.Length > 0)
-                {
-                    // ✅ Всегда обновляем кадр
-                    int writeIndex = 1 - _readyBufferIndex;
-                    _frameBuffer[writeIndex] = frame;
-                    _readyBufferIndex = writeIndex;
-                    _lastReceivedTimestamp = frame.Timestamp;
-                    _framesReceived++;
-                }
-
-                // ✅ Минимальная задержка для предотвращения 100% CPU
-                await Task.Delay(1, _cts.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                break;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error fetching frame: {ex.Message}");
-                await Task.Delay(16, _cts.Token);
-            }
+            CheckFunctionKeysRaw(keyboardState);
         }
     }
 
-
-    protected override void OnUpdateFrame(FrameEventArgs args)
+    public void Render(int texture, int textureWidth, int textureHeight, 
+                      ref int framesReceived, ref int framesDisplayed)
     {
-        base.OnUpdateFrame(args);
-        _time += (float)args.Time;
+        ImGui.DockSpaceOverViewport();
+        
+        RenderSettingsPanel(framesReceived, framesDisplayed, textureWidth, textureHeight);
+        RenderSceneViewport(texture, textureWidth, textureHeight, ref framesDisplayed);
+    }
 
-        // ✅ Берем последний полученный кадр
-        var frameToUpdate = _frameBuffer[_readyBufferIndex];
-        if (frameToUpdate?.PixelData?.Length > 0)
+    private void RenderSettingsPanel(int framesReceived, int framesDisplayed, 
+                                    int textureWidth, int textureHeight)
+    {
+        ImGui.SetNextWindowSize(new Vector2(360, 150), ImGuiCond.FirstUseEver);
+        ImGui.SetNextWindowPos(new Vector2(10, 10), ImGuiCond.FirstUseEver);
+        
+        if (ImGui.Begin("Settings Panel"))
         {
-            UpdateTexture(frameToUpdate);
+            string helpText = ShowHelp ? " | H:hide" : " | H:show";
+            ImGui.Text($"Recv: {framesReceived} | Display: {framesDisplayed} FPS{helpText}");
+            ImGui.Text($"Texture: {textureWidth} x {textureHeight}");
+            ImGui.Separator();
+            
+            if (ShowHelp)
+            {
+                ImGui.TextColored(new Vector4(0.4f, 1f, 0.4f, 1f), "=== CONTROLS ===");
+                ImGui.Text("WASD - Move | Mouse - Rotate Camera");
+                ImGui.Text("Space - Up | Shift - Down");
+                ImGui.Text("F1 - Wireframe | F2 - Fill");
+                ImGui.Text("H - Toggle Help | F11 - Fullscreen");
+                ImGui.TextColored(new Vector4(1f, 1f, 0.4f, 1f), "Focus viewport to send input!");
+            }
+
+            if (ImGui.Button("Fullscreen (F11)"))
+            {
+                _window.WindowState = _window.WindowState == WindowState.Fullscreen 
+                    ? WindowState.Normal 
+                    : WindowState.Fullscreen;
+            }
         }
 
-        var now = DateTime.Now;
-        if ((now - _lastStatsTime).TotalSeconds >= 1.0)
-        {
-            string helpText = _showHelp ? " | H:hide" : " | H:help";
-            Title = $"Remote Renderer - Recv: {_framesReceived} | Display: {_framesDisplayed} FPS{helpText}";
-            _framesReceived = 0;
-            _framesDisplayed = 0;
-            _lastStatsTime = now;
-        }
+        ImGui.End();
+    }
 
-        if (KeyboardState.IsKeyDown(Keys.Escape))
+    private void RenderSceneViewport(int texture, int textureWidth, int textureHeight, 
+                                    ref int framesDisplayed)
+    {
+        ImGui.SetNextWindowSize(new Vector2(800, 600), ImGuiCond.FirstUseEver);
+        ImGui.SetNextWindowPos(new Vector2(10, 170), ImGuiCond.FirstUseEver);
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 0);
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 1);
+        
+        ImGui.Begin("Remote Renderer Viewport", ImGuiWindowFlags.NoCollapse);
+        
+        _isRemoteWindowFocused = ImGui.IsWindowFocused(ImGuiFocusedFlags.RootAndChildWindows);
+        
+        var availableSize = ImGui.GetContentRegionAvail();
+        if (availableSize.X > 32 && availableSize.Y > 32)
         {
-            Close();
+            float targetAspectRatio = (float)textureWidth / Math.Max(1, textureHeight);
+            float availableAspectRatio = availableSize.X / availableSize.Y;
+            
+            Vector2 imageSize;
+            if (availableAspectRatio > targetAspectRatio)
+            {
+                imageSize.Y = availableSize.Y;
+                imageSize.X = imageSize.Y * targetAspectRatio;
+            }
+            else
+            {
+                imageSize.X = availableSize.X;
+                imageSize.Y = imageSize.X / targetAspectRatio;
+            }
+
+            var cursor = ImGui.GetCursorPos();
+            cursor.X += (availableSize.X - imageSize.X) * 0.5f;
+            cursor.Y += (availableSize.Y - imageSize.Y) * 0.5f;
+            ImGui.SetCursorPos(cursor);
+            
+            var cursorScreenPos = ImGui.GetCursorScreenPos();
+            
+            ImGui.Image(new IntPtr(texture), imageSize,
+                new Vector2(0, 1),
+                new Vector2(1, 0));
+            
+            framesDisplayed++;
+            
+            if (_isRemoteWindowFocused && ImGui.IsItemHovered())
+            {
+                ProcessInput(imageSize, cursorScreenPos);
+            }
         }
 
         if (_isRemoteWindowFocused)
         {
-            CheckFunctionKeysRaw();
+            ProcessKeyboard();
         }
+
+        ImGui.End();
+        ImGui.PopStyleVar(2);
     }
 
-    private readonly HashSet<Keys> _pressedRawKeys = new HashSet<Keys>();
-
-    private void CheckFunctionKeysRaw()
+    private void CheckFunctionKeysRaw(KeyboardState keyboardState)
     {
         var functionKeys = new[]
         {
@@ -148,14 +144,13 @@ public class RenderWindow : GameWindow
 
         foreach (var key in functionKeys)
         {
-            bool isDown = KeyboardState.IsKeyDown(key);
+            bool isDown = keyboardState.IsKeyDown(key);
             bool wasPressed = _pressedRawKeys.Contains(key);
 
             if (isDown && !wasPressed)
             {
                 _pressedRawKeys.Add(key);
                 string keyName = key.ToString().ToUpper();
-
 
                 Task.Run(() =>
                 {
@@ -180,129 +175,10 @@ public class RenderWindow : GameWindow
                     {
                         _remoteRenderer.OnKeyUp(keyName);
                     }
-                    catch
-                    {
-                    }
+                    catch { }
                 });
             }
         }
-    }
-
-    private void UpdateTexture(FrameData frameData)
-    {
-        try
-        {
-            GL.BindTexture(TextureTarget.Texture2d, _texture);
-
-            if (_currentTextureWidth != frameData.Width || _currentTextureHeight != frameData.Height)
-            {
-                _currentTextureWidth = frameData.Width;
-                _currentTextureHeight = frameData.Height;
-            }
-
-            GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba,
-                frameData.Width, frameData.Height, 0,
-                PixelFormat.Rgba, PixelType.UnsignedByte, frameData.PixelData);
-
-            GL.BindTexture(TextureTarget.Texture2d, 0);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error updating texture: {ex.Message}");
-        }
-    }
-
-    protected override void OnRenderFrame(FrameEventArgs args)
-    {
-        base.OnRenderFrame(args);
-        GL.Clear(ClearBufferMask.ColorBufferBit);
-        ImguiImplOpenGL3.NewFrame();
-        ImguiImplOpenTK4.NewFrame();
-        ImGui.NewFrame();
-        RenderImGui();
-        ImGui.Render();
-        ImguiImplOpenGL3.RenderDrawData(ImGui.GetDrawData());
-        SwapBuffers();
-    }
-
-    private void RenderImGui()
-    {
-        ImGui.DockSpaceOverViewport();
-        ImGui.SetNextWindowSize(new Vector2(360, 150), ImGuiCond.FirstUseEver);
-        ImGui.SetNextWindowPos(new Vector2(10, 10), ImGuiCond.FirstUseEver);
-        if (ImGui.Begin("Settings Panel"))
-        {
-            string helpText = _showHelp ? " | H:hide" : " | H:show";
-            ImGui.Text($"Recv: {_framesReceived} | Display: {_framesDisplayed} FPS{helpText}");
-            ImGui.Text($"Texture: {_currentTextureWidth} x {_currentTextureHeight}");
-            ImGui.Separator();
-            if (_showHelp)
-            {
-                ImGui.TextColored(new Vector4(0.4f, 1f, 0.4f, 1f), "=== CONTROLS ===");
-                ImGui.Text("WASD - Move | Mouse - Rotate Camera");
-                ImGui.Text("Space - Up | Shift - Down");
-                ImGui.Text("F1 - Wireframe | F2 - Fill");
-                ImGui.Text("H - Toggle Help | F11 - Fullscreen");
-                ImGui.TextColored(new Vector4(1f, 1f, 0.4f, 1f), "Focus viewport to send input!");
-            }
-
-            if (ImGui.Button("Fullscreen (F11)"))
-            {
-                WindowState = WindowState == WindowState.Fullscreen ? WindowState.Normal : WindowState.Fullscreen;
-            }
-        }
-
-        ImGui.End();
-        RenderSceneViewport();
-    }
-
-    private void RenderSceneViewport()
-    {
-        ImGui.SetNextWindowSize(new Vector2(800, 600), ImGuiCond.FirstUseEver);
-        ImGui.SetNextWindowPos(new Vector2(10, 170), ImGuiCond.FirstUseEver);
-        ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 0);
-        ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 1);
-        ImGui.Begin("Remote Renderer Viewport", ImGuiWindowFlags.NoCollapse);
-        _isRemoteWindowFocused = ImGui.IsWindowFocused(ImGuiFocusedFlags.RootAndChildWindows);
-        var availableSize = ImGui.GetContentRegionAvail();
-        if (availableSize.X > 32 && availableSize.Y > 32)
-        {
-            float targetAspectRatio = (float)_currentTextureWidth / Math.Max(1, _currentTextureHeight);
-            float availableAspectRatio = availableSize.X / availableSize.Y;
-            Vector2 imageSize;
-            if (availableAspectRatio > targetAspectRatio)
-            {
-                imageSize.Y = availableSize.Y;
-                imageSize.X = imageSize.Y * targetAspectRatio;
-            }
-            else
-            {
-                imageSize.X = availableSize.X;
-                imageSize.Y = imageSize.X / targetAspectRatio;
-            }
-
-            var cursor = ImGui.GetCursorPos();
-            cursor.X += (availableSize.X - imageSize.X) * 0.5f;
-            cursor.Y += (availableSize.Y - imageSize.Y) * 0.5f;
-            ImGui.SetCursorPos(cursor);
-            var cursorScreenPos = ImGui.GetCursorScreenPos();
-            ImGui.Image(new IntPtr(_texture), imageSize,
-                new Vector2(0, 1),
-                new Vector2(1, 0));
-            _framesDisplayed++;
-            if (_isRemoteWindowFocused && ImGui.IsItemHovered())
-            {
-                ProcessInput(imageSize, cursorScreenPos);
-            }
-        }
-
-        if (_isRemoteWindowFocused)
-        {
-            ProcessKeyboard();
-        }
-
-        ImGui.End();
-        ImGui.PopStyleVar(2);
     }
 
     private void ProcessInput(Vector2 imageSize, Vector2 imagePos)
@@ -319,9 +195,7 @@ public class RenderWindow : GameWindow
             {
                 _remoteRenderer.OnMouseMoveDelta(deltaX, deltaY);
             }
-            catch
-            {
-            }
+            catch { }
         }
 
         float normalizedX = ((mousePos.X - imagePos.X) / imageSize.X) * 2.0f - 1.0f;
@@ -333,10 +207,12 @@ public class RenderWindow : GameWindow
             (ImGuiMouseButton.Right, 1),
             (ImGuiMouseButton.Middle, 2)
         };
+        
         foreach (var (button, buttonIndex) in mouseButtons)
         {
             bool isDown = ImGui.IsMouseDown(button);
             bool wasPressed = _pressedMouseButtons.Contains(button);
+            
             if (isDown && !wasPressed)
             {
                 _pressedMouseButtons.Add(button);
@@ -344,9 +220,7 @@ public class RenderWindow : GameWindow
                 {
                     _remoteRenderer.OnMouseDown(normalizedX, normalizedY, buttonIndex);
                 }
-                catch
-                {
-                }
+                catch { }
             }
             else if (!isDown && wasPressed)
             {
@@ -355,9 +229,7 @@ public class RenderWindow : GameWindow
                 {
                     _remoteRenderer.OnMouseUp(normalizedX, normalizedY, buttonIndex);
                 }
-                catch
-                {
-                }
+                catch { }
             }
         }
     }
@@ -383,26 +255,22 @@ public class RenderWindow : GameWindow
             ImGuiKey.Keypad5, ImGuiKey.Keypad6, ImGuiKey.Keypad7, ImGuiKey.Keypad8, ImGuiKey.Keypad9,
             ImGuiKey.KeypadDecimal, ImGuiKey.KeypadDivide, ImGuiKey.KeypadMultiply,
             ImGuiKey.KeypadSubtract, ImGuiKey.KeypadAdd, ImGuiKey.KeypadEnter, ImGuiKey.KeypadEqual
-            // ✅ УБРАЛИ ВСЕ СИМВОЛЬНЫЕ КЛАВИШИ - они мапятся неправильно из-за бага ImGui с раскладкой
-            // ImGuiKey.Apostrophe, ImGuiKey.Comma, ImGuiKey.Minus, ImGuiKey.Period, ImGuiKey.Slash,
-            // ImGuiKey.Semicolon, ImGuiKey.Equal, ImGuiKey.LeftBracket, ImGuiKey.Backslash,
-            // ImGuiKey.RightBracket, ImGuiKey.GraveAccent
         };
 
         foreach (var key in keysToCheck)
         {
             bool isDown = ImGui.IsKeyDown(key);
             bool wasPressed = _pressedKeys.Contains(key);
+            
             if (isDown && !wasPressed)
             {
                 _pressedKeys.Add(key);
-
                 string keyName = GetKeyName(key);
 
                 // Локальная обработка только для H
                 if (key == ImGuiKey.H)
                 {
-                    _showHelp = !_showHelp;
+                    ShowHelp = !ShowHelp;
                 }
 
                 // Отправка на сервер
@@ -422,15 +290,14 @@ public class RenderWindow : GameWindow
             {
                 _pressedKeys.Remove(key);
                 string keyName = GetKeyName(key);
+                
                 Task.Run(() =>
                 {
                     try
                     {
                         _remoteRenderer.OnKeyUp(keyName);
                     }
-                    catch
-                    {
-                    }
+                    catch { }
                 });
             }
         }
@@ -515,38 +382,20 @@ public class RenderWindow : GameWindow
             ImGuiKey.KeypadEnter => "KPENTER",
             ImGuiKey.KeypadEqual => "KPEQUAL",
 
-            // Символы (это была проблема!)
-            ImGuiKey.Apostrophe => "APOSTROPHE", // '
-            ImGuiKey.Comma => "COMMA", // ,
-            ImGuiKey.Minus => "MINUS", // -
-            ImGuiKey.Period => "PERIOD", // .
-            ImGuiKey.Slash => "SLASH", // /
-            ImGuiKey.Semicolon => "SEMICOLON", // ;
-            ImGuiKey.Equal => "EQUAL", // =
-            ImGuiKey.LeftBracket => "LEFTBRACKET", // [
-            ImGuiKey.Backslash => "BACKSLASH", // \
-            ImGuiKey.RightBracket => "RIGHTBRACKET", // ]
-            ImGuiKey.GraveAccent => "GRAVEACCENT", // `
+            // Символы
+            ImGuiKey.Apostrophe => "APOSTROPHE",
+            ImGuiKey.Comma => "COMMA",
+            ImGuiKey.Minus => "MINUS",
+            ImGuiKey.Period => "PERIOD",
+            ImGuiKey.Slash => "SLASH",
+            ImGuiKey.Semicolon => "SEMICOLON",
+            ImGuiKey.Equal => "EQUAL",
+            ImGuiKey.LeftBracket => "LEFTBRACKET",
+            ImGuiKey.Backslash => "BACKSLASH",
+            ImGuiKey.RightBracket => "RIGHTBRACKET",
+            ImGuiKey.GraveAccent => "GRAVEACCENT",
 
             _ => key.ToString().ToUpper()
         };
-    }
-
-    protected override void OnUnload()
-    {
-        base.OnUnload();
-        _cts.Cancel();
-        _fetcherTask?.Wait(TimeSpan.FromSeconds(2));
-        _cts.Dispose();
-        GL.DeleteTexture(_texture);
-        ImguiImplOpenGL3.Shutdown();
-        ImguiImplOpenTK4.Shutdown();
-        ImGui.DestroyContext();
-    }
-
-    protected override void OnResize(ResizeEventArgs e)
-    {
-        base.OnResize(e);
-        GL.Viewport(0, 0, e.Width, e.Height);
     }
 }
