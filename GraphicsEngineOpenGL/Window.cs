@@ -8,7 +8,6 @@ using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using Utils;
 using Vector3 = DustyEngine.Engine.Math.Vectors.Vector3;
-using DustyEngine.Runner;
 using System.IO.Pipes;
 using StreamJsonRpc;
 using Buffer = System.Buffer;
@@ -200,7 +199,7 @@ public class Window : GameWindow
         {
             StartRpcServer();
             // Включаем RPC ввод сразу при запуске в режиме Editor
-            Input.EnableRpcInput();
+            Input.Input.EnableRpcInput();
             Console.WriteLine("[Input] RPC input mode enabled for Editor");
         }
         
@@ -319,17 +318,17 @@ public class Window : GameWindow
     {
         if (isPressed)
         {
-            Input.RpcKeyDown(key);
+            Input.Input.RpcKeyDown(key);
         }
         else
         {
-            Input.RpcKeyUp(key);
+            Input.Input.RpcKeyUp(key);
         }
     }
 
     private void HandleMouseMoveFromClient(float normalizedX, float normalizedY)
     {
-        Input.RpcMouseMove(normalizedX, normalizedY);
+        Input.Input.RpcMouseMove(normalizedX, normalizedY);
     }
 
     private void HandleMouseEvent(float normalizedX, float normalizedY, int button, bool isPressed)
@@ -344,11 +343,11 @@ public class Window : GameWindow
         
         if (isPressed)
         {
-            Input.RpcMouseDown(mouseButton);
+            Input.Input.RpcMouseDown(mouseButton);
         }
         else
         {
-            Input.RpcMouseUp(mouseButton);
+            Input.Input.RpcMouseUp(mouseButton);
         }
     }
 
@@ -365,8 +364,8 @@ public class Window : GameWindow
         else
         {
             // Standalone режим - обновляем локальный ввод
-            Input.Update(KeyboardState);
-            Input.UpdateMouseState(MouseState);
+            Input.Input.Update(KeyboardState);
+            Input.Input.UpdateMouseState(MouseState);
         }
         
         // Вызываем единый метод для движения камеры
@@ -374,7 +373,7 @@ public class Window : GameWindow
         
         if (_renderMode == RenderMode.Editor)
         {
-            string inputMode = Input.IsRpcInputActive ? "RPC" : "Local";
+            string inputMode = Input.Input.IsRpcInputActive ? "RPC" : "Local";
             Title = $"{_windowName} - Editor - Clients: {_connectedClients} - Input: {inputMode}";
         }
     }
@@ -387,11 +386,11 @@ public class Window : GameWindow
         
         if ((_renderMode == RenderMode.Editor) && _editorCamera is EditorCamera ec)
         {
-            bool shouldRotate = Input.IsMouseButtonDown(MouseButton.Middle);
+            bool shouldRotate = Input.Input.IsMouseButtonDown(MouseButton.Middle);
             
             if (shouldRotate)
             {
-                (float dx, float dy) = Input.Delta;
+                (float dx, float dy) = Input.Input.Delta;
     
                 // ✅ Применяем экспоненциальное сглаживание для плавности
                 _edSmoothDX = _edSmoothDX * _edSmoothing + dx * (1f - _edSmoothing);
@@ -426,13 +425,13 @@ public class Window : GameWindow
             }
             
             // Сбрасываем дельту после применения
-            if (Input.IsRpcInputActive)
+            if (Input.Input.IsRpcInputActive)
             {
-                Input.RpcResetMouseDelta();
+                Input.Input.RpcResetMouseDelta();
             }
             else
             {
-                Input.ResetMouse();
+                Input.Input.ResetMouse();
             }
             
             // Обработка движения камеры WASD + Space/Shift
@@ -441,12 +440,12 @@ public class Window : GameWindow
             var up = ec.InternalTransform.Up;
             var dir = Vector3.Zero;
             
-            if (Input.IsKeyDown(KeyCode.W)) dir += fwd;
-            if (Input.IsKeyDown(KeyCode.S)) dir -= fwd;
-            if (Input.IsKeyDown(KeyCode.A)) dir -= right;
-            if (Input.IsKeyDown(KeyCode.D)) dir += right;
-            if (Input.IsKeyDown(KeyCode.Space)) dir += up;
-            if (Input.IsKeyDown(KeyCode.LeftShift)) dir -= up;
+            if (Input.Input.IsKeyDown(KeyCode.W)) dir += fwd;
+            if (Input.Input.IsKeyDown(KeyCode.S)) dir -= fwd;
+            if (Input.Input.IsKeyDown(KeyCode.A)) dir -= right;
+            if (Input.Input.IsKeyDown(KeyCode.D)) dir += right;
+            if (Input.Input.IsKeyDown(KeyCode.Space)) dir += up;
+            if (Input.Input.IsKeyDown(KeyCode.LeftShift)) dir -= up;
             
             if (dir.LengthSquared > 0f)
             {
@@ -456,11 +455,11 @@ public class Window : GameWindow
         }
         
         // Переключение режимов рендеринга
-        if (Input.IsKeyJustActivatedOnce(KeyCode.F1))
+        if (Input.Input.IsKeyJustActivatedOnce(KeyCode.F1))
         {
             GL.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Line);
         }
-        if (Input.IsKeyJustActivatedOnce(KeyCode.F2))
+        if (Input.Input.IsKeyJustActivatedOnce(KeyCode.F2))
         {
             GL.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Fill);
         }
@@ -471,7 +470,7 @@ public class Window : GameWindow
         base.OnMouseMove(e);
         // В Standalone режиме обновляем локальную мышь
         if (_renderMode == RenderMode.Standalone) 
-            Input.UpdateMouse(e.X, e.Y);
+            Input.Input.UpdateMouse(e.X, e.Y);
     }
 
     protected override void OnRenderFrame(FrameEventArgs args)
@@ -565,7 +564,7 @@ public class Window : GameWindow
         
         if (_renderMode == RenderMode.Editor)
         {
-            Input.DisableRpcInput();
+            Input.Input.DisableRpcInput();
         }
         
         foreach (var vao in _vaoList)

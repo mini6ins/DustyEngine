@@ -32,7 +32,7 @@ public class ViewportRenderer : GameWindow
             new NativeWindowSettings()
             {
                 ClientSize = new Vector2i(1024, 768),
-                Title = "DustyEngineEditor 0.01v",
+                Title = "DustyEngineEditor " + Editor.EditorVersion + "v",
                 API = ContextAPI.OpenGL,
                 APIVersion = new Version(3, 3),
                 Flags = ContextFlags.Default
@@ -90,7 +90,7 @@ public class ViewportRenderer : GameWindow
 
                 if (frame?.PixelData?.Length > 0)
                 {
-                    int writeIndex = 1 - _readyBufferIndex;
+                    var writeIndex = 1 - _readyBufferIndex;
                     _frameBuffer[writeIndex] = frame;
                     _readyBufferIndex = writeIndex;
                 }

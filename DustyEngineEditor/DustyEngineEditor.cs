@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.IO.Pipes;
 using DustyEngineEditor.Panels;
-using DustyEngineEditor.Panels.RemoteRenderer;
 using DustyEngineEditor.Panels.ViewPortPanel.RemoteRenderer;
 using StreamJsonRpc;
 
@@ -16,6 +15,8 @@ internal static class Runner
 
 internal class Editor
 {
+    public const float EditorVersion = 0.01f;
+
     private readonly string _projectPath;
     private readonly string _runnerPath;
 
@@ -96,7 +97,7 @@ internal class Editor
         var jsonRpc = JsonRpc.Attach(stream);
         var renderer = jsonRpc.Attach<IRemoteRenderer>();
 
-        using (var clientWindow = new ViewportRenderer(renderer)) 
+        using (var clientWindow = new ViewportRenderer(renderer))
             clientWindow.Run();
 
         stream.Dispose();

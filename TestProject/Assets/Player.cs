@@ -1,6 +1,7 @@
 using DustyEngine;
 using DustyEngine.Components;
 using DustyEngine.Engine.Math.Vectors;
+using GraphicsEngineOpenGL.Input;
 using Utils;
 
 public class Player : MonoBehaviour

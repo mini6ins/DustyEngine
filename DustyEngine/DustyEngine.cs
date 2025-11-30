@@ -6,13 +6,13 @@ namespace DustyEngine
 {
     public class DustyEngine
     {
-        public static string ProjectFolderPath { get; set; }
-        private static ProjectSettings settings = new(); 
-        private static IRenderer graphicsEngineOpenGl;
+        public static string ProjectFolderPath { get; set; } = null!;
+        private static ProjectSettings _settings = new(); 
+        private static IRenderer _graphicsEngineOpenGl = null!;
 
-        private static Action<MeshRenderer> AddRenderer = (renderer) => { graphicsEngineOpenGl.AddRenderer(renderer); };
+        private static Action<MeshRenderer> _addRenderer = (renderer) => { _graphicsEngineOpenGl.AddRenderer(renderer); };
 
-        public void StartEngine(string path, RenderMode renderMode)
+        public static void StartEngine(string path, RenderMode renderMode)
         {
             Debug.ClearLogs();
 
@@ -23,13 +23,13 @@ namespace DustyEngine
             }
 
             ProjectFolderPath = path;
-            settings = ProjectSettings.DeserializeProjectSettings(ProjectFolderPath);
+            _settings = ProjectSettings.DeserializeProjectSettings(ProjectFolderPath);
             
     
-            Debug.EnableDebugMode(settings.Debug);
-            Debug.SetLogLevel(settings.LogLevel);
-            Debug.EnableConsoleLogging(settings.LogToConsole);
-            Debug.EnableFileLogging(settings.LogToFile);
+            Debug.EnableDebugMode(_settings.Debug);
+            Debug.SetLogLevel(_settings.LogLevel);
+            Debug.EnableConsoleLogging(_settings.LogToConsole);
+            Debug.EnableFileLogging(_settings.LogToFile);
 
             Debug.Log("Project settings loaded", Debug.LogLevel.Info, false);
 
@@ -39,35 +39,36 @@ namespace DustyEngine
             Debug.Log("Test ERROR", Debug.LogLevel.Error, true);
             Debug.Log("Test FATAL", Debug.LogLevel.FatalError, true);
 
-            if (SceneSerializer.LoadScene(out var loadedScene, settings.PathToScenes.FirstOrDefault())) return;
+            if (SceneSerializer.LoadScene(out var loadedScene, _settings.PathToScenes.FirstOrDefault())) return;
 
             if (renderMode == RenderMode.Standalone)
             {
                 foreach (var method in new[] { "OnEnable", "Start" })
                 {
-                    foreach (var gameObject in loadedScene.GameObjects)
+                    foreach (var gameObject in loadedScene!.GameObjects)
                     {
                         SceneManager.InvokeRecursive(gameObject, method);
                     }
                 }
             }
 
-            GameLoop.Initialize(loadedScene);
+            GameLoop.Initialize(loadedScene!);
             Time.Init();
-            graphicsEngineOpenGl = new GraphicsEngineOpenGl();
+            _graphicsEngineOpenGl = new GraphicsEngineOpenGl();
 
-            SceneManager.AddRenderer2 += AddRenderer;
+            SceneManager.AddRenderer2 += _addRenderer;
 
-            Action gameLoopAction = () =>
+            _graphicsEngineOpenGl.RunMainLoop(loadedScene!, GameLoopAction,
+                _settings.ScreenSize.ToOpenTK(), _settings.ProjectName, _settings.PathToVertShader,
+                _settings.PathToFragShader, _settings.Vsync, renderMode);
+            return;
+
+            void GameLoopAction()
             {
-                if(renderMode == RenderMode.Editor) return;
-                GameLoop.ExecuteFrame(loadedScene);
+                if (renderMode == RenderMode.Editor) return;
+                GameLoop.ExecuteFrame(loadedScene!);
                 Time.Tick();
-            };
-            
-            graphicsEngineOpenGl.RunMainLoop(loadedScene, gameLoopAction,
-                settings.ScreenSize.ToOpenTK(), settings.ProjectName, settings.PathToVertShader,
-                settings.PathToFragShader, settings.Vsync, renderMode);
+            }
         }
     }
 }

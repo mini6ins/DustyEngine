@@ -1,91 +1,82 @@
 ﻿using OpenTK.Windowing.GraphicsLibraryFramework;
+using Utils;
+using MouseButton = Utils.MouseButton;
 
-namespace Utils
+namespace GraphicsEngineOpenGL.Input
 {
     public static class Input
     {
-        private static KeyboardState? keyboardState;
-        private static KeyboardState? previousKeyboardState;
-        private static MouseState? mouseState;
-        private static MouseState? previousMouseState;
+        private static KeyboardState? _keyboardState;
+        private static KeyboardState? _previousKeyboardState;
+        private static MouseState? _mouseState;
+        private static MouseState? _previousMouseState;
 
         private static readonly HashSet<KeyCode> TriggeredKeys = [];
 
-        private static bool firstMove = true;
-        private static float lastX;
-        private static float lastY;
-        private static (float X, float Y) currentDelta;
-
-        // ===== RPC INPUT STATE =====
-        private static readonly Dictionary<KeyCode, bool> _rpcKeyStates = new Dictionary<KeyCode, bool>();
-        private static readonly Dictionary<MouseButton, bool> _rpcMouseButtonStates = new Dictionary<MouseButton, bool>();
-        private static (float X, float Y) _rpcMousePosition = (0f, 0f);
+        private static bool _firstMove = true;
+        private static float _lastX;
+        private static float _lastY;
+        private static (float X, float Y) _currentDelta;
+        
+        private static readonly Dictionary<KeyCode, bool> RpcKeyStates = new ();
+        private static readonly Dictionary<MouseButton, bool> RpcMouseButtonStates = new ();
+        private static readonly (float X, float Y) RpcMousePosition = (0f, 0f);
         private static (float X, float Y) _rpcMouseDelta = (0f, 0f);
-        private static (float X, float Y) _lastRpcMousePosition = (0f, 0f);
-        private static readonly object _rpcInputLock = new object();
-        private static bool _useRpcInput = false;
+        private static readonly object RpcInputLock = new ();
 
-        public static (float X, float Y) Delta => _useRpcInput ? _rpcMouseDelta : currentDelta;
-
-        // ===== EXISTING LOCAL INPUT METHODS =====
+        public static (float X, float Y) Delta => IsRpcInputActive ? _rpcMouseDelta : _currentDelta;
+        
+        public static bool IsRpcInputActive { get; private set; }
         
         public static void Update(KeyboardState newKeyboardState)
         {
-            previousKeyboardState = keyboardState;
-            keyboardState = newKeyboardState;
+            _previousKeyboardState = _keyboardState;
+            _keyboardState = newKeyboardState;
         }
 
         public static void UpdateMouseState(MouseState newMouseState)
         {
-            previousMouseState = mouseState;
-            mouseState = newMouseState;
+            _previousMouseState = _mouseState;
+            _mouseState = newMouseState;
         }
 
         public static bool IsKeyDown(KeyCode keyCode)
         {
-            if (_useRpcInput)
+            if (!IsRpcInputActive) return _keyboardState != null && _keyboardState.IsKeyDown(ConvertKey(keyCode));
+            
+            lock (RpcInputLock)
             {
-                lock (_rpcInputLock)
-                {
-                    return _rpcKeyStates.TryGetValue(keyCode, out bool isPressed) && isPressed;
-                }
+                return RpcKeyStates.TryGetValue(keyCode, out bool isPressed) && isPressed;
             }
-            return keyboardState != null && keyboardState.IsKeyDown(ConvertKey(keyCode));
         }
 
         public static bool IsKeyPressed(KeyCode keyCode)
         {
-            if (_useRpcInput)
-            {
-                // RPC не поддерживает "pressed" (только down/up), возвращаем IsKeyDown
+            if (IsRpcInputActive)
                 return IsKeyDown(keyCode);
-            }
             
-            if (keyboardState == null || previousKeyboardState == null) return false;
+            if (_keyboardState == null || _previousKeyboardState == null) return false;
             var k = ConvertKey(keyCode);
-            return keyboardState.IsKeyDown(k) && !previousKeyboardState.IsKeyDown(k);
+            return _keyboardState.IsKeyDown(k) && !_previousKeyboardState.IsKeyDown(k);
         }
 
         public static bool IsKeyReleased(KeyCode keyCode)
         {
-            if (_useRpcInput)
-            {
-                // RPC не поддерживает "released" (только down/up), возвращаем !IsKeyDown
+            if (IsRpcInputActive)
                 return !IsKeyDown(keyCode);
-            }
             
-            if (keyboardState == null || previousKeyboardState == null) return false;
+            if (_keyboardState == null || _previousKeyboardState == null) return false;
             var k = ConvertKey(keyCode);
-            return !keyboardState.IsKeyDown(k) && previousKeyboardState.IsKeyDown(k);
+            return !_keyboardState.IsKeyDown(k) && _previousKeyboardState.IsKeyDown(k);
         }
 
         public static bool IsKeyJustActivatedOnce(KeyCode keyCode)
         {
-            if (_useRpcInput)
+            if (IsRpcInputActive)
             {
-                lock (_rpcInputLock)
+                lock (RpcInputLock)
                 {
-                    if (_rpcKeyStates.TryGetValue(keyCode, out bool isPressed) && isPressed)
+                    if (RpcKeyStates.TryGetValue(keyCode, out var isPressed) && isPressed)
                     {
                         if (TriggeredKeys.Add(keyCode))
                         {
@@ -100,10 +91,10 @@ namespace Utils
                 }
             }
             
-            if (keyboardState == null) return false;
+            if (_keyboardState == null) return false;
             var k = ConvertKey(keyCode);
 
-            if (keyboardState.IsKeyDown(k))
+            if (_keyboardState.IsKeyDown(k))
             {
                 if (TriggeredKeys.Add(keyCode))
                 {
@@ -120,198 +111,161 @@ namespace Utils
 
         public static bool IsMouseButtonDown(MouseButton button)
         {
-            if (_useRpcInput)
+            if (IsRpcInputActive)
             {
-                lock (_rpcInputLock)
+                lock (RpcInputLock)
                 {
-                    return _rpcMouseButtonStates.TryGetValue(button, out bool isPressed) && isPressed;
+                    return RpcMouseButtonStates.TryGetValue(button, out var isPressed) && isPressed;
                 }
             }
             
-            if (mouseState == null)
+            if (_mouseState == null)
                 return false;
 
             return button switch
             {
-                MouseButton.Left => mouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Left),
-                MouseButton.Right => mouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Right),
-                MouseButton.Middle => mouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Middle),
+                MouseButton.Left => _mouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Left),
+                MouseButton.Right => _mouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Right),
+                MouseButton.Middle => _mouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Middle),
                 _ => false
             };
         }
 
         public static bool IsMouseButtonPressed(MouseButton button)
         {
-            if (_useRpcInput)
-            {
-                // RPC не поддерживает "pressed" (только down/up), возвращаем IsMouseButtonDown
+            if (IsRpcInputActive)
                 return IsMouseButtonDown(button);
-            }
             
-            if (mouseState == null || previousMouseState == null)
+            if (_mouseState == null || _previousMouseState == null)
                 return false;
 
             return button switch
             {
                 MouseButton.Left =>
-                    mouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Left) &&
-                    !previousMouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Left),
+                    _mouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Left) &&
+                    !_previousMouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Left),
                 MouseButton.Right => 
-                    mouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Right) &&
-                    !previousMouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Right),
+                    _mouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Right) &&
+                    !_previousMouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Right),
                 MouseButton.Middle => 
-                    mouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Middle) &&
-                    !previousMouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Middle),
+                    _mouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Middle) &&
+                    !_previousMouseState.IsButtonDown(OpenTK.Windowing.GraphicsLibraryFramework.MouseButton.Middle),
                 _ => false
             };
         }
 
-        private static Keys ConvertKey(KeyCode keyCode) =>
-            Enum.TryParse(keyCode.ToString(), out Keys result) ? result : Keys.Unknown;
+        private static Keys ConvertKey(KeyCode keyCode) => Enum.TryParse(keyCode.ToString(), out Keys result) ? result : Keys.Unknown;
 
         public static void UpdateMouse(float x, float y)
         {
-            if (firstMove)
+            if (_firstMove)
             {
-                lastX = x;
-                lastY = y;
-                firstMove = false;
-                currentDelta = (0, 0);
+                _lastX = x;
+                _lastY = y;
+                _firstMove = false;
+                _currentDelta = (0, 0);
                 return;
             }
 
-            currentDelta = (x - lastX, y - lastY);
+            _currentDelta = (x - _lastX, y - _lastY);
 
-            lastX = x;
-            lastY = y;
+            _lastX = x;
+            _lastY = y;
         }
 
-        public static void ResetMouse() => currentDelta = (0, 0);
+        public static void ResetMouse() => _currentDelta = (0, 0);
 
-        public static bool HasMouseMoved() =>
-            System.Math.Abs(currentDelta.X) > 0.001f || System.Math.Abs(currentDelta.Y) > 0.001f;
+        public static bool HasMouseMoved() => System.Math.Abs(_currentDelta.X) > 0.001f || System.Math.Abs(_currentDelta.Y) > 0.001f;
 
-        // ===== RPC INPUT METHODS =====
         
-        /// <summary>
-        /// Включить режим RPC ввода (отключает локальную клавиатуру/мышь)
-        /// </summary>
         public static void EnableRpcInput()
         {
-            _useRpcInput = true;
-            lock (_rpcInputLock)
+            IsRpcInputActive = true;
+            lock (RpcInputLock)
             {
-                _rpcKeyStates.Clear();
-                _rpcMouseButtonStates.Clear();
+                RpcKeyStates.Clear();
+                RpcMouseButtonStates.Clear();
                 _rpcMouseDelta = (0f, 0f);
             }
         }
-
-        /// <summary>
-        /// Отключить режим RPC ввода (возвращается локальная клавиатура/мышь)
-        /// </summary>
+        
+        
         public static void DisableRpcInput()
         {
-            _useRpcInput = false;
-            lock (_rpcInputLock)
+            IsRpcInputActive = false;
+            lock (RpcInputLock)
             {
-                _rpcKeyStates.Clear();
-                _rpcMouseButtonStates.Clear();
+                RpcKeyStates.Clear();
+                RpcMouseButtonStates.Clear();
                 _rpcMouseDelta = (0f, 0f);
             }
         }
 
-        /// <summary>
-        /// Проверка активен ли режим RPC ввода
-        /// </summary>
-        public static bool IsRpcInputActive => _useRpcInput;
 
-        /// <summary>
-        /// Обработка нажатия клавиши из RPC
-        /// </summary>
+
+
+
         public static void RpcKeyDown(string key)
         {
-            if (TryParseKeyCode(key, out KeyCode keyCode))
+            if (!TryParseKeyCode(key, out KeyCode keyCode)) return;
+            lock (RpcInputLock)
             {
-                lock (_rpcInputLock)
-                {
-                    _rpcKeyStates[keyCode] = true;
-                }
+                RpcKeyStates[keyCode] = true;
             }
         }
 
-        /// <summary>
-        /// Обработка отпускания клавиши из RPC
-        /// </summary>
+
         public static void RpcKeyUp(string key)
         {
-            if (TryParseKeyCode(key, out KeyCode keyCode))
+            if (!TryParseKeyCode(key, out var keyCode)) return;
+            
+            lock (RpcInputLock)
             {
-                lock (_rpcInputLock)
-                {
-                    _rpcKeyStates[keyCode] = false;
-                }
+                RpcKeyStates[keyCode] = false;
             }
         }
 
-        /// <summary>
-        /// Обработка движения мыши из RPC
-        /// </summary>
+
         public static void RpcMouseMove(float deltaX, float deltaY)
         {
-            lock (_rpcInputLock)
+            lock (RpcInputLock)
             {
-                // ✅ Нормализуем пиксельную дельту к стандартному масштабу
-                // Локальная мышь OpenTK обычно даёт значения ~1-10 пикселей на движение
-                // RPC клиент может отправлять большие значения (50-200 пикселей)
-                // Делим на коэффициент, чтобы привести к одному масштабу
-                const float pixelScale = 0.5f; // Подбирайте: 0.3-0.7 обычно хорошо работает
+                const float pixelScale = 0.5f; 
         
                 _rpcMouseDelta = (deltaX * pixelScale, deltaY * pixelScale);
             }
         }
-
-        /// <summary>
-        /// Обработка нажатия кнопки мыши из RPC
-        /// </summary>
+        
         public static void RpcMouseDown(MouseButton button)
         {
-            lock (_rpcInputLock)
+            lock (RpcInputLock)
             {
-                _rpcMouseButtonStates[button] = true;
+                RpcMouseButtonStates[button] = true;
             }
         }
 
-        /// <summary>
-        /// Обработка отпускания кнопки мыши из RPC
-        /// </summary>
         public static void RpcMouseUp(MouseButton button)
         {
-            lock (_rpcInputLock)
+            lock (RpcInputLock)
             {
-                _rpcMouseButtonStates[button] = false;
+                RpcMouseButtonStates[button] = false;
             }
         }
-
-        /// <summary>
-        /// Сброс дельты мыши RPC (вызывать после применения)
-        /// </summary>
+        
         public static void RpcResetMouseDelta()
         {
-            lock (_rpcInputLock)
+            lock (RpcInputLock)
             {
                 _rpcMouseDelta = (0f, 0f);
             }
         }
 
-        /// <summary>
-        /// Получить текущую позицию мыши RPC
-        /// </summary>
+   
         public static (float X, float Y) GetRpcMousePosition()
         {
-            lock (_rpcInputLock)
+            lock (RpcInputLock)
             {
-                return _rpcMousePosition;
+                return RpcMousePosition;
             }
         }
 
@@ -389,21 +343,15 @@ namespace Utils
                 _ => KeyCode.Unknown
             };
             
-            // Если не нашли в switch, пробуем буквы A-Z и цифры 0-9
-            if (keyCode == KeyCode.Unknown && key.Length == 1)
+          
+            if (keyCode != KeyCode.Unknown || key.Length != 1) return keyCode != KeyCode.Unknown;
+            var c = key.ToUpper()[0];
+            return c switch
             {
-                char c = key.ToUpper()[0];
-                if (c >= 'A' && c <= 'Z')
-                {
-                    return Enum.TryParse(c.ToString(), out keyCode);
-                }
-                if (c >= '0' && c <= '9')
-                {
-                    return Enum.TryParse("D" + c, out keyCode);
-                }
-            }
-            
-            return keyCode != KeyCode.Unknown;
+                >= 'A' and <= 'Z' => Enum.TryParse(c.ToString(), out keyCode),
+                >= '0' and <= '9' => Enum.TryParse("D" + c, out keyCode),
+                _ => keyCode != KeyCode.Unknown
+            };
         }
     }
 }
