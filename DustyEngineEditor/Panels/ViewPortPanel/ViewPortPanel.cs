@@ -12,6 +12,9 @@ internal class ViewPortPanel(InputHandler inputHandler) : IRenderablePanel
 
     public bool IsRemoteWindowFocused { get; private set; }
 
+    public Action? OnStartClicked;
+    public Action? OnStopClicked;
+
     public void UpdateData(int texture, int textureWidth, int textureHeight, int framesDisplayed)
     {
         _texture = texture;
@@ -30,6 +33,18 @@ internal class ViewPortPanel(InputHandler inputHandler) : IRenderablePanel
         ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 1);
 
         ImGui.Begin("Renderer Viewport", ImGuiWindowFlags.NoCollapse);
+        
+        if (ImGui.Button("Start"))
+            OnStartClicked?.Invoke();
+        
+
+        ImGui.SameLine();
+
+        if (ImGui.Button("Stop"))
+            OnStopClicked?.Invoke();
+        
+
+        ImGui.Separator();
 
         IsRemoteWindowFocused = ImGui.IsWindowFocused(ImGuiFocusedFlags.RootAndChildWindows);
 

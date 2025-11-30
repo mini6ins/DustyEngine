@@ -1,6 +1,6 @@
-using DustyEngineEditor.Panels.RemoteRenderer;
-using DustyEngineEditor.Panels.SettingPanel;
+using DustyEngineEditor.Panels.HierarchyPanel;
 using DustyEngineEditor.Panels.ViewPortPanel;
+using DustyEngineEditor.Panels.ViewPortPanel.RemoteRenderer;
 using ImGuiNET;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 
@@ -21,7 +21,17 @@ internal class RendererUI
     {
         _inputHandler = new InputHandler(remoteRenderer);
         _viewPortPanel = new ViewPortPanel(_inputHandler);
-        _renderablePanels = [new SettingPanel(), _viewPortPanel];
+        _renderablePanels = [new HierarchyPanel(), _viewPortPanel, new ProjectFilePanel(), new InspectorPanel()];
+        
+        _viewPortPanel.OnStartClicked = () =>
+        {
+            Console.WriteLine("START CLICKED");
+        };
+
+        _viewPortPanel.OnStopClicked = () =>
+        {
+            Console.WriteLine("STOP CLICKED");
+        };
     }
 
     public void Update(KeyboardState keyboardState)
@@ -34,6 +44,8 @@ internal class RendererUI
 
     public void Render(int texture, int textureWidth, int textureHeight, ref int framesDisplayed)
     {
+        RenderTopMenuBar(); 
+
         ImGui.DockSpaceOverViewport();
 
         _viewPortPanel.UpdateData(texture, textureWidth, textureHeight, framesDisplayed);
@@ -44,5 +56,45 @@ internal class RendererUI
         }
 
         framesDisplayed = _viewPortPanel.GetFramesDisplayed();
+    }
+
+    private void RenderTopMenuBar()
+    {
+        if (ImGui.BeginMainMenuBar())
+        {
+            if (ImGui.BeginMenu("File"))
+            {
+                if (ImGui.MenuItem("Open"))
+                {
+                    Console.WriteLine("Open");
+                }
+
+                if (ImGui.MenuItem("Save"))
+                {
+                    Console.WriteLine("Save");
+                }
+
+                if (ImGui.MenuItem("Exit"))
+                {
+                    // Close app
+                }
+
+                ImGui.EndMenu();
+            }
+
+            if (ImGui.BeginMenu("View"))
+            {
+                ImGui.MenuItem("Stats", "", true);
+                ImGui.EndMenu();
+            }
+
+            if (ImGui.BeginMenu("Help"))
+            {
+                ImGui.MenuItem("About");
+                ImGui.EndMenu();
+            }
+
+            ImGui.EndMainMenuBar();
+        }
     }
 }

@@ -1,4 +1,6 @@
-namespace DustyEngineEditor.Panels.RemoteRenderer;
+using DustyEngineEditor.Panels.RemoteRenderer;
+
+namespace DustyEngineEditor.Panels.ViewPortPanel.RemoteRenderer;
 
 public interface IRemoteRenderer
 {

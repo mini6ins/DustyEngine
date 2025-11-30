@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO.Pipes;
 using DustyEngineEditor.Panels;
 using DustyEngineEditor.Panels.RemoteRenderer;
+using DustyEngineEditor.Panels.ViewPortPanel.RemoteRenderer;
 using StreamJsonRpc;
 
 namespace DustyEngineEditor;
