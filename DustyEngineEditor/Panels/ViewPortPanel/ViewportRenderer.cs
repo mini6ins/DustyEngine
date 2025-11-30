@@ -1,3 +1,5 @@
+using DustyEngine;
+using DustyEngineEditor.Panels.RemoteRenderer;
 using ImGui_OpenTK.Backends;
 using ImGuiNET;
 using OpenTK.Graphics.OpenGL.Compatibility;
@@ -6,31 +8,30 @@ using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 
+namespace DustyEngineEditor.Panels;
+
 public class ViewportRenderer : GameWindow
 {
-    private IRemoteRenderer _remoteRenderer;
+    private readonly IRemoteRenderer _remoteRenderer;
     private int _texture;
-    private float _time = 0f;
-    private FrameData?[] _frameBuffer = new FrameData?[3];
-    private volatile int _readyBufferIndex = 0;
-    private CancellationTokenSource _cts = new CancellationTokenSource();
+    private float _time;
+    private readonly FrameData?[] _frameBuffer = new FrameData?[3];
+    private volatile int _readyBufferIndex;
+    private readonly CancellationTokenSource _cts = new();
     private Task? _fetcherTask;
-    
-    private int _framesReceived = 0;
-    private int _framesDisplayed = 0;
-    private DateTime _lastStatsTime = DateTime.Now;
-    private float _lastReceivedTimestamp = -1f;
-    private int _currentTextureWidth = 0;
-    private int _currentTextureHeight = 0;
 
-    private RendererUI _ui;
+    private int _framesDisplayed;
+    private int _currentTextureWidth;
+    private int _currentTextureHeight;
+
+    private RendererUI _ui = null!;
 
     public ViewportRenderer(IRemoteRenderer remoteRenderer)
         : base(GameWindowSettings.Default,
             new NativeWindowSettings()
             {
-                Size = new Vector2i(1024, 768),
-                Title = "Remote Renderer Client",
+                ClientSize = new Vector2i(1024, 768),
+                Title = "DustyEngineEditor 0.01v",
                 API = ContextAPI.OpenGL,
                 APIVersion = new Version(3, 3),
                 Flags = ContextFlags.Default
@@ -44,21 +45,21 @@ public class ViewportRenderer : GameWindow
     {
         base.OnLoad();
         GL.ClearColor(0.15f, 0.15f, 0.15f, 1.0f);
-        
+
         ImGui.CreateContext();
         var io = ImGui.GetIO();
         io.ConfigFlags |= ImGuiConfigFlags.DockingEnable;
         ImGui.StyleColorsDark();
-        
+
         ImguiImplOpenTK4.Init(this);
         ImguiImplOpenGL3.Init();
-        
+
         InitializeTexture();
-        
-        _ui = new RendererUI(_remoteRenderer, this);
-        
+
+        _ui = new RendererUI(_remoteRenderer);
+
         _fetcherTask = Task.Run(FetchFramesLoop);
-        Console.WriteLine("Client ready. WASD to move camera, mouse to rotate.");
+        Debug.Log("Editor ready. WASD to move camera, mouse to rotate.");
     }
 
     private void InitializeTexture()
@@ -69,11 +70,11 @@ public class ViewportRenderer : GameWindow
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
-        
-        byte[] px = new byte[] { 32, 32, 32, 255 };
+
+        byte[] px = [32, 32, 32, 255];
         GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba, 1, 1, 0,
             PixelFormat.Rgba, PixelType.UnsignedByte, px);
-        
+
         _currentTextureWidth = 1;
         _currentTextureHeight = 1;
     }
@@ -91,8 +92,6 @@ public class ViewportRenderer : GameWindow
                     int writeIndex = 1 - _readyBufferIndex;
                     _frameBuffer[writeIndex] = frame;
                     _readyBufferIndex = writeIndex;
-                    _lastReceivedTimestamp = frame.Timestamp;
-                    _framesReceived++;
                 }
 
                 await Task.Delay(1, _cts.Token);
@@ -120,8 +119,6 @@ public class ViewportRenderer : GameWindow
             UpdateTexture(frameToUpdate);
         }
 
-        UpdateStats();
-
         if (KeyboardState.IsKeyDown(Keys.Escape))
         {
             Close();
@@ -130,18 +127,6 @@ public class ViewportRenderer : GameWindow
         _ui.Update(KeyboardState);
     }
 
-    private void UpdateStats()
-    {
-        var now = DateTime.Now;
-        if ((now - _lastStatsTime).TotalSeconds >= 1.0)
-        {
-            string helpText = _ui.ShowHelp ? " | H:hide" : " | H:help";
-            Title = $"Remote Renderer - Recv: {_framesReceived} | Display: {_framesDisplayed} FPS{helpText}";
-            _framesReceived = 0;
-            _framesDisplayed = 0;
-            _lastStatsTime = now;
-        }
-    }
 
     private void UpdateTexture(FrameData frameData)
     {
@@ -170,40 +155,39 @@ public class ViewportRenderer : GameWindow
     protected override void OnRenderFrame(FrameEventArgs args)
     {
         base.OnRenderFrame(args);
-        
+
         GL.Clear(ClearBufferMask.ColorBufferBit);
-        
+
         ImguiImplOpenGL3.NewFrame();
         ImguiImplOpenTK4.NewFrame();
         ImGui.NewFrame();
-        
-        _ui.Render(_texture, _currentTextureWidth, _currentTextureHeight, 
-                   ref _framesReceived, ref _framesDisplayed);
-        
+
+        _ui.Render(_texture, _currentTextureWidth, _currentTextureHeight, ref _framesDisplayed);
+
         ImGui.Render();
         ImguiImplOpenGL3.RenderDrawData(ImGui.GetDrawData());
-        
-        SwapBuffers();
-    }
 
-    protected override void OnUnload()
-    {
-        base.OnUnload();
-        
-        _cts.Cancel();
-        _fetcherTask?.Wait(TimeSpan.FromSeconds(2));
-        _cts.Dispose();
-        
-        GL.DeleteTexture(_texture);
-        
-        ImguiImplOpenGL3.Shutdown();
-        ImguiImplOpenTK4.Shutdown();
-        ImGui.DestroyContext();
+        SwapBuffers();
     }
 
     protected override void OnResize(ResizeEventArgs e)
     {
         base.OnResize(e);
         GL.Viewport(0, 0, e.Width, e.Height);
+    }
+
+    protected override void OnUnload()
+    {
+        base.OnUnload();
+
+        _cts.Cancel();
+        _fetcherTask?.Wait(TimeSpan.FromSeconds(2));
+        _cts.Dispose();
+
+        GL.DeleteTexture(_texture);
+
+        ImguiImplOpenGL3.Shutdown();
+        ImguiImplOpenTK4.Shutdown();
+        ImGui.DestroyContext();
     }
 }

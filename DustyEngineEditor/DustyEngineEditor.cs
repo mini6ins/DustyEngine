@@ -1,45 +1,33 @@
 using System.Diagnostics;
 using System.IO.Pipes;
-using System.Reflection;
+using DustyEngineEditor.Panels;
+using DustyEngineEditor.Panels.RemoteRenderer;
 using StreamJsonRpc;
 
+namespace DustyEngineEditor;
 
-class Runner
-{
-    private static void Main(string[] args) => new DustyEngineEditor().RunEditor();
-}
-
-class DustyEngineEditor
+internal static class Runner
 {
     private const string ProjectPath = "/home/maksym/DustyEngine/TestProject";
-    private readonly string RunnerPath = "/home/maksym/DustyEngine/Runner/bin/Debug/net9.0/Runner";
+    private const string RunnerPath = "/home/maksym/DustyEngine/Runner/bin/Debug/net9.0/Runner";
+    private static void Main(string[] args) => new Editor(ProjectPath, RunnerPath);
+}
+
+internal class Editor
+{
+    private readonly string _projectPath;
+    private readonly string _runnerPath;
 
     private Process? _engineProcess;
     private volatile bool _engineRunning;
 
-
-    public void RunEditor()
+    public Editor(string projectPath, string runnerPath)
     {
+        _projectPath = projectPath;
+        _runnerPath = runnerPath;
+
         StartEngineProcess();
         ConnectToEngineByStreamJsonRpc();
-    }
-
-    private void ConnectToEngineByStreamJsonRpc()
-    {
-        Console.Title = Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location);
-
-        var stream = new NamedPipeClientStream(".", "StreamJsonRpcSamplePipe", PipeDirection.InOut,
-            PipeOptions.Asynchronous);
-        stream.Connect();
-
-        var jsonRpc = JsonRpc.Attach(stream);
-        var renderer = jsonRpc.Attach<IRemoteRenderer>();
-        using (ViewportRenderer clientWindow = new ViewportRenderer(renderer))
-        {
-            clientWindow.Run();
-        }
-
-        stream.Dispose();
     }
 
     private void StartEngineProcess()
@@ -50,21 +38,39 @@ class DustyEngineEditor
         {
             var psi = new ProcessStartInfo
             {
-                FileName = RunnerPath,
+                FileName = _runnerPath,
                 UseShellExecute = false,
+                CreateNoWindow = true,
                 RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
+                RedirectStandardError = true
             };
 
-            psi.ArgumentList.Add(ProjectPath);
+            psi.ArgumentList.Add(_projectPath);
             psi.ArgumentList.Add("Editor");
-            // psi.ArgumentList.Add("Standalone");
 
+            _engineProcess = new Process
+            {
+                StartInfo = psi,
+                EnableRaisingEvents = true
+            };
 
-            _engineProcess = new Process { StartInfo = psi, EnableRaisingEvents = true };
+            _engineProcess.OutputDataReceived += (_, e) =>
+            {
+                if (e.Data != null)
+                    Console.WriteLine($"[DustyEngine] {e.Data}");
+            };
 
-            _engineProcess.Exited += (_, __) => { _engineRunning = false; };
+            _engineProcess.ErrorDataReceived += (_, e) =>
+            {
+                if (e.Data != null)
+                    Console.WriteLine($"[DustyEngine ERROR] {e.Data}");
+            };
+
+            _engineProcess.Exited += (_, __) =>
+            {
+                Console.WriteLine("DustyEngine exited.");
+                _engineRunning = false;
+            };
 
             _engineProcess.Start();
             _engineProcess.BeginOutputReadLine();
@@ -74,26 +80,24 @@ class DustyEngineEditor
         }
         catch (Exception ex)
         {
+            Console.WriteLine("Failed to start Runner: " + ex.Message);
             _engineRunning = false;
         }
     }
-}
 
-public interface IRemoteRenderer
-{
-    Task<FrameData> GetFrameData(float time);
-    void OnKeyDown(string key);
-    void OnKeyUp(string key);
-    void OnMouseDown(float normalizedX, float normalizedY, int button);
-    void OnMouseUp(float normalizedX, float normalizedY, int button);
-    void OnMouseMoveDelta(float deltaX, float deltaY); 
-    void OnMouseClick(float normalizedX, float normalizedY, int button);
-}
 
-public class FrameData
-{
-    public int Width { get; set; }
-    public int Height { get; set; }
-    public float Timestamp { get; set; }
-    public byte[] PixelData { get; set; } = Array.Empty<byte>();
+    private static void ConnectToEngineByStreamJsonRpc()
+    {
+        var stream = new NamedPipeClientStream(".", "StreamJsonRpcSamplePipe", PipeDirection.InOut,
+            PipeOptions.Asynchronous);
+        stream.Connect();
+
+        var jsonRpc = JsonRpc.Attach(stream);
+        var renderer = jsonRpc.Attach<IRemoteRenderer>();
+
+        using (var clientWindow = new ViewportRenderer(renderer)) 
+            clientWindow.Run();
+
+        stream.Dispose();
+    }
 }
