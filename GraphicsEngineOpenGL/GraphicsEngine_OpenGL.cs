@@ -22,12 +22,12 @@ public class GraphicsEngineOpenGl : IRenderer
             ClientSize = new Vector2i(resolution.X, resolution.Y),
             Title = programName,
         };
-        
+
         _window = new Window(GameWindowSettings.Default, nativeWindowSettings, scene, vertShaderPath, fragShaderPath,
             programName, vsync, CursorState.Normal, renderMode);
-        
+
         _window.IsVisible = renderMode != RenderMode.Editor;
-        
+
         _window.UpdateFrame += _ => { updateCallback?.Invoke(); };
         _window.Run();
     }
