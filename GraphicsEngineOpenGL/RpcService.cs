@@ -1,5 +1,11 @@
 namespace GraphicsEngineOpenGL;
 
+public class FrameSlot
+{
+    public FrameData Frame = new();
+    public volatile bool IsReady = false;
+}
+
 public class FrameData
 {
     public int Width { get; set; }

@@ -1,5 +1,6 @@
 ﻿using DustyEngine.Components;
 using DustyEngine.Scene;
+using GraphicsEngine;
 using GraphicsEngineOpenGL;
 
 namespace DustyEngine

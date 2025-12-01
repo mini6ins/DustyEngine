@@ -6,26 +6,19 @@ namespace DustyEngine.Components
 {
     public class CameraBase : MonoBehaviour
     {
-        [SerializeField] protected float _fieldOfView = 45.0f;
-        [SerializeField] protected float _nearPlane = 0.5f;
-        [SerializeField] protected float _farPlane = 200.0f;
+        [SerializeField] private float _fieldOfView = 45.0f;
+        [SerializeField] private float _nearPlane = 0.5f;
+        [SerializeField] private float _farPlane = 200.0f;
 
         public float AspectRatio { get; set; } = 16f / 9f;
 
-        private readonly Transform _selfTransform;
+        protected virtual Transform TransformSource => InternalTransform;
 
-        protected virtual Transform TransformSource => _selfTransform;
-
-        public CameraBase()
-        {
-            _selfTransform = new Transform(
-                new V3(0, 2.5f, 5),
-                new V3(0, 0, 0),
-                new V3(1, 1, 1)
-            );
-        }
-
-        public Transform InternalTransform => _selfTransform;
+        public Transform InternalTransform { get; } = new(
+            new V3(0, 2.5f, 5),
+            new V3(0, 0, 0),
+            new V3(1, 1, 1)
+        );
 
         public virtual Matrix4 GetViewMatrix()
         {

@@ -1,6 +1,7 @@
 ﻿using DustyEngine;
 using DustyEngine.Components;
 using DustyEngine.Scene;
+using GraphicsEngine;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using Vector2i = OpenTK.Mathematics.Vector2i;
