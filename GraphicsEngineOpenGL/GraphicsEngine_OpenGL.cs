@@ -23,7 +23,7 @@ public class GraphicsEngineOpenGl : IRenderer
             Title = programName,
         };
 
-        _window = new Window(GameWindowSettings.Default, nativeWindowSettings, scene, vertShaderPath, fragShaderPath,
+        _window = new Window(GameWindowSettings.Default, nativeWindowSettings, vertShaderPath, fragShaderPath,
             programName, vsync, CursorState.Normal, renderMode);
 
         _window.IsVisible = renderMode != RenderMode.Editor;
@@ -33,6 +33,6 @@ public class GraphicsEngineOpenGl : IRenderer
     }
 
 
-    public void AddRenderer(MeshRenderer meshRenderer) => _window?.AddRenderer(meshRenderer);
-    public bool RemoveRenderer(int objectId) => _window?.RemoveRenderer(objectId) ?? false;
+    public void AddRenderer(MeshRenderer meshRenderer) => _window?.GraphicsRenderer.AddRenderer(meshRenderer);
+    public bool RemoveRenderer(int objectId) => _window?.GraphicsRenderer.RemoveRenderer(objectId) ?? false;
 }
