@@ -4,7 +4,9 @@ using DustyEngine.Scene;
 using GraphicsEngineOpenGL.RenderUtils;
 using OpenTK.Graphics.OpenGL.Compatibility;
 using OpenTK.Mathematics;
+using OpenTK.Windowing.GraphicsLibraryFramework;
 using Utils;
+using MouseButton = Utils.MouseButton;
 using Vector3 = DustyEngine.Engine.Math.Vectors.Vector3;
 
 namespace GraphicsEngineOpenGL;
@@ -22,27 +24,41 @@ public enum RenderMode
     Editor
 }
 
-public class GraphicsRenderer(
-    string vertShaderPath,
-    string fragShaderPath,
-    int viewportWidth,
-    int viewportHeight,
-    RenderMode renderMode)
+public class GraphicsRenderer
 {
+    private readonly string _vertShaderPath;
+    private readonly string _fragShaderPath;
+    private readonly int _viewportWidth;
+    private readonly int _viewportHeight;
+    private readonly RenderMode _renderMode;
+
     private ShaderProgram _shaderProgram = null!;
     private readonly List<VAOManager> _vaoList = [];
     private readonly List<RenderableObject> _sceneObjects = [];
 
-    private List<Camera>? _sceneCameras;
+    private List<Camera> _sceneCameras = null!;
     private EditorCamera? _editorCamera;
     private Matrix4 _projection;
 
-    public bool IsEditorMode => renderMode == RenderMode.Editor;
+    private CameraBase ActiveCamera => (IsEditorMode && _editorCamera != null)
+        ? _editorCamera
+        : _sceneCameras.First();
 
-    private CameraBase ActiveCamera => (IsEditorMode && _editorCamera != null) ? _editorCamera : _sceneCameras!.First();
+    private bool IsEditorMode => _renderMode == RenderMode.Editor;
+
+    public GraphicsRenderer(string vertShaderPath, string fragShaderPath,
+        int viewportWidth, int viewportHeight, RenderMode renderMode)
+    {
+        _vertShaderPath = vertShaderPath;
+        _fragShaderPath = fragShaderPath;
+        _viewportWidth = viewportWidth;
+        _viewportHeight = viewportHeight;
+        _renderMode = renderMode;
+    }
 
     public void Load()
     {
+        // Initialize OpenGL state
         GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
         GL.Enable(EnableCap.CullFace);
         GL.CullFace(TriangleFace.Back);
@@ -50,15 +66,17 @@ public class GraphicsRenderer(
         GL.Enable(EnableCap.DepthTest);
         GL.DepthFunc(DepthFunction.Less);
 
-        _shaderProgram = new ShaderProgram(vertShaderPath, fragShaderPath);
+        // Create shader program
+        _shaderProgram = new ShaderProgram(_vertShaderPath, _fragShaderPath);
 
+        // Initialize cameras
         _sceneCameras = SceneManager.FindCameras();
 
         if (IsEditorMode)
         {
             _editorCamera = new EditorCamera
             {
-                AspectRatio = viewportWidth / (float)viewportHeight,
+                AspectRatio = _viewportWidth / (float)_viewportHeight,
                 InternalTransform =
                 {
                     LocalPosition = new Vector3(0f, 2.5f, 5f),
@@ -67,10 +85,20 @@ public class GraphicsRenderer(
             };
         }
 
-        ActiveCamera.AspectRatio = viewportWidth / (float)viewportHeight;
+        // Set up projection
+        ActiveCamera.AspectRatio = _viewportWidth / (float)_viewportHeight;
         _projection = ActiveCamera.GetProjectionMatrix();
 
+        // Load all renderers from current scene
         LoadSceneRenderers();
+
+        // Initialize editor-specific features
+        if (IsEditorMode)
+        {
+            _editorCamera?.InitializeController();
+            Input.Input.EnableRpcInput();
+            Console.WriteLine("[Input] RPC input mode enabled for Editor");
+        }
     }
 
     private void LoadSceneRenderers()
@@ -88,9 +116,38 @@ public class GraphicsRenderer(
             AddRenderer(meshRenderer);
     }
 
-    public void InitializeEditorCamera() => _editorCamera?.InitializeController();
+    public void Update(float deltaTime, KeyboardState keyboardState, MouseState mouseState)
+    {
+        if (!IsEditorMode)
+        {
+            Input.Input.Update(keyboardState);
+            Input.Input.UpdateMouseState(mouseState);
+        }
+        else
+        {
+            UpdateEditorCamera(deltaTime);
+        }
 
-    public void UpdateEditorCamera(float deltaTime)
+        HandleDebugInput();
+    }
+
+    public void OnMouseMove(float x, float y)
+    {
+        if (!IsEditorMode)
+        {
+            Input.Input.UpdateMouse(x, y);
+        }
+    }
+
+    public void CaptureFrameIfNeeded(RpcController? rpcManager, int width, int height)
+    {
+        if (IsEditorMode && rpcManager?.ConnectedClients > 0)
+        {
+            rpcManager.CaptureFrame(width, height);
+        }
+    }
+
+    private void UpdateEditorCamera(float deltaTime)
     {
         if (_editorCamera == null) return;
 
@@ -109,13 +166,14 @@ public class GraphicsRenderer(
 
         _editorCamera.UpdateMovement(deltaTime, isMiddleMouseDown, mouseDelta, movementInput);
 
+        // Reset mouse delta after camera update
         if (Input.Input.IsRpcInputActive)
             Input.Input.RpcResetMouseDelta();
         else
             Input.Input.ResetMouse();
     }
 
-    public static void HandleDebugInput()
+    private void HandleDebugInput()
     {
         if (Input.Input.IsKeyJustActivatedOnce(KeyCode.F1))
             GL.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Line);
@@ -126,9 +184,11 @@ public class GraphicsRenderer(
 
     public void Render()
     {
+        // Clear screen
         GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
+        // Render scene
         _shaderProgram.ActiveProgram();
         var viewMatrix = ActiveCamera.GetViewMatrix();
         _shaderProgram.SetUniform("uView", viewMatrix);
@@ -215,6 +275,11 @@ public class GraphicsRenderer(
 
     public void Dispose()
     {
+        if (IsEditorMode)
+        {
+            Input.Input.DisableRpcInput();
+        }
+
         foreach (var vao in _vaoList)
             vao.Dispose();
         _shaderProgram?.DeleteProgram();
