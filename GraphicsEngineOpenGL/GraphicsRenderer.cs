@@ -58,18 +58,15 @@ public class GraphicsRenderer
 
     public void Load()
     {
-        // Initialize OpenGL state
         GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
         GL.Enable(EnableCap.CullFace);
         GL.CullFace(TriangleFace.Back);
         GL.FrontFace(FrontFaceDirection.Ccw);
         GL.Enable(EnableCap.DepthTest);
         GL.DepthFunc(DepthFunction.Less);
-
-        // Create shader program
+        
         _shaderProgram = new ShaderProgram(_vertShaderPath, _fragShaderPath);
-
-        // Initialize cameras
+        
         _sceneCameras = SceneManager.FindCameras();
 
         if (IsEditorMode)
@@ -85,14 +82,11 @@ public class GraphicsRenderer
             };
         }
 
-        // Set up projection
         ActiveCamera.AspectRatio = _viewportWidth / (float)_viewportHeight;
         _projection = ActiveCamera.GetProjectionMatrix();
-
-        // Load all renderers from current scene
+        
         LoadSceneRenderers();
-
-        // Initialize editor-specific features
+        
         if (IsEditorMode)
         {
             _editorCamera?.InitializeController();
@@ -165,8 +159,7 @@ public class GraphicsRenderer
         };
 
         _editorCamera.UpdateMovement(deltaTime, isMiddleMouseDown, mouseDelta, movementInput);
-
-        // Reset mouse delta after camera update
+        
         if (Input.Input.IsRpcInputActive)
             Input.Input.RpcResetMouseDelta();
         else
@@ -184,11 +177,9 @@ public class GraphicsRenderer
 
     public void Render()
     {
-        // Clear screen
         GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-
-        // Render scene
+        
         _shaderProgram.ActiveProgram();
         var viewMatrix = ActiveCamera.GetViewMatrix();
         _shaderProgram.SetUniform("uView", viewMatrix);
