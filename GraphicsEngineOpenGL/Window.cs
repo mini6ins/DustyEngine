@@ -2,6 +2,7 @@
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 
+
 namespace GraphicsEngineOpenGL;
 
 public class Window : GameWindow
