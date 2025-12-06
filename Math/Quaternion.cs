@@ -3,7 +3,7 @@
 public struct Quaternion(float x, float y, float z, float w)
 {
     public float X = x, Y = y, Z = z, W = w;
-    public static Quaternion Identity => new Quaternion(0f, 0f, 0f, 1f);
+    public static Quaternion Identity => new (0f, 0f, 0f, 1f);
     
     public static Quaternion FromAxisAngle(Vector3 axis, float angleRad)
     {
