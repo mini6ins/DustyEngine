@@ -6,11 +6,12 @@ using StreamJsonRpc;
 
 namespace DustyEngineEditor;
 
-internal static class Runner
+public static class Runner
 {
-    private const string ProjectPath = "/home/maksym/DustyEngine/TestProject";
-    private const string RunnerPath = "/home/maksym/DustyEngine/Runner/bin/Debug/net9.0/Runner";
-    private static void Main(string[] args) => new Editor(ProjectPath, RunnerPath);
+    public static void Run(string projectPath, string runnerPath)
+    {
+        new Editor(projectPath, runnerPath);
+    }
 }
 
 internal class Editor
