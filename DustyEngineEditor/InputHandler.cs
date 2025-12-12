@@ -139,7 +139,7 @@ public class InputHandler(IRemoteRenderer remoteRenderer)
         var deltaX = mousePos.X - _lastMousePos.X;
         var deltaY = mousePos.Y - _lastMousePos.Y;
 
-        if (!(Math.Abs(deltaX) > 0.1f) && !(Math.Abs(deltaY) > 0.1f)) return;
+        if (!(System.Math.Abs(deltaX) > 0.1f) && !(System.Math.Abs(deltaY) > 0.1f)) return;
         
         _lastMousePos = mousePos;
         SendToRemote(() => remoteRenderer.OnMouseMoveDelta(deltaX, deltaY));

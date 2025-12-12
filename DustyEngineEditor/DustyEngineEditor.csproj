@@ -14,6 +14,7 @@
     <ItemGroup>
       <ProjectReference Include="..\Dear ImGui Sample\ImGui_OpenTK.Backends.csproj" />
       <ProjectReference Include="..\Debug\Debug.csproj" />
+      <ProjectReference Include="..\GraphicsEngineOpenGL\GraphicsEngineOpenGL.csproj" />
     </ItemGroup>
 
 </Project>

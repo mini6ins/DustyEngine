@@ -1,4 +1,4 @@
-using DustyEngineEditor.Panels.RemoteRenderer;
+using GraphicsEngineOpenGL;
 
 namespace DustyEngineEditor.Panels.ViewPortPanel.RemoteRenderer;
 
@@ -11,4 +11,7 @@ public interface IRemoteRenderer
     void OnMouseUp(float normalizedX, float normalizedY, int button);
     void OnMouseMoveDelta(float deltaX, float deltaY);
     void OnMouseClick(float normalizedX, float normalizedY, int button);
+
+    void PlayEngine();
+    void StopEngine();
 }

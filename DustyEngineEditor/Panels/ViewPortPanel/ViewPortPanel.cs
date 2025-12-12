@@ -74,7 +74,7 @@ internal class ViewPortPanel(InputHandler inputHandler) : IRenderablePanel
 
     private static Vector2 CalculateImageSize(Vector2 availableSize, int textureWidth, int textureHeight)
     {
-        var targetAspectRatio = (float)textureWidth / Math.Max(1, textureHeight);
+        var targetAspectRatio = (float)textureWidth / System.Math.Max(1, textureHeight);
         var availableAspectRatio = availableSize.X / availableSize.Y;
 
         Vector2 imageSize;

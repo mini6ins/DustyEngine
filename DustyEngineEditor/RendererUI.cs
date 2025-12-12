@@ -16,9 +16,10 @@ internal class RendererUI
     private readonly InputHandler _inputHandler;
     private readonly ViewPortPanel _viewPortPanel;
     private readonly IRenderablePanel[] _renderablePanels;
-
+    private readonly IRemoteRenderer _remoteRenderer;
     public RendererUI(IRemoteRenderer remoteRenderer)
     {
+        _remoteRenderer = remoteRenderer;
         _inputHandler = new InputHandler(remoteRenderer);
         _viewPortPanel = new ViewPortPanel(_inputHandler);
         _renderablePanels = [new HierarchyPanel(), _viewPortPanel, new ProjectFilePanel(), new InspectorPanel()];
@@ -26,11 +27,13 @@ internal class RendererUI
         _viewPortPanel.OnStartClicked = () =>
         {
             Console.WriteLine("START CLICKED");
+            _remoteRenderer.PlayEngine();
         };
 
         _viewPortPanel.OnStopClicked = () =>
         {
             Console.WriteLine("STOP CLICKED");
+            _remoteRenderer.StopEngine();
         };
     }
 

@@ -1,6 +1,6 @@
 using DustyEngine;
-using DustyEngineEditor.Panels.RemoteRenderer;
 using DustyEngineEditor.Panels.ViewPortPanel.RemoteRenderer;
+using GraphicsEngineOpenGL;
 using ImGui_OpenTK.Backends;
 using ImGuiNET;
 using OpenTK.Graphics.OpenGL.Compatibility;
