@@ -1,5 +1,4 @@
-﻿using System.Runtime.InteropServices;
-using GraphicsEngineOpenGL;
+﻿using GraphicsEngineOpenGL;
 
 namespace DustyEngine.Runner;
 

@@ -9,12 +9,6 @@ using SceneSystem.Attributes;
 
 namespace DustyEngine.Core.Converters
 {
-    /// <summary>
-    /// JSON-конвертер для компонентов. Поддерживает:
-    /// - загрузку типа по имени (Type)
-    /// - загрузку/компиляцию компонента из SourcePath (.cs или .dll)
-    /// - запись SourcePath (относительно папки проекта)
-    /// </summary>
     public class ComponentConverter : JsonConverter<Component>
     {
         private static readonly Dictionary<string, Type> ComponentTypes;
@@ -25,28 +19,27 @@ namespace DustyEngine.Core.Converters
             var assemblies = AppDomain.CurrentDomain.GetAssemblies();
 
             ComponentTypes = assemblies
-                .SelectMany(a => SafeGetTypes(a))
+                .SelectMany(SafeGetTypes)
                 .Where(t => t.IsClass && !t.IsAbstract && t.IsSubclassOf(typeof(Component)))
                 .GroupBy(t => t.Name)
-                .ToDictionary(g => g.Key, g => g.First()); // если имён-дубликатов несколько – берём первый
+                .ToDictionary(g => g.Key, g => g.First());
         }
 
         public override Component Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             using (JsonDocument doc = JsonDocument.ParseValue(ref reader))
             {
-                string typeName = doc.RootElement.GetProperty("Type").GetString() ?? "";
+                var typeName = doc.RootElement.GetProperty("Type").GetString() ?? "";
 
                 ComponentTypes.TryGetValue(typeName, out Type? componentType);
 
-                // Если указан внешний путь к исходнику/сборке – пробуем загрузить/скомпилировать
                 if (doc.RootElement.TryGetProperty("SourcePath", out JsonElement externalSourcePathEl))
                 {
-                    string raw = externalSourcePathEl.GetString() ?? string.Empty;
-                    string sourcePath = ResolvePath(raw);
+                    var raw = externalSourcePathEl.GetString() ?? string.Empty;
+                    var sourcePath = ResolvePath(raw);
                     Debug.Log($"Source Path: {sourcePath}", Debug.LogLevel.Info, true);
 
-                    Component? externalComponent = LoadOrCompileComponent(sourcePath);
+                    var externalComponent = LoadOrCompileComponent(sourcePath);
                     if (externalComponent != null)
                     {
                         componentType = externalComponent.GetType();
@@ -55,29 +48,32 @@ namespace DustyEngine.Core.Converters
                 }
 
                 if (componentType == null)
-                {
                     throw new JsonException($"Unknown component type '{typeName}'.");
-                }
 
                 var newOptions = new JsonSerializerOptions(options)
                 {
                     Converters = { this }
                 };
 
-                return (Component)JsonSerializer.Deserialize(doc.RootElement.GetRawText(), componentType, newOptions)!;
+                var instance = (Component)JsonSerializer.Deserialize(
+                    doc.RootElement.GetRawText(),
+                    componentType,
+                    newOptions
+                )!;
+
+                ResolveObjPathInComponent(instance);
+
+                return instance;
             }
         }
 
-        /// <summary>
-        /// Загрузка компонента из .dll или компиляция из .cs, с учётом абсолютного пути.
-        /// </summary>
-        public static Component? LoadOrCompileComponent(string path)
+        private static Component? LoadOrCompileComponent(string path)
         {
-            string absPath = ResolvePath(path);
-            string typeName = Path.GetFileNameWithoutExtension(absPath);
+            var absPath = ResolvePath(path);
+            var typeName = Path.GetFileNameWithoutExtension(absPath);
             Component? component = null;
 
-            string ext = Path.GetExtension(absPath);
+            var ext = Path.GetExtension(absPath);
             if (ext.Equals(".dll", StringComparison.OrdinalIgnoreCase))
             {
                 Debug.Log($"Loading component from DLL: {absPath}", Debug.LogLevel.Info, true);
@@ -95,9 +91,7 @@ namespace DustyEngine.Core.Converters
             }
 
             if (component != null)
-            {
                 ComponentSourcePaths[component.GetType()] = absPath;
-            }
 
             return component;
         }
@@ -135,27 +129,23 @@ namespace DustyEngine.Core.Converters
 
         private static string CompileSourceToDll(string sourcePath)
         {
-            // Убедимся, что путь проекта абсолютный
             if (!string.IsNullOrEmpty(DustyEngine.ProjectFolderPath))
                 DustyEngine.ProjectFolderPath = Path.GetFullPath(DustyEngine.ProjectFolderPath);
 
-            string outputDirectory = Path.Combine(DustyEngine.ProjectFolderPath, "Settings", "Dlls");
+            var outputDirectory = Path.Combine(DustyEngine.ProjectFolderPath, "Settings", "Dlls");
 
             if (!Directory.Exists(outputDirectory))
-            {
                 Directory.CreateDirectory(outputDirectory);
-            }
 
-            string outputDllPath = Path.Combine(
+            var outputDllPath = Path.Combine(
                 outputDirectory,
                 Path.GetFileNameWithoutExtension(sourcePath) + ".dll"
             );
 
-            // Кэш: если .dll свежее исходника — используем её
             if (File.Exists(outputDllPath))
             {
-                DateTime sourceLastModified = File.GetLastWriteTimeUtc(sourcePath);
-                DateTime dllLastModified = File.GetLastWriteTimeUtc(outputDllPath);
+                var sourceLastModified = File.GetLastWriteTimeUtc(sourcePath);
+                var dllLastModified = File.GetLastWriteTimeUtc(outputDllPath);
 
                 if (sourceLastModified <= dllLastModified)
                 {
@@ -164,7 +154,7 @@ namespace DustyEngine.Core.Converters
                 }
             }
 
-            string sourceCode = File.ReadAllText(sourcePath);
+            var sourceCode = File.ReadAllText(sourcePath);
             var syntaxTree = CSharpSyntaxTree.ParseText(sourceCode);
             var root = syntaxTree.GetRoot();
 
@@ -186,17 +176,16 @@ namespace DustyEngine.Core.Converters
             foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
             {
                 var location = SafeAssemblyLocation(asm);
-                if (!string.IsNullOrWhiteSpace(location) && File.Exists(location))
+                if (string.IsNullOrWhiteSpace(location) || !File.Exists(location)) continue;
+
+                try
                 {
-                    try
-                    {
-                        references.Add(MetadataReference.CreateFromFile(location));
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.Log($"[Warning] Could not add reference for {location}: {ex.Message}",
-                            Debug.LogLevel.Warning);
-                    }
+                    references.Add(MetadataReference.CreateFromFile(location));
+                }
+                catch (Exception ex)
+                {
+                    Debug.Log($"[Warning] Could not add reference for {location}: {ex.Message}",
+                        Debug.LogLevel.Warning);
                 }
             }
 
@@ -215,7 +204,7 @@ namespace DustyEngine.Core.Converters
 
             var compilation = CSharpCompilation.Create(
                 Path.GetFileNameWithoutExtension(outputDllPath),
-                new[] { syntaxTree },
+                [syntaxTree],
                 references,
                 new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
             );
@@ -227,9 +216,7 @@ namespace DustyEngine.Core.Converters
                 if (!result.Success)
                 {
                     foreach (var diagnostic in result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error))
-                    {
                         Debug.Log($"Compilation error: {diagnostic.GetMessage()}", Debug.LogLevel.Error);
-                    }
 
                     throw new Exception("Roslyn compilation failed.");
                 }
@@ -244,24 +231,21 @@ namespace DustyEngine.Core.Converters
             writer.WriteStartObject();
             writer.WriteString("Type", value.GetType().Name);
 
-            // Сохраняем SourcePath (стараемся записать относительный к ProjectFolderPath — переносимее)
             if (ComponentSourcePaths.TryGetValue(value.GetType(), out string absSourcePath))
             {
-                string projectRoot = string.IsNullOrEmpty(DustyEngine.ProjectFolderPath)
+                var projectRoot = string.IsNullOrEmpty(DustyEngine.ProjectFolderPath)
                     ? Directory.GetCurrentDirectory()
                     : Path.GetFullPath(DustyEngine.ProjectFolderPath);
 
-                string toWrite = absSourcePath;
+                var toWrite = absSourcePath;
                 try
                 {
                     if (Path.IsPathRooted(absSourcePath))
-                    {
                         toWrite = Path.GetRelativePath(projectRoot, absSourcePath);
-                    }
                 }
                 catch
                 {
-                    // на всякий случай оставим исходный путь
+                    // ignored
                 }
 
                 writer.WriteString("SourcePath", toWrite);
@@ -278,25 +262,28 @@ namespace DustyEngine.Core.Converters
                 if (HasJsonIgnore(member, type))
                     continue;
 
-                bool shouldSerialize = false;
+                var shouldSerialize = false;
 
-                if (member is FieldInfo field)
+                switch (member)
                 {
-                    shouldSerialize = field.IsPublic || field.GetCustomAttribute<SerializeFieldAttribute>() != null;
-                }
-                else if (member is PropertyInfo prop)
-                {
-                    if (prop.CanRead && prop.GetMethod?.IsPublic == true)
-                        shouldSerialize = true;
+                    case FieldInfo field:
+                        shouldSerialize = field.IsPublic || field.GetCustomAttribute<SerializeFieldAttribute>() != null;
+                        break;
+                    case PropertyInfo prop:
+                    {
+                        if (prop.CanRead && prop.GetMethod?.IsPublic == true)
+                            shouldSerialize = true;
 
-                    if (prop.GetCustomAttribute<SerializeFieldAttribute>() != null && prop.CanRead)
-                        shouldSerialize = true;
+                        if (prop.GetCustomAttribute<SerializeFieldAttribute>() != null && prop.CanRead)
+                            shouldSerialize = true;
+                        break;
+                    }
                 }
 
                 if (!shouldSerialize)
                     continue;
 
-                object? valueToWrite = null;
+                object? valueToWrite;
 
                 try
                 {
@@ -313,12 +300,18 @@ namespace DustyEngine.Core.Converters
                     continue;
                 }
 
-                if (valueToWrite != null)
+                if (valueToWrite == null) continue;
                 {
                     try
                     {
                         writer.WritePropertyName(member.Name);
-                        JsonSerializer.Serialize(writer, valueToWrite, options);
+
+                        var toSerialize = valueToWrite;
+
+                        if (valueToWrite is string s && ShouldRelativizeObjPath(member, s))
+                            toSerialize = MakeRelativeToProjectRoot(s);
+
+                        JsonSerializer.Serialize(writer, toSerialize, options);
                     }
                     catch (Exception ex)
                     {
@@ -336,55 +329,103 @@ namespace DustyEngine.Core.Converters
             if (member.GetCustomAttribute<JsonIgnoreAttribute>() != null)
                 return true;
 
-            if (member is PropertyInfo prop)
+            switch (member)
             {
-                var realProp = declaringType.GetProperty(prop.Name,
-                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                case PropertyInfo prop:
+                {
+                    var realProp = declaringType.GetProperty(prop.Name,
+                        BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
-                if (realProp?.GetCustomAttribute<JsonIgnoreAttribute>() != null)
-                    return true;
-            }
+                    if (realProp?.GetCustomAttribute<JsonIgnoreAttribute>() != null)
+                        return true;
+                    break;
+                }
+                case FieldInfo field:
+                {
+                    var realField = declaringType.GetField(field.Name,
+                        BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
-            if (member is FieldInfo field)
-            {
-                var realField = declaringType.GetField(field.Name,
-                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-
-                if (realField?.GetCustomAttribute<JsonIgnoreAttribute>() != null)
-                    return true;
+                    if (realField?.GetCustomAttribute<JsonIgnoreAttribute>() != null)
+                        return true;
+                    break;
+                }
             }
 
             return false;
         }
 
-        /// <summary>
-        /// Превращает путь в абсолютный:
-        /// - разворачивает '~' и переменные среды
-        /// - относительные пути делает относительными к Program.ProjectFolderPath (если задан) или к текущему каталогу
-        /// </summary>
+
+        private static void ResolveObjPathInComponent(Component component)
+        {
+            var type = component.GetType();
+
+            var prop = type.GetProperty("Path", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (prop != null && prop.PropertyType == typeof(string) && prop.CanRead && prop.CanWrite)
+            {
+                var s = (string?)prop.GetValue(component);
+                if (!string.IsNullOrWhiteSpace(s) && s.EndsWith(".obj", StringComparison.OrdinalIgnoreCase))
+                    prop.SetValue(component, ResolvePath(s));
+            }
+
+            var field = type.GetField("Path", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (field == null || field.FieldType != typeof(string)) return;
+            {
+                var s = (string?)field.GetValue(component);
+                if (!string.IsNullOrWhiteSpace(s) && s.EndsWith(".obj", StringComparison.OrdinalIgnoreCase))
+                    field.SetValue(component, ResolvePath(s));
+            }
+        }
+
+        private static bool ShouldRelativizeObjPath(MemberInfo member, string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return false;
+
+            if (!string.Equals(member.Name, "Path", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            return value.EndsWith(".obj", StringComparison.OrdinalIgnoreCase) && Path.IsPathRooted(value);
+        }
+
+        private static string MakeRelativeToProjectRoot(string absPathOrRaw)
+        {
+            var absPath = ResolvePath(absPathOrRaw);
+
+            var projectRoot = string.IsNullOrEmpty(DustyEngine.ProjectFolderPath)
+                ? Directory.GetCurrentDirectory()
+                : Path.GetFullPath(DustyEngine.ProjectFolderPath);
+
+            try
+            {
+                return Path.GetRelativePath(projectRoot, absPath);
+            }
+            catch
+            {
+                return absPathOrRaw;
+            }
+        }
+
+
         private static string ResolvePath(string rawPath)
         {
             if (string.IsNullOrWhiteSpace(rawPath))
                 return rawPath;
 
-            // ~ → $HOME
             if (rawPath.StartsWith("~"))
             {
-                string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
                 rawPath = Path.Combine(home, rawPath.TrimStart('~').TrimStart('/', '\\'));
             }
 
-            // Переменные окружения
             rawPath = Environment.ExpandEnvironmentVariables(rawPath);
 
             if (Path.IsPathRooted(rawPath))
                 return Path.GetFullPath(rawPath);
 
-            string baseDir = !string.IsNullOrEmpty(DustyEngine.ProjectFolderPath)
+            var baseDir = !string.IsNullOrEmpty(DustyEngine.ProjectFolderPath)
                 ? Path.GetFullPath(DustyEngine.ProjectFolderPath)
                 : Directory.GetCurrentDirectory();
 
-            string combined = Path.Combine(baseDir, rawPath);
+            var combined = Path.Combine(baseDir, rawPath);
             return Path.GetFullPath(combined);
         }
 
@@ -396,7 +437,7 @@ namespace DustyEngine.Core.Converters
             }
             catch
             {
-                return Enumerable.Empty<Type>();
+                return [];
             }
         }
 

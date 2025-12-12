@@ -29,7 +29,7 @@ public class Player : MonoBehaviour
         _testObject = new GameObject("testObject");
         _testObject.AddComponent(new Transform(new Vector3(0f, 5f, 0f)));
         _testObject.AddComponent(new MeshRenderer(null,
-            "/home/maksym/github/DustyEngine/TestProject/Assets/TeddyBear.obj"));
+            "Assets/cube.ob"));
     }
 
     private void Update()

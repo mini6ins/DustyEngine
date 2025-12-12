@@ -2,10 +2,10 @@
   "ProjectName": "My Game",
   "Version": 1,
   "PathToScenes": [
-    "/home/maksym/DustyEngine/TestProject/Assets/DustyEngineTestScene.json"
+    "Assets/DustyEngineTestScene.json"
   ],
-  "PathToFragShader": "/home/maksym/DustyEngine/TestProject/Assets/shaders/shader.frag",
-  "PathToVertShader": "/home/maksym/DustyEngine/TestProject/Assets/shaders/shader.vert",
+  "PathToFragShader": "Assets/shaders/shader.frag",
+  "PathToVertShader": "Assets/shaders/shader.vert",
   "Debug": true,
   "LogLevel": 0,
   "LogToConsole": true,
