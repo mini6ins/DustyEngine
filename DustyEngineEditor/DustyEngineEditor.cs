@@ -6,15 +6,7 @@ using StreamJsonRpc;
 
 namespace DustyEngineEditor;
 
-public static class Runner
-{
-    public static void Run(string projectPath, string runnerPath)
-    {
-        new Editor(projectPath, runnerPath);
-    }
-}
-
-internal class Editor
+public  class Editor
 {
     public const float EditorVersion = 0.01f;
 

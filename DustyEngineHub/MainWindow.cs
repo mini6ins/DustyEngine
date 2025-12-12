@@ -88,6 +88,6 @@ public class MainWindow : Window
         string projectPath = _projectPathBox.Text ?? "";
         string runnerPath = _runnerPathBox.Text ?? "";
 
-        Runner.Run(projectPath, runnerPath);
+        new Editor(projectPath, runnerPath);
     }
 }
