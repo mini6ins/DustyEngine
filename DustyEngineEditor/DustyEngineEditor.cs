@@ -6,11 +6,11 @@ using StreamJsonRpc;
 
 namespace DustyEngineEditor;
 
-public  class Editor
+public class Editor
 {
     public const float EditorVersion = 0.01f;
 
-    private readonly string _projectPath;
+    public static string? ProjectPath { get; private set; }
     private readonly string _runnerPath;
 
     private Process? _engineProcess;
@@ -18,7 +18,7 @@ public  class Editor
 
     public Editor(string projectPath, string runnerPath)
     {
-        _projectPath = projectPath;
+        ProjectPath = projectPath;
         _runnerPath = runnerPath;
 
         StartEngineProcess();
@@ -40,7 +40,7 @@ public  class Editor
                 RedirectStandardError = true
             };
 
-            psi.ArgumentList.Add(_projectPath);
+            psi.ArgumentList.Add(ProjectPath);
             psi.ArgumentList.Add("Editor");
 
             _engineProcess = new Process

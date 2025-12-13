@@ -3,6 +3,7 @@ using DustyEngineEditor.Panels.ViewPortPanel.RemoteRenderer;
 using GraphicsEngineOpenGL;
 using ImGui_OpenTK.Backends;
 using ImGuiNET;
+using OpenTK.Graphics;
 using OpenTK.Graphics.OpenGL.Compatibility;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
@@ -45,6 +46,8 @@ public class ViewportRenderer : GameWindow
     protected override void OnLoad()
     {
         base.OnLoad();
+        GLLoader.LoadBindings(new GLFWBindingsContext());
+
         GL.ClearColor(0.15f, 0.15f, 0.15f, 1.0f);
 
         ImGui.CreateContext();
@@ -56,10 +59,13 @@ public class ViewportRenderer : GameWindow
         ImguiImplOpenGL3.Init();
 
         InitializeTexture();
+        IconLoader.InitIcons();
 
         _ui = new RendererUI(_remoteRenderer);
 
         _fetcherTask = Task.Run(FetchFramesLoop);
+
+
         Debug.Log("Editor ready. WASD to move camera, mouse to rotate.");
     }
 

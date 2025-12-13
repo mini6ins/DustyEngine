@@ -4,10 +4,12 @@
         <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
     <ItemGroup>
       <PackageReference Include="OpenTK" Version="5.0.0-pre.15" />
+      <PackageReference Include="StbImageSharp" Version="2.30.15" />
       <PackageReference Include="StreamJsonRpc" Version="2.23.32-alpha" />
     </ItemGroup>
 
@@ -16,5 +18,13 @@
       <ProjectReference Include="..\Debug\Debug.csproj" />
       <ProjectReference Include="..\GraphicsEngineOpenGL\GraphicsEngineOpenGL.csproj" />
     </ItemGroup>
+    
+    <ItemGroup>
+        <Content Include="Editor\Icons\**\*.*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+    
+
 
 </Project>
