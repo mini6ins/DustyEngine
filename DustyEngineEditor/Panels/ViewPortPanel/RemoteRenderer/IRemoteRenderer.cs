@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+using DustyEngine;
 using GraphicsEngineOpenGL;
 
 namespace DustyEngineEditor.Panels.ViewPortPanel.RemoteRenderer;
@@ -14,4 +16,10 @@ public interface IRemoteRenderer
 
     void PlayEngine();
     void StopEngine();
+
+
+    void LogMessage(object? message, Debug.LogLevel level, bool isDebug, string source,
+        [CallerMemberName] string caller = "",
+        [CallerFilePath] string file = "", [CallerLineNumber] int line = 0
+    );
 }

@@ -24,14 +24,13 @@ public enum RenderMode
     Editor
 }
 
-public class GraphicsRenderer
+public class GraphicsRenderer(
+    string vertShaderPath,
+    string fragShaderPath,
+    int viewportWidth,
+    int viewportHeight,
+    RenderMode renderMode)
 {
-    private readonly string _vertShaderPath;
-    private readonly string _fragShaderPath;
-    private readonly int _viewportWidth;
-    private readonly int _viewportHeight;
-    private readonly RenderMode _renderMode;
-
     private ShaderProgram _shaderProgram = null!;
     private readonly List<VAOManager> _vaoList = [];
     private readonly List<RenderableObject> _sceneObjects = [];
@@ -40,21 +39,9 @@ public class GraphicsRenderer
     private EditorCamera? _editorCamera;
     private Matrix4 _projection;
 
-    private CameraBase ActiveCamera => (IsEditorMode && _editorCamera != null)
-        ? _editorCamera
-        : _sceneCameras.First();
+    private CameraBase ActiveCamera => IsEditorMode && _editorCamera != null ? _editorCamera : _sceneCameras.First();
 
-    private bool IsEditorMode => _renderMode == RenderMode.Editor;
-
-    public GraphicsRenderer(string vertShaderPath, string fragShaderPath,
-        int viewportWidth, int viewportHeight, RenderMode renderMode)
-    {
-        _vertShaderPath = vertShaderPath;
-        _fragShaderPath = fragShaderPath;
-        _viewportWidth = viewportWidth;
-        _viewportHeight = viewportHeight;
-        _renderMode = renderMode;
-    }
+    private bool IsEditorMode => renderMode == RenderMode.Editor;
 
     public void Load()
     {
@@ -64,16 +51,16 @@ public class GraphicsRenderer
         GL.FrontFace(FrontFaceDirection.Ccw);
         GL.Enable(EnableCap.DepthTest);
         GL.DepthFunc(DepthFunction.Less);
-        
-        _shaderProgram = new ShaderProgram(_vertShaderPath, _fragShaderPath);
-        
+
+        _shaderProgram = new ShaderProgram(vertShaderPath, fragShaderPath);
+
         _sceneCameras = SceneManager.FindCameras();
 
         if (IsEditorMode)
         {
             _editorCamera = new EditorCamera
             {
-                AspectRatio = _viewportWidth / (float)_viewportHeight,
+                AspectRatio = viewportWidth / (float)viewportHeight,
                 InternalTransform =
                 {
                     LocalPosition = new Vector3(0f, 2.5f, 5f),
@@ -82,17 +69,16 @@ public class GraphicsRenderer
             };
         }
 
-        ActiveCamera.AspectRatio = _viewportWidth / (float)_viewportHeight;
+        ActiveCamera.AspectRatio = viewportWidth / (float)viewportHeight;
         _projection = ActiveCamera.GetProjectionMatrix();
-        
+
         LoadSceneRenderers();
-        
-        if (IsEditorMode)
-        {
-            _editorCamera?.InitializeController();
-            Input.Input.EnableRpcInput();
-            Console.WriteLine("[Input] RPC input mode enabled for Editor");
-        }
+
+        if (!IsEditorMode) return;
+
+        _editorCamera?.InitializeController();
+        Input.Input.EnableRpcInput();
+        Debug.Log("RPC input mode enabled for Editor", Debug.LogLevel.Info, true);
     }
 
     private void LoadSceneRenderers()
@@ -118,9 +104,7 @@ public class GraphicsRenderer
             Input.Input.UpdateMouseState(mouseState);
         }
         else
-        {
             UpdateEditorCamera(deltaTime);
-        }
 
         HandleDebugInput();
     }
@@ -128,17 +112,13 @@ public class GraphicsRenderer
     public void OnMouseMove(float x, float y)
     {
         if (!IsEditorMode)
-        {
             Input.Input.UpdateMouse(x, y);
-        }
     }
 
     public void CaptureFrameIfNeeded(RpcController? rpcManager, int width, int height)
     {
         if (IsEditorMode && rpcManager?.ConnectedClients > 0)
-        {
             rpcManager.CaptureFrame(width, height);
-        }
     }
 
     private void UpdateEditorCamera(float deltaTime)
@@ -159,14 +139,14 @@ public class GraphicsRenderer
         };
 
         _editorCamera.UpdateMovement(deltaTime, isMiddleMouseDown, mouseDelta, movementInput);
-        
+
         if (Input.Input.IsRpcInputActive)
             Input.Input.RpcResetMouseDelta();
         else
             Input.Input.ResetMouse();
     }
 
-    private void HandleDebugInput()
+    private static void HandleDebugInput()
     {
         if (Input.Input.IsKeyJustActivatedOnce(KeyCode.F1))
             GL.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Line);
@@ -179,7 +159,7 @@ public class GraphicsRenderer
     {
         GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-        
+
         _shaderProgram.ActiveProgram();
         var viewMatrix = ActiveCamera.GetViewMatrix();
         _shaderProgram.SetUniform("uView", viewMatrix);
@@ -194,15 +174,18 @@ public class GraphicsRenderer
     private void RenderObject(RenderableObject obj)
     {
         var transform = obj.Transform;
+
         var rotation =
             Matrix4.CreateRotationX(transform.GlobalRotation.X) *
             Matrix4.CreateRotationY(transform.GlobalRotation.Y) *
             Matrix4.CreateRotationZ(transform.GlobalRotation.Z);
+
         var modelMatrix =
             Matrix4.CreateScale(transform.GlobalScale.ToOpenTK()) *
             rotation *
             Matrix4.CreateTranslation(transform.GlobalPosition.ToOpenTK());
         _shaderProgram.SetUniform("uModel", modelMatrix);
+
         if (obj.VaoIndex < _vaoList.Count)
             _vaoList[obj.VaoIndex].RenderVAO(0);
     }
@@ -267,9 +250,7 @@ public class GraphicsRenderer
     public void Dispose()
     {
         if (IsEditorMode)
-        {
             Input.Input.DisableRpcInput();
-        }
 
         foreach (var vao in _vaoList)
             vao.Dispose();

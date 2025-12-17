@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO.Pipes;
 using DustyEngineEditor.Panels;
+using DustyEngineEditor.Panels.ConsolePanel;
 using DustyEngineEditor.Panels.ViewPortPanel.RemoteRenderer;
 using StreamJsonRpc;
 
@@ -16,14 +17,16 @@ internal class Editor
     private Process? _engineProcess;
     private volatile bool _engineRunning;
 
+    public static IRemoteRenderer? RemoteRenderer { get; private set; }
+
     public static int Main(string[] args)
     {
         var projectPath = args.Length > 0 ? args[0] : ".";
-        var runnerPath  = args.Length > 1 ? args[1] : "";
+        var runnerPath = args.Length > 1 ? args[1] : "";
 
         if (string.IsNullOrWhiteSpace(runnerPath))
         {
-            DustyEngine.Debug.Log("Runner path is empty. Pass: <projectPath> <runnerPath>");
+            ConsolePanel.Log("DustyEngine path is empty. Pass: <projectPath> <runnerPath>");
             return 1;
         }
 
@@ -78,20 +81,7 @@ internal class Editor
 
             _engineProcess.OutputDataReceived += (_, e) =>
             {
-                if (e.Data != null)
-                    DustyEngine.Debug.Log($"[DustyEngine] {e.Data}");
-            };
-
-            _engineProcess.ErrorDataReceived += (_, e) =>
-            {
-                if (e.Data != null)
-                    DustyEngine.Debug.Log($"[DustyEngine ERROR] {e.Data}");
-            };
-
-            _engineProcess.Exited += (_, __) =>
-            {
-               DustyEngine.Debug.Log("DustyEngine exited.");
-                _engineRunning = false;
+                if (e.Data != null) ConsolePanel.Out($"{e.Data}");
             };
 
             _engineProcess.Start();
@@ -102,7 +92,7 @@ internal class Editor
         }
         catch (Exception ex)
         {
-            DustyEngine.Debug.Log("Failed to start Runner: " + ex.Message);
+            ConsolePanel.Log("Failed to start DustyEngine: " + ex.Message);
             _engineRunning = false;
         }
     }
@@ -143,9 +133,9 @@ internal class Editor
         stream.Connect();
 
         var jsonRpc = JsonRpc.Attach(stream);
-        var renderer = jsonRpc.Attach<IRemoteRenderer>();
+        RemoteRenderer = jsonRpc.Attach<IRemoteRenderer>();
 
-        using var clientWindow = new ViewportRenderer(renderer);
+        using var clientWindow = new ViewportRenderer();
         clientWindow.Run();
     }
 }

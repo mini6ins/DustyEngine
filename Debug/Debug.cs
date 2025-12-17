@@ -4,13 +4,13 @@ namespace DustyEngine
 {
     public static class Debug
     {
-        private static List<string> logMessages = new List<string>();
-        private static string logFilePath = "debug.log";
-        
-        private static LogLevel currentLogLevel = LogLevel.Info;
-        private static bool writeToConsole = true;
-        private static bool writeToFile = true;
-        private static bool isDebugMode = false;
+        private static readonly List<string> LogMessages = [];
+        private const string LogFilePath = "debug.log";
+
+        private static LogLevel _currentLogLevel = LogLevel.Info;
+        private static bool _writeToConsole = true;
+        private static bool _writeToFile = true;
+        private static bool _isDebugMode;
 
         public enum LogLevel
         {
@@ -20,42 +20,52 @@ namespace DustyEngine
             FatalError,
         }
 
-        public static void Log(object? message, LogLevel level = LogLevel.Info, bool isDebugMessage = false,
+        public static void Log(
+            object? message,
+            LogLevel level = LogLevel.Info,
+            bool isDebugMessage = false,
+            string source = "Engine",
             [CallerMemberName] string caller = "",
             [CallerFilePath] string file = "",
-            [CallerLineNumber] int line = 0)
+            [CallerLineNumber] int line = 0
+        )
         {
-            string formattedMessage = 
-                $"[{DateTime.Now:HH:mm:ss}] [{level}] ({Path.GetFileName(file)}:{line} in {caller}) {message}";
-    
-            if (writeToFile)
-                File.AppendAllText(logFilePath, formattedMessage + Environment.NewLine);
+            var formattedMessage =
+                $"[{source}] " +
+                $"[{DateTime.Now:HH:mm:ss}] " +
+                $"[{level}] " +
+                $"({Path.GetFileName(file)}:{line} in {caller}) {message}";
 
-            if ((int)level >= (int)GetLogLevel())
-            {
-                logMessages.Add(formattedMessage);
-                
-                if (isDebugMode == false && isDebugMessage == true) return;
-        
-                if (writeToConsole)
-                {
-                    Console.WriteLine(formattedMessage);
-                    Console.Out.Flush();
-                }
-            }
+            if (_writeToFile)
+                File.AppendAllText(LogFilePath, formattedMessage + Environment.NewLine);
+
+            if ((int)level < (int)GetLogLevel())
+                return;
+
+            LogMessages.Add(formattedMessage);
+
+            if (!_isDebugMode && isDebugMessage)
+                return;
+
+            if (!_writeToConsole)
+                return;
+
+            Console.WriteLine(formattedMessage);
+            Console.Out.Flush();
         }
 
-        public static void SetLogLevel(LogLevel level) => currentLogLevel = level;
-        public static LogLevel GetLogLevel() => currentLogLevel;
-        public static void EnableConsoleLogging(bool enabled) => writeToConsole = enabled;
-        public static void EnableFileLogging(bool enabled) => writeToFile = enabled;
-        public static void EnableDebugMode(bool enabled) => isDebugMode = enabled;
-        public static void ShowLogs() => logMessages.ForEach(Console.WriteLine);
+
+        public static void SetLogLevel(LogLevel level) => _currentLogLevel = level;
+        public static LogLevel GetLogLevel() => _currentLogLevel;
+        public static void EnableConsoleLogging(bool enabled) => _writeToConsole = enabled;
+        public static void EnableFileLogging(bool enabled) => _writeToFile = enabled;
+        public static void EnableDebugMode(bool enabled) => _isDebugMode = enabled;
+        public static void ShowLogs() => LogMessages.ForEach(Console.WriteLine);
 
         public static void ClearLogs()
         {
-            logMessages.Clear();
-            File.WriteAllText(logFilePath, string.Empty);
+            LogMessages.Clear();
+            File.WriteAllText(LogFilePath, string.Empty);
         }
     }
 }

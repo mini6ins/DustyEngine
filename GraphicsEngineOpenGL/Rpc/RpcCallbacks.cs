@@ -1,3 +1,5 @@
+using DustyEngine;
+
 namespace GraphicsEngineOpenGL;
 
 public class FrameSlot
@@ -21,4 +23,6 @@ public class RpcCallbacks
     public Action<float, float, int, bool>? OnMouseEvent { get; set; }
     public Action? OnPlayEngine { get; set; }
     public Action? OnStopEngine { get; set; }
+
+    public Action<object, Debug.LogLevel, bool, string, string, string, int>? OnLogMessage { get; init; }
 }

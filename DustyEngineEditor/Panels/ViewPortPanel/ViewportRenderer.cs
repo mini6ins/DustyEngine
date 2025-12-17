@@ -1,5 +1,4 @@
 using DustyEngine;
-using DustyEngineEditor.Panels.ViewPortPanel.RemoteRenderer;
 using GraphicsEngineOpenGL;
 using ImGui_OpenTK.Backends;
 using ImGuiNET;
@@ -12,9 +11,15 @@ using OpenTK.Windowing.GraphicsLibraryFramework;
 
 namespace DustyEngineEditor.Panels;
 
-public class ViewportRenderer : GameWindow
+public class ViewportRenderer() : GameWindow(GameWindowSettings.Default, new NativeWindowSettings
 {
-    private readonly IRemoteRenderer _remoteRenderer;
+    ClientSize = new Vector2i(1024, 768),
+    Title = "DustyEngineEditor " + Editor.EditorVersion + "v",
+    API = ContextAPI.OpenGL,
+    APIVersion = new Version(3, 3),
+    Flags = ContextFlags.Default
+})
+{
     private int _texture;
     private float _time;
     private readonly FrameData?[] _frameBuffer = new FrameData?[3];
@@ -28,24 +33,12 @@ public class ViewportRenderer : GameWindow
 
     private RendererUI _ui = null!;
 
-    public ViewportRenderer(IRemoteRenderer remoteRenderer)
-        : base(GameWindowSettings.Default,
-            new NativeWindowSettings()
-            {
-                ClientSize = new Vector2i(1024, 768),
-                Title = "DustyEngineEditor " + Editor.EditorVersion + "v",
-                API = ContextAPI.OpenGL,
-                APIVersion = new Version(3, 3),
-                Flags = ContextFlags.Default
-            })
-    {
-        _remoteRenderer = remoteRenderer;
-        UpdateFrequency = 200;
-    }
-
     protected override void OnLoad()
     {
         base.OnLoad();
+
+        UpdateFrequency = 200;
+
         GLLoader.LoadBindings(new GLFWBindingsContext());
 
         GL.ClearColor(0.15f, 0.15f, 0.15f, 1.0f);
@@ -61,10 +54,9 @@ public class ViewportRenderer : GameWindow
         InitializeTexture();
         IconLoader.InitIcons();
 
-        _ui = new RendererUI(_remoteRenderer);
+        _ui = new RendererUI(Editor.RemoteRenderer);
 
         _fetcherTask = Task.Run(FetchFramesLoop);
-
 
         Debug.Log("Editor ready. WASD to move camera, mouse to rotate.");
     }
@@ -92,9 +84,9 @@ public class ViewportRenderer : GameWindow
         {
             try
             {
-                var frame = await _remoteRenderer.GetFrameData(_time);
+                var frame = await Editor.RemoteRenderer.GetFrameData(_time);
 
-                if (frame?.PixelData?.Length > 0)
+                if (frame.PixelData.Length > 0)
                 {
                     var writeIndex = 1 - _readyBufferIndex;
                     _frameBuffer[writeIndex] = frame;
@@ -121,15 +113,12 @@ public class ViewportRenderer : GameWindow
         _time += (float)args.Time;
 
         var frameToUpdate = _frameBuffer[_readyBufferIndex];
+
         if (frameToUpdate?.PixelData?.Length > 0)
-        {
             UpdateTexture(frameToUpdate);
-        }
 
         if (KeyboardState.IsKeyDown(Keys.Escape))
-        {
             Close();
-        }
 
         _ui.Update(KeyboardState);
     }

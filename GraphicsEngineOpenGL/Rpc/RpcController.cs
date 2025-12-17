@@ -4,6 +4,7 @@ using OpenTK.Graphics.OpenGL.Compatibility;
 using StreamJsonRpc;
 using Utils;
 using Buffer = System.Buffer;
+using Debug = DustyEngine.Debug;
 
 namespace GraphicsEngineOpenGL;
 
@@ -132,32 +133,38 @@ public class RpcController : IDisposable
 
     private async void RpcServerLoop()
     {
-        var clientId = 0;
-        while (_rpcServerRunning)
+        try
         {
-            try
+            while (_rpcServerRunning)
             {
-                var stream = new NamedPipeServerStream(
-                    "StreamJsonRpcSamplePipe",
-                    PipeDirection.InOut,
-                    NamedPipeServerStream.MaxAllowedServerInstances,
-                    PipeTransmissionMode.Byte,
-                    PipeOptions.Asynchronous);
+                try
+                {
+                    var stream = new NamedPipeServerStream(
+                        "StreamJsonRpcSamplePipe",
+                        PipeDirection.InOut,
+                        NamedPipeServerStream.MaxAllowedServerInstances,
+                        PipeTransmissionMode.Byte,
+                        PipeOptions.Asynchronous);
 
-                await stream.WaitForConnectionAsync();
-                var currentClientId = ++clientId;
-                ConnectedClients++;
+                    await stream.WaitForConnectionAsync();
 
-                _ = Task.Run(() => HandleRpcClient(stream, currentClientId));
+                    ConnectedClients++;
+
+                    _ = Task.Run(() => HandleRpcClient(stream));
+                }
+                catch (Exception)
+                {
+                    await Task.Delay(1000);
+                }
             }
-            catch (Exception)
-            {
-                await Task.Delay(1000);
-            }
+        }
+        catch
+        {
+            // ignored
         }
     }
 
-    private async Task HandleRpcClient(NamedPipeServerStream stream, int clientId)
+    private async Task HandleRpcClient(NamedPipeServerStream stream)
     {
         try
         {
@@ -170,6 +177,7 @@ public class RpcController : IDisposable
                     OnMouseEvent = HandleMouseEvent,
                     OnPlayEngine = HandlePlayEngine,
                     OnStopEngine = HandleStopEngine,
+                    OnLogMessage = HandleLogMessage,
                 };
 
                 var rpcService = new RpcService(() => GetCurrentFrame(800, 600), callbacks);
@@ -187,6 +195,11 @@ public class RpcController : IDisposable
         }
     }
 
+    private static void HandleLogMessage(object logMessage, Debug.LogLevel logLevel, bool isDebug, string source,
+        string caller, string file, int line)
+    {
+        Debug.Log($"{logMessage}", logLevel, isDebug, source, caller, file, line);
+    }
 
     private static void HandlePlayEngine()
     {
@@ -247,4 +260,10 @@ public class RpcService(Func<FrameData> getFrameData, RpcCallbacks callbacks)
 
     public void PlayEngine() => callbacks.OnPlayEngine?.Invoke();
     public void StopEngine() => callbacks.OnStopEngine?.Invoke();
+
+    public void LogMessage(object message, Debug.LogLevel level, bool isDebug, string source,
+        string caller, string file, int line)
+    {
+        callbacks.OnLogMessage?.Invoke(message, level, isDebug, source, caller, file, line);
+    }
 }

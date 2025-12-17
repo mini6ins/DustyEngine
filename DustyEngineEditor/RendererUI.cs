@@ -1,3 +1,5 @@
+using DustyEngine;
+using DustyEngineEditor.Panels.ConsolePanel;
 using DustyEngineEditor.Panels.HierarchyPanel;
 using DustyEngineEditor.Panels.ViewPortPanel;
 using DustyEngineEditor.Panels.ViewPortPanel.RemoteRenderer;
@@ -17,13 +19,15 @@ internal class RendererUI
     private readonly ViewPortPanel _viewPortPanel;
     private readonly IRenderablePanel[] _renderablePanels;
     private readonly IRemoteRenderer _remoteRenderer;
+
     public RendererUI(IRemoteRenderer remoteRenderer)
     {
         _remoteRenderer = remoteRenderer;
         _inputHandler = new InputHandler(remoteRenderer);
         _viewPortPanel = new ViewPortPanel(_inputHandler);
-        _renderablePanels = [new HierarchyPanel(), _viewPortPanel, new ProjectFilePanel(), new InspectorPanel()];
-        
+        _renderablePanels =
+            [new HierarchyPanel(), _viewPortPanel, new ProjectFilePanel(), new InspectorPanel(), new ConsolePanel()];
+
         _viewPortPanel.OnStartClicked = () =>
         {
             Console.WriteLine("START CLICKED");
@@ -47,7 +51,7 @@ internal class RendererUI
 
     public void Render(int texture, int textureWidth, int textureHeight, ref int framesDisplayed)
     {
-        RenderTopMenuBar(); 
+        RenderTopMenuBar();
 
         ImGui.DockSpaceOverViewport();
 
@@ -67,14 +71,9 @@ internal class RendererUI
         {
             if (ImGui.BeginMenu("File"))
             {
-                if (ImGui.MenuItem("Open"))
-                {
-                    Console.WriteLine("Open");
-                }
-
                 if (ImGui.MenuItem("Save"))
                 {
-                    Console.WriteLine("Save");
+                    ConsolePanel.Log("Saved");
                 }
 
                 if (ImGui.MenuItem("Exit"))
@@ -82,12 +81,6 @@ internal class RendererUI
                     // Close app
                 }
 
-                ImGui.EndMenu();
-            }
-
-            if (ImGui.BeginMenu("View"))
-            {
-                ImGui.MenuItem("Stats", "", true);
                 ImGui.EndMenu();
             }
 
