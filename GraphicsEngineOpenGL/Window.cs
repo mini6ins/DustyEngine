@@ -2,28 +2,31 @@
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 
-
 namespace GraphicsEngineOpenGL;
 
 public class Window : GameWindow
 {
-    private readonly RpcController? _rpcManager;
     public readonly GraphicsRenderer GraphicsRenderer;
+    private readonly RenderMode _renderMode;
 
-    public Window(GameWindowSettings gws, NativeWindowSettings nws,
-        string vertShaderPath, string fragShaderPath, string windowName, bool isVsync = true,
-        CursorState cursorState = CursorState.Normal, RenderMode renderMode = RenderMode.Editor)
+    public Window(
+        GameWindowSettings gws,
+        NativeWindowSettings nws,
+        string vertShaderPath,
+        string fragShaderPath,
+        string windowName,
+        bool isVsync = true,
+        CursorState cursorState = CursorState.Normal,
+        RenderMode renderMode = RenderMode.Editor)
         : base(gws, nws)
     {
         Title = windowName;
         VSync = isVsync ? VSyncMode.On : VSyncMode.Off;
         CursorState = cursorState;
+        _renderMode = renderMode;
 
         GraphicsRenderer =
             new GraphicsRenderer(vertShaderPath, fragShaderPath, nws.ClientSize.X, nws.ClientSize.Y, renderMode);
-
-        if (renderMode == RenderMode.Editor)
-            _rpcManager = new RpcController(nws.ClientSize.X, nws.ClientSize.Y);
     }
 
     protected override void OnLoad()
@@ -33,7 +36,20 @@ public class Window : GameWindow
         GL.Viewport(0, 0, FramebufferSize.X, FramebufferSize.Y);
 
         GraphicsRenderer.Load();
-        _rpcManager?.Start();
+
+        // на всякий — под размер окна
+        GraphicsRenderer.ResizeViewport(FramebufferSize.X, FramebufferSize.Y);
+    }
+
+    protected override void OnResize(ResizeEventArgs e)
+    {
+        base.OnResize(e);
+
+        GL.Viewport(0, 0, e.Width, e.Height);
+
+        // в Standalone надо ресайзить FBO под окно
+        if (_renderMode == RenderMode.Standalone)
+            GraphicsRenderer.ResizeViewport(e.Width, e.Height);
     }
 
     protected override void OnUpdateFrame(FrameEventArgs args)
@@ -54,21 +70,23 @@ public class Window : GameWindow
     {
         base.OnRenderFrame(args);
 
-        GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-        GL.Viewport(0, 0, FramebufferSize.X, FramebufferSize.Y);
-
+        // 1) Рендер всегда -> FBO (текстуру)
         GraphicsRenderer.Render();
 
-        GraphicsRenderer.CaptureFrameIfNeeded(_rpcManager, FramebufferSize.X, FramebufferSize.Y);
+        // 2) В Standalone выводим FBO на экран
+        if (_renderMode == RenderMode.Standalone)
+        {
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+            GL.Viewport(0, 0, FramebufferSize.X, FramebufferSize.Y);
+            GraphicsRenderer.PresentToScreen(FramebufferSize.X, FramebufferSize.Y);
+        }
 
         SwapBuffers();
     }
 
     protected override void OnUnload()
     {
-        _rpcManager?.Dispose();
         GraphicsRenderer.Dispose();
-
         base.OnUnload();
     }
 }

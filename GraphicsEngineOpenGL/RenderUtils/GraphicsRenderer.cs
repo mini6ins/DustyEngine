@@ -2,11 +2,13 @@ using DustyEngine;
 using DustyEngine.Components;
 using DustyEngine.Scene;
 using GraphicsEngineOpenGL.RenderUtils;
+using ImGuiNET;
 using OpenTK.Graphics.OpenGL.Compatibility;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using Utils;
 using MouseButton = Utils.MouseButton;
+using Vector2 = System.Numerics.Vector2;
 using Vector3 = DustyEngine.Engine.Math.Vectors.Vector3;
 
 namespace GraphicsEngineOpenGL;
@@ -39,8 +41,13 @@ public class GraphicsRenderer(
     private EditorCamera? _editorCamera;
     private Matrix4 _projection;
 
-    private CameraBase ActiveCamera => IsEditorMode && _editorCamera != null ? _editorCamera : _sceneCameras.First();
+    private int _viewportFramebuffer;
+    private int _viewportTexture;
+    private int _viewportDepthBuffer;
+    private int _currentViewportWidth;
+    private int _currentViewportHeight;
 
+    private CameraBase ActiveCamera => IsEditorMode && _editorCamera != null ? _editorCamera : _sceneCameras.First();
     private bool IsEditorMode => renderMode == RenderMode.Editor;
 
     public void Load()
@@ -67,18 +74,87 @@ public class GraphicsRenderer(
                     LocalRotation = new Vector3(0f, 0f, 0f)
                 }
             };
+
+            _editorCamera?.InitializeController();
+            Input.Input.EnableRpcInput();
+            Debug.Log("RPC input mode enabled for Editor", Debug.LogLevel.Info, true);
         }
 
-        ActiveCamera.AspectRatio = viewportWidth / (float)viewportHeight;
-        _projection = ActiveCamera.GetProjectionMatrix();
+        CreateViewportFramebuffer();
+
+        if (IsEditorMode && _editorCamera != null || _sceneCameras != null && _sceneCameras.Count > 0)
+        {
+            ActiveCamera.AspectRatio = viewportWidth / (float)viewportHeight;
+            _projection = ActiveCamera.GetProjectionMatrix();
+        }
+        else
+        {
+            Debug.Log("No cameras found in scene!", Debug.LogLevel.Warning, true);
+        }
 
         LoadSceneRenderers();
+    }
 
-        if (!IsEditorMode) return;
+    private void CreateViewportFramebuffer()
+    {
+        _currentViewportWidth = viewportWidth;
+        _currentViewportHeight = viewportHeight;
 
-        _editorCamera?.InitializeController();
-        Input.Input.EnableRpcInput();
-        Debug.Log("RPC input mode enabled for Editor", Debug.LogLevel.Info, true);
+        _viewportFramebuffer = GL.GenFramebuffer();
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, _viewportFramebuffer);
+
+        _viewportTexture = GL.GenTexture();
+        GL.BindTexture(TextureTarget.Texture2d, _viewportTexture);
+        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgb, viewportWidth, viewportHeight,
+            0, PixelFormat.Rgb, PixelType.UnsignedByte, IntPtr.Zero);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0,
+            TextureTarget.Texture2d, _viewportTexture, 0);
+
+        _viewportDepthBuffer = GL.GenRenderbuffer();
+        GL.BindRenderbuffer(RenderbufferTarget.Renderbuffer, _viewportDepthBuffer);
+        GL.RenderbufferStorage(RenderbufferTarget.Renderbuffer, InternalFormat.Depth24Stencil8,
+            viewportWidth, viewportHeight);
+        GL.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthStencilAttachment,
+            RenderbufferTarget.Renderbuffer, _viewportDepthBuffer);
+
+        var status = GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer);
+        if (status != FramebufferStatus.FramebufferComplete)
+            Debug.Log($"Framebuffer is not complete! Status: {status}", Debug.LogLevel.Error, true);
+        else
+            Debug.Log($"Framebuffer created successfully: {viewportWidth}x{viewportHeight}", Debug.LogLevel.Info, true);
+
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+    }
+
+    public void ResizeViewport(int width, int height)
+    {
+        if (width == _currentViewportWidth && height == _currentViewportHeight) return;
+        if (width <= 0 || height <= 0) return;
+
+        _currentViewportWidth = width;
+        _currentViewportHeight = height;
+
+        GL.BindTexture(TextureTarget.Texture2d, _viewportTexture);
+        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgb, width, height,
+            0, PixelFormat.Rgb, PixelType.UnsignedByte, IntPtr.Zero);
+
+        GL.BindRenderbuffer(RenderbufferTarget.Renderbuffer, _viewportDepthBuffer);
+        GL.RenderbufferStorage(RenderbufferTarget.Renderbuffer, InternalFormat.Depth24Stencil8, width, height);
+
+        if (_editorCamera != null)
+        {
+            _editorCamera.AspectRatio = width / (float)height;
+            _projection = _editorCamera.GetProjectionMatrix();
+        }
+        else if (_sceneCameras.Count > 0)
+        {
+            ActiveCamera.AspectRatio = width / (float)height;
+            _projection = ActiveCamera.GetProjectionMatrix();
+        }
+
+        Debug.Log($"Viewport resized to: {width}x{height}", Debug.LogLevel.Info, true);
     }
 
     private void LoadSceneRenderers()
@@ -113,12 +189,6 @@ public class GraphicsRenderer(
     {
         if (!IsEditorMode)
             Input.Input.UpdateMouse(x, y);
-    }
-
-    public void CaptureFrameIfNeeded(RpcController? rpcManager, int width, int height)
-    {
-        if (IsEditorMode && rpcManager?.ConnectedClients > 0)
-            rpcManager.CaptureFrame(width, height);
     }
 
     private void UpdateEditorCamera(float deltaTime)
@@ -157,8 +227,14 @@ public class GraphicsRenderer(
 
     public void Render()
     {
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, _viewportFramebuffer);
+        GL.Viewport(0, 0, _currentViewportWidth, _currentViewportHeight);
+
         GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+
+        GL.Enable(EnableCap.DepthTest);
+        GL.Enable(EnableCap.CullFace);
 
         _shaderProgram.ActiveProgram();
         var viewMatrix = ActiveCamera.GetViewMatrix();
@@ -169,6 +245,46 @@ public class GraphicsRenderer(
             RenderObject(obj);
 
         _shaderProgram.DeactiveProgram();
+
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+    }
+
+    public void PresentToScreen(int screenWidth, int screenHeight)
+    {
+        if (screenWidth <= 0 || screenHeight <= 0) return;
+
+        GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, _viewportFramebuffer);
+        GL.BindFramebuffer(FramebufferTarget.DrawFramebuffer, 0);
+
+        GL.BlitFramebuffer(
+            0, 0, _currentViewportWidth, _currentViewportHeight,
+            0, 0, screenWidth, screenHeight,
+            ClearBufferMask.ColorBufferBit,
+            BlitFramebufferFilter.Linear);
+
+        GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, 0);
+        GL.BindFramebuffer(FramebufferTarget.DrawFramebuffer, 0);
+    }
+
+    public void RenderImGuiViewport()
+    {
+        if (!IsEditorMode) return;
+
+        ImGui.Begin("Scene Viewport");
+
+        var viewportSize = ImGui.GetContentRegionAvail();
+        if (viewportSize.X > 0 && viewportSize.Y > 0)
+        {
+            if ((int)viewportSize.X != _currentViewportWidth || (int)viewportSize.Y != _currentViewportHeight)
+            {
+                ResizeViewport((int)viewportSize.X, (int)viewportSize.Y);
+            }
+
+            ImGui.Image((IntPtr)_viewportTexture, viewportSize,
+                new Vector2(0, 1), new Vector2(1, 0));
+        }
+
+        ImGui.End();
     }
 
     private void RenderObject(RenderableObject obj)
@@ -184,6 +300,7 @@ public class GraphicsRenderer(
             Matrix4.CreateScale(transform.GlobalScale.ToOpenTK()) *
             rotation *
             Matrix4.CreateTranslation(transform.GlobalPosition.ToOpenTK());
+
         _shaderProgram.SetUniform("uModel", modelMatrix);
 
         if (obj.VaoIndex < _vaoList.Count)
@@ -194,7 +311,7 @@ public class GraphicsRenderer(
     {
         if (meshRenderer == null)
         {
-            Debug.Log("[AddRenderer] meshRenderer == null — skipping.");
+            Debug.Log("[AddRenderer] meshRenderer == null – skipping.");
             return;
         }
 
@@ -203,26 +320,27 @@ public class GraphicsRenderer(
 
         if (mesh == null || mesh.Vertices.Length == 0 || mesh.Indices.Length == 0)
         {
-            Debug.Log("[AddRenderer] Empty Mesh — skipping.");
+            Debug.Log("[AddRenderer] Empty Mesh – skipping.");
             return;
         }
 
         if (meshRenderer.Parent == null)
         {
-            Debug.Log("[AddRenderer] meshRenderer.Parent == null — skipping.");
+            Debug.Log("[AddRenderer] meshRenderer.Parent == null – skipping.");
             return;
         }
 
         var transform = meshRenderer.Parent.GetComponent<Transform>();
         if (transform == null)
         {
-            Debug.Log("[AddRenderer] No Transform found on parent — skipping.");
+            Debug.Log("[AddRenderer] No Transform found on parent – skipping.");
             return;
         }
 
         var vao = new VAOManager(_shaderProgram);
         vao.CreateVAO(mesh.Vertices, mesh.Indices);
         _vaoList.Add(vao);
+
         _sceneObjects.Add(new RenderableObject
         {
             VaoIndex = _vaoList.Count - 1,
@@ -234,11 +352,14 @@ public class GraphicsRenderer(
     public bool RemoveRenderer(int objectId)
     {
         if (objectId < 0 || objectId >= _sceneObjects.Count) return false;
+
         var obj = _sceneObjects[objectId];
+
         if (obj.VaoIndex < _vaoList.Count)
         {
             _vaoList[obj.VaoIndex].Dispose();
             _vaoList.RemoveAt(obj.VaoIndex);
+
             foreach (var t in _sceneObjects.Where(t => t.VaoIndex > obj.VaoIndex))
                 t.VaoIndex--;
         }
@@ -250,10 +371,21 @@ public class GraphicsRenderer(
     public void Dispose()
     {
         if (IsEditorMode)
+        {
             Input.Input.DisableRpcInput();
+        }
+
+        // IMPORTANT: FBO создаётся всегда, поэтому удаляем всегда
+        if (_viewportFramebuffer != 0)
+            GL.DeleteFramebuffer(_viewportFramebuffer);
+        if (_viewportTexture != 0)
+            GL.DeleteTexture(_viewportTexture);
+        if (_viewportDepthBuffer != 0)
+            GL.DeleteRenderbuffer(_viewportDepthBuffer);
 
         foreach (var vao in _vaoList)
             vao.Dispose();
+
         _shaderProgram?.DeleteProgram();
     }
 }

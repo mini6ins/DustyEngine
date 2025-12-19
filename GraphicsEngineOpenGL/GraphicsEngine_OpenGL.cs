@@ -10,7 +10,7 @@ namespace GraphicsEngineOpenGL;
 
 public class GraphicsEngineOpenGl : IRenderer
 {
-    private Window? _window;
+    private GameWindow? _window;
 
     public void RunMainLoop(Scene scene, Action updateCallback, Vector2i resolution, string programName,
         string vertShaderPath, string fragShaderPath, bool vsync, RenderMode renderMode)
@@ -23,16 +23,31 @@ public class GraphicsEngineOpenGl : IRenderer
             Title = programName,
         };
 
-        _window = new Window(GameWindowSettings.Default, nativeWindowSettings, vertShaderPath, fragShaderPath,
-            programName, vsync, CursorState.Normal, renderMode);
-
-        _window.IsVisible = renderMode != RenderMode.Editor;
+        if (renderMode == RenderMode.Editor)
+        {
+            _window = new EditorWindow(GameWindowSettings.Default, nativeWindowSettings,
+                vertShaderPath, fragShaderPath, programName, vsync);
+        }
+        else
+        {
+            _window = new Window(GameWindowSettings.Default, nativeWindowSettings,
+                vertShaderPath, fragShaderPath, programName, vsync, CursorState.Normal, renderMode);
+        }
 
         _window.UpdateFrame += _ => { updateCallback?.Invoke(); };
         _window.Run();
     }
 
+    public void AddRenderer(MeshRenderer meshRenderer)
+    {
+        if (_window is EditorWindow editorWindow)
+            editorWindow.GraphicsRenderer.AddRenderer(meshRenderer);
+        else if (_window is Window window)
+            window.GraphicsRenderer.AddRenderer(meshRenderer);
+    }
 
-    public void AddRenderer(MeshRenderer meshRenderer) => _window?.GraphicsRenderer.AddRenderer(meshRenderer);
-    public bool RemoveRenderer(int objectId) => _window?.GraphicsRenderer.RemoveRenderer(objectId) ?? false;
+    public bool RemoveRenderer(int objectId)
+    {
+        return false;
+    }
 }

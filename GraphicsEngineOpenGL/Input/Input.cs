@@ -26,7 +26,6 @@ namespace GraphicsEngineOpenGL.Input
         public static (float X, float Y) Delta => IsRpcInputActive ? _rpcMouseDelta : _currentDelta;
         public static bool IsRpcInputActive { get; private set; }
 
-        // Keyboard State Updates
         public static void Update(KeyboardState newKeyboardState)
         {
             _previousKeyboardState = _keyboardState;
@@ -39,7 +38,6 @@ namespace GraphicsEngineOpenGL.Input
             _mouseState = newMouseState;
         }
 
-        // Keyboard Input
         public static bool IsKeyDown(KeyCode keyCode)
         {
             if (!IsRpcInputActive)
@@ -112,18 +110,16 @@ namespace GraphicsEngineOpenGL.Input
             return false;
         }
 
-        // Mouse Input
+
         public static bool IsMouseButtonDown(MouseButton button)
         {
-            if (IsRpcInputActive)
+            if (!IsRpcInputActive) return _mouseState != null && GetMouseButtonState(_mouseState, button);
+
+            lock (RpcInputLock)
             {
-                lock (RpcInputLock)
-                {
-                    return RpcMouseButtonStates.TryGetValue(button, out var isPressed) && isPressed;
-                }
+                return RpcMouseButtonStates.TryGetValue(button, out var isPressed) && isPressed;
             }
-            
-            return _mouseState != null && GetMouseButtonState(_mouseState, button);
+
         }
 
         public static bool IsMouseButtonPressed(MouseButton button)
@@ -148,7 +144,6 @@ namespace GraphicsEngineOpenGL.Input
             };
         }
 
-        // Mouse Movement
         public static void UpdateMouse(float x, float y)
         {
             if (_firstMove)
@@ -167,10 +162,8 @@ namespace GraphicsEngineOpenGL.Input
 
         public static void ResetMouse() => _currentDelta = (0, 0);
 
-        public static bool HasMouseMoved() => 
-            System.Math.Abs(_currentDelta.X) > 0.001f || System.Math.Abs(_currentDelta.Y) > 0.001f;
+        public static bool HasMouseMoved() => System.Math.Abs(_currentDelta.X) > 0.001f || System.Math.Abs(_currentDelta.Y) > 0.001f;
 
-        // RPC Input Management
         public static void EnableRpcInput()
         {
             IsRpcInputActive = true;
@@ -193,16 +186,13 @@ namespace GraphicsEngineOpenGL.Input
             }
         }
 
-        // RPC Keyboard Events
         public static void RpcKeyDown(string key)
         {
             if (!TryParseKeyCode(key, out KeyCode keyCode))
                 return;
             
             lock (RpcInputLock)
-            {
                 RpcKeyStates[keyCode] = true;
-            }
         }
 
         public static void RpcKeyUp(string key)
@@ -211,12 +201,9 @@ namespace GraphicsEngineOpenGL.Input
                 return;
             
             lock (RpcInputLock)
-            {
                 RpcKeyStates[keyCode] = false;
-            }
         }
 
-        // RPC Mouse Events
         public static void RpcMouseMove(float deltaX, float deltaY)
         {
             lock (RpcInputLock)
@@ -229,29 +216,22 @@ namespace GraphicsEngineOpenGL.Input
         public static void RpcMouseDown(MouseButton button)
         {
             lock (RpcInputLock)
-            {
                 RpcMouseButtonStates[button] = true;
-            }
         }
 
         public static void RpcMouseUp(MouseButton button)
         {
             lock (RpcInputLock)
-            {
                 RpcMouseButtonStates[button] = false;
-            }
         }
 
         public static void RpcResetMouseDelta()
         {
             lock (RpcInputLock)
-            {
                 _rpcMouseDelta = (0f, 0f);
-            }
         }
 
-        // Helper Methods
-        private static Keys ConvertKey(KeyCode keyCode) => 
+        private static Keys ConvertKey(KeyCode keyCode) =>
             Enum.TryParse(keyCode.ToString(), out Keys result) ? result : Keys.Unknown;
 
         private static bool TryParseKeyCode(string key, out KeyCode keyCode)
