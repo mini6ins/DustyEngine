@@ -4,29 +4,20 @@ using OpenTK.Windowing.Desktop;
 
 namespace GraphicsEngineOpenGL;
 
-public class Window : GameWindow
+public class StandaloneWindow : GameWindow
 {
-    public readonly GraphicsRenderer GraphicsRenderer;
+    private GraphicsRenderer GraphicsRenderer { get; }
     private readonly RenderMode _renderMode;
 
-    public Window(
-        GameWindowSettings gws,
-        NativeWindowSettings nws,
-        string vertShaderPath,
-        string fragShaderPath,
-        string windowName,
-        bool isVsync = true,
-        CursorState cursorState = CursorState.Normal,
-        RenderMode renderMode = RenderMode.Editor)
-        : base(gws, nws)
+    public StandaloneWindow(GameWindowSettings gws, NativeWindowSettings nws, string windowName, bool isVsync,
+        CursorState cursorState, RenderMode renderMode, GraphicsRenderer graphicsRenderer) : base(gws, nws)
     {
         Title = windowName;
         VSync = isVsync ? VSyncMode.On : VSyncMode.Off;
         CursorState = cursorState;
-        _renderMode = renderMode;
 
-        GraphicsRenderer =
-            new GraphicsRenderer(vertShaderPath, fragShaderPath, nws.ClientSize.X, nws.ClientSize.Y, renderMode);
+        _renderMode = renderMode;
+        GraphicsRenderer = graphicsRenderer;
     }
 
     protected override void OnLoad()
@@ -36,8 +27,6 @@ public class Window : GameWindow
         GL.Viewport(0, 0, FramebufferSize.X, FramebufferSize.Y);
 
         GraphicsRenderer.Load();
-
-        // на всякий — под размер окна
         GraphicsRenderer.ResizeViewport(FramebufferSize.X, FramebufferSize.Y);
     }
 
@@ -47,7 +36,6 @@ public class Window : GameWindow
 
         GL.Viewport(0, 0, e.Width, e.Height);
 
-        // в Standalone надо ресайзить FBO под окно
         if (_renderMode == RenderMode.Standalone)
             GraphicsRenderer.ResizeViewport(e.Width, e.Height);
     }
@@ -70,10 +58,8 @@ public class Window : GameWindow
     {
         base.OnRenderFrame(args);
 
-        // 1) Рендер всегда -> FBO (текстуру)
         GraphicsRenderer.Render();
 
-        // 2) В Standalone выводим FBO на экран
         if (_renderMode == RenderMode.Standalone)
         {
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);

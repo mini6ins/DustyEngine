@@ -11,9 +11,17 @@ namespace GraphicsEngineOpenGL;
 public class GraphicsEngineOpenGl : IRenderer
 {
     private GameWindow? _window;
+    private GraphicsRenderer? _renderer;
 
-    public void RunMainLoop(Scene scene, Action updateCallback, Vector2i resolution, string programName,
-        string vertShaderPath, string fragShaderPath, bool vsync, RenderMode renderMode)
+    public void RunMainLoop(
+        Scene scene,
+        Action updateCallback,
+        Vector2i resolution,
+        string programName,
+        string vertShaderPath,
+        string fragShaderPath,
+        bool vsync,
+        RenderMode renderMode)
     {
         Debug.Log("GraphicsEngineOpenGl is working", Debug.LogLevel.Info, true);
 
@@ -23,31 +31,32 @@ public class GraphicsEngineOpenGl : IRenderer
             Title = programName,
         };
 
-        if (renderMode == RenderMode.Editor)
-        {
-            _window = new EditorWindow(GameWindowSettings.Default, nativeWindowSettings,
-                vertShaderPath, fragShaderPath, programName, vsync);
-        }
-        else
-        {
-            _window = new Window(GameWindowSettings.Default, nativeWindowSettings,
-                vertShaderPath, fragShaderPath, programName, vsync, CursorState.Normal, renderMode);
-        }
+        // 1) создаём ОДИН renderer тут
+        _renderer = new GraphicsRenderer(
+            vertShaderPath,
+            fragShaderPath,
+            nativeWindowSettings.ClientSize.X,
+            nativeWindowSettings.ClientSize.Y,
+            renderMode);
 
-        _window.UpdateFrame += _ => { updateCallback?.Invoke(); };
+        // 2) создаём нужное окно и ПЕРЕДАЁМ renderer
+        _window = renderMode == RenderMode.Editor
+            ? new EditorWindow(GameWindowSettings.Default, nativeWindowSettings, programName, vsync, _renderer)
+            : new StandaloneWindow(GameWindowSettings.Default, nativeWindowSettings, programName, vsync, CursorState.Normal, renderMode, _renderer);
+
+        // внешний апдейт твоего движка
+        _window.UpdateFrame += _ => updateCallback?.Invoke();
+
         _window.Run();
     }
 
     public void AddRenderer(MeshRenderer meshRenderer)
     {
-        if (_window is EditorWindow editorWindow)
-            editorWindow.GraphicsRenderer.AddRenderer(meshRenderer);
-        else if (_window is Window window)
-            window.GraphicsRenderer.AddRenderer(meshRenderer);
+        _renderer?.AddRenderer(meshRenderer);
     }
 
     public bool RemoveRenderer(int objectId)
     {
-        return false;
+        return _renderer != null && _renderer.RemoveRenderer(objectId);
     }
 }

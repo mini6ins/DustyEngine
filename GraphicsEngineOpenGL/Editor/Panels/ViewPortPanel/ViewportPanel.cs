@@ -1,5 +1,4 @@
 using System.Numerics;
-using DustyEngine;
 using GraphicsEngineOpenGL;
 using ImGuiNET;
 using OpenTK.Graphics.OpenGL.Compatibility;
@@ -8,22 +7,19 @@ namespace DustyEngineEditor.Panels.ViewPortPanel;
 
 internal class ViewportPanel : IRenderablePanel, IDisposable
 {
-    private readonly InputHandler _inputHandler;
     private int _texture;
     private int _textureWidth = 1;
     private int _textureHeight = 1;
     private float _time;
 
-    private readonly FrameData?[] _frameBuffer = new FrameData?[3];
     private volatile int _readyBufferIndex;
     private readonly CancellationTokenSource _cts = new();
     private readonly Task _fetcherTask;
 
     public bool IsRemoteWindowFocused { get; private set; }
 
-    public ViewportPanel(InputHandler inputHandler)
+    public ViewportPanel( )
     {
-        _inputHandler = inputHandler;
         InitializeTexture();
         _fetcherTask = Task.Run(FetchFramesLoop);
     }
@@ -54,14 +50,8 @@ internal class ViewportPanel : IRenderablePanel, IDisposable
         {
             try
             {
-                var frame = await Editor.RemoteRenderer!.GetFrameData(_time);
 
-                if (frame?.PixelData?.Length > 0)
-                {
-                    var writeIndex = 1 - _readyBufferIndex;
-                    _frameBuffer[writeIndex] = frame;
-                    _readyBufferIndex = writeIndex;
-                }
+
 
                 await Task.Delay(normalDelayMs, _cts.Token);
             }
@@ -80,40 +70,8 @@ internal class ViewportPanel : IRenderablePanel, IDisposable
     public void Update(float deltaTime)
     {
         _time += deltaTime;
-
-        var frameToUpdate = _frameBuffer[_readyBufferIndex];
-        if (frameToUpdate?.PixelData?.Length > 0)
-            UpdateTexture(frameToUpdate);
-
-        if (IsRemoteWindowFocused)
-            _inputHandler.ProcessKeyboard();
     }
 
-    private void UpdateTexture(FrameData frameData)
-    {
-        try
-        {
-            GL.BindTexture(TextureTarget.Texture2d, _texture);
-
-            if (_textureWidth != frameData.Width || _textureHeight != frameData.Height)
-            {
-                _textureWidth = frameData.Width;
-                _textureHeight = frameData.Height;
-
-                Debug.Log($"Texture resized to {_textureWidth}x{_textureHeight}");
-            }
-
-            GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba,
-                frameData.Width, frameData.Height, 0,
-                PixelFormat.Rgba, PixelType.UnsignedByte, frameData.PixelData);
-
-            GL.BindTexture(TextureTarget.Texture2d, 0);
-        }
-        catch (Exception ex)
-        {
-            ConsolePanel.ConsolePanel.Log($"Error updating texture: {ex.Message}");
-        }
-    }
 
     public void Render()
     {
@@ -137,13 +95,11 @@ internal class ViewportPanel : IRenderablePanel, IDisposable
 
     private static void RenderControls()
     {
-        if (ImGui.Button("Start"))
-            Editor.RemoteRenderer!.PlayEngine();
+        if (ImGui.Button("Start")) ;
 
         ImGui.SameLine();
 
-        if (ImGui.Button("Stop"))
-            Editor.RemoteRenderer!.StopEngine();
+        if (ImGui.Button("Stop")) ;
     }
 
     private void RenderViewport()
@@ -157,9 +113,6 @@ internal class ViewportPanel : IRenderablePanel, IDisposable
         var cursorScreenPos = CenterImage(availableSize, imageSize);
 
         ImGui.Image(new IntPtr(_texture), imageSize, new Vector2(0, 1), new Vector2(1, 0));
-
-        if (IsRemoteWindowFocused && ImGui.IsItemHovered())
-            _inputHandler.ProcessMouse(imageSize, cursorScreenPos);
     }
 
     private static Vector2 CalculateImageSize(Vector2 availableSize, int textureWidth, int textureHeight)

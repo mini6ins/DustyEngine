@@ -2,13 +2,11 @@ using DustyEngine;
 using DustyEngine.Components;
 using DustyEngine.Scene;
 using GraphicsEngineOpenGL.RenderUtils;
-using ImGuiNET;
 using OpenTK.Graphics.OpenGL.Compatibility;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using Utils;
 using MouseButton = Utils.MouseButton;
-using Vector2 = System.Numerics.Vector2;
 using Vector3 = DustyEngine.Engine.Math.Vectors.Vector3;
 
 namespace GraphicsEngineOpenGL;
@@ -26,13 +24,10 @@ public enum RenderMode
     Editor
 }
 
-public class GraphicsRenderer(
-    string vertShaderPath,
-    string fragShaderPath,
-    int viewportWidth,
-    int viewportHeight,
-    RenderMode renderMode)
+public class GraphicsRenderer(string vertShaderPath, string fragShaderPath, int viewportWidth, int viewportHeight, RenderMode renderMode)
 {
+    public int ViewportTexture => _viewportTexture;
+
     private ShaderProgram _shaderProgram = null!;
     private readonly List<VAOManager> _vaoList = [];
     private readonly List<RenderableObject> _sceneObjects = [];
@@ -266,26 +261,6 @@ public class GraphicsRenderer(
         GL.BindFramebuffer(FramebufferTarget.DrawFramebuffer, 0);
     }
 
-    public void RenderImGuiViewport()
-    {
-        if (!IsEditorMode) return;
-
-        ImGui.Begin("Scene Viewport");
-
-        var viewportSize = ImGui.GetContentRegionAvail();
-        if (viewportSize.X > 0 && viewportSize.Y > 0)
-        {
-            if ((int)viewportSize.X != _currentViewportWidth || (int)viewportSize.Y != _currentViewportHeight)
-            {
-                ResizeViewport((int)viewportSize.X, (int)viewportSize.Y);
-            }
-
-            ImGui.Image((IntPtr)_viewportTexture, viewportSize,
-                new Vector2(0, 1), new Vector2(1, 0));
-        }
-
-        ImGui.End();
-    }
 
     private void RenderObject(RenderableObject obj)
     {
@@ -375,7 +350,6 @@ public class GraphicsRenderer(
             Input.Input.DisableRpcInput();
         }
 
-        // IMPORTANT: FBO создаётся всегда, поэтому удаляем всегда
         if (_viewportFramebuffer != 0)
             GL.DeleteFramebuffer(_viewportFramebuffer);
         if (_viewportTexture != 0)

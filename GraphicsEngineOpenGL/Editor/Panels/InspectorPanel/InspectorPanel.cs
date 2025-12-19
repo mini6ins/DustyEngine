@@ -1,4 +1,5 @@
 using System.Numerics;
+using GraphicsEngineOpenGL;
 using ImGuiNET;
 
 namespace DustyEngineEditor.Panels.HierarchyPanel;

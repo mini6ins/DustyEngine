@@ -15,7 +15,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\DustyEngineEditor\DustyEngineEditor.csproj" />
+      <ProjectReference Include="..\GraphicsEngineOpenGL\GraphicsEngineOpenGL.csproj" />
     </ItemGroup>
 
 </Project>

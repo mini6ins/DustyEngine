@@ -1,3 +1,4 @@
+using System.Numerics;
 using ImGuiNET;
 using ImGui_OpenTK.Backends;
 using OpenTK.Graphics.OpenGL.Compatibility;
@@ -8,27 +9,21 @@ namespace GraphicsEngineOpenGL;
 
 public class EditorWindow : GameWindow
 {
-    public readonly GraphicsRenderer GraphicsRenderer;
+    private GraphicsRenderer GraphicsRenderer { get; }
 
     public EditorWindow(
         GameWindowSettings gws,
         NativeWindowSettings nws,
-        string vertShaderPath,
-        string fragShaderPath,
         string windowName,
-        bool isVsync = true)
+        bool isVsync,
+        GraphicsRenderer graphicsRenderer)
         : base(gws, nws)
     {
         Title = windowName;
         VSync = isVsync ? VSyncMode.On : VSyncMode.Off;
         CursorState = CursorState.Normal;
 
-        GraphicsRenderer = new GraphicsRenderer(
-            vertShaderPath,
-            fragShaderPath,
-            nws.ClientSize.X,
-            nws.ClientSize.Y,
-            RenderMode.Editor);
+        GraphicsRenderer = graphicsRenderer;
     }
 
     protected override void OnLoad()
@@ -44,14 +39,18 @@ public class EditorWindow : GameWindow
         var io = ImGui.GetIO();
         io.ConfigFlags |= ImGuiConfigFlags.DockingEnable;
 
+        // 🔴 КЛЮЧЕВОЕ: чтобы через Hub и напрямую было одинаково
+        // (иначе imgui.ini берётся из разных working directory)
+
+
         GraphicsRenderer.Load();
+        GraphicsRenderer.ResizeViewport(FramebufferSize.X, FramebufferSize.Y);
     }
 
     protected override void OnUpdateFrame(FrameEventArgs args)
     {
         base.OnUpdateFrame(args);
 
-        // RPC input (как было)
         if (Input.Input.IsRpcInputActive)
         {
             UpdateKeyboardInput();
@@ -125,23 +124,14 @@ public class EditorWindow : GameWindow
             Input.Input.RpcMouseUp(Utils.MouseButton.Right);
     }
 
-    protected override void OnMouseMove(MouseMoveEventArgs e)
-    {
-        base.OnMouseMove(e);
-
-        // В editor режиме обычно мышь в Input обновляется через RPC,
-        // но твой GraphicsRenderer.OnMouseMove оставим как было.
-        GraphicsRenderer.OnMouseMove(e.X, e.Y);
-    }
-
     protected override void OnRenderFrame(FrameEventArgs args)
     {
         base.OnRenderFrame(args);
 
-        // 1) РЕНДЕР СЦЕНЫ → FBO (текстура)
+        // 1) сцена -> FBO
         GraphicsRenderer.Render();
 
-        // 2) РЕНДЕР UI → default framebuffer
+        // 2) UI -> экран
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
         GL.Viewport(0, 0, FramebufferSize.X, FramebufferSize.Y);
         GL.ClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -152,24 +142,32 @@ public class EditorWindow : GameWindow
         ImGui.NewFrame();
 
         var viewport = ImGui.GetMainViewport();
-        ImGui.SetNextWindowPos(viewport.WorkPos);
-        ImGui.SetNextWindowSize(viewport.WorkSize);
+
+        ImGui.SetNextWindowPos(viewport.Pos);
+        ImGui.SetNextWindowSize(viewport.Size);
         ImGui.SetNextWindowViewport(viewport.ID);
 
-        ImGuiWindowFlags windowFlags = ImGuiWindowFlags.MenuBar | ImGuiWindowFlags.NoDocking;
-        windowFlags |= ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoCollapse;
-        windowFlags |= ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove;
-        windowFlags |= ImGuiWindowFlags.NoBringToFrontOnFocus | ImGuiWindowFlags.NoNavFocus;
+
+        ImGuiWindowFlags windowFlags =
+            ImGuiWindowFlags.MenuBar |
+            ImGuiWindowFlags.NoDocking |
+            ImGuiWindowFlags.NoTitleBar |
+            ImGuiWindowFlags.NoCollapse |
+            ImGuiWindowFlags.NoResize |
+            ImGuiWindowFlags.NoMove |
+            ImGuiWindowFlags.NoBringToFrontOnFocus |
+            ImGuiWindowFlags.NoNavFocus;
+
 
         ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 0.0f);
         ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 0.0f);
-        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new System.Numerics.Vector2(0.0f, 0.0f));
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new System.Numerics.Vector2(0, 0));
 
         ImGui.Begin("DockSpace", windowFlags);
         ImGui.PopStyleVar(3);
 
         var dockspaceId = ImGui.GetID("MainDockSpace");
-        ImGui.DockSpace(dockspaceId, new System.Numerics.Vector2(0.0f, 0.0f), ImGuiDockNodeFlags.None);
+        ImGui.DockSpace(dockspaceId, new System.Numerics.Vector2(0, 0), ImGuiDockNodeFlags.None);
 
         RenderEditorUI();
 
@@ -187,48 +185,26 @@ public class EditorWindow : GameWindow
         {
             if (ImGui.BeginMenu("File"))
             {
-                if (ImGui.MenuItem("New Scene")) { }
-                if (ImGui.MenuItem("Open Scene")) { }
-                if (ImGui.MenuItem("Save Scene")) { }
-                ImGui.Separator();
                 if (ImGui.MenuItem("Exit")) Close();
                 ImGui.EndMenu();
             }
-
-            if (ImGui.BeginMenu("Edit"))
-            {
-                if (ImGui.MenuItem("Undo")) { }
-                if (ImGui.MenuItem("Redo")) { }
-                ImGui.EndMenu();
-            }
-
-            if (ImGui.BeginMenu("View"))
-            {
-                if (ImGui.MenuItem("Hierarchy")) { }
-                if (ImGui.MenuItem("Inspector")) { }
-                if (ImGui.MenuItem("Console")) { }
-                ImGui.EndMenu();
-            }
-
             ImGui.EndMenuBar();
         }
 
-        // ВАЖНО: Scene viewport берёт ТЕКСТУРУ из GraphicsRenderer (FBO)
-        GraphicsRenderer.RenderImGuiViewport();
+        ImGui.Begin("Scene Viewport");
 
-        ImGui.Begin("Hierarchy");
-        ImGui.Text("Scene Objects");
-        ImGui.Separator();
-        ImGui.End();
+        var size = ImGui.GetContentRegionAvail();
+        if (size.X > 0 && size.Y > 0)
+        {
+            GraphicsRenderer.ResizeViewport((int)size.X, (int)size.Y);
 
-        ImGui.Begin("Inspector");
-        ImGui.Text("Object Properties");
-        ImGui.Separator();
-        ImGui.End();
+            ImGui.Image(
+                GraphicsRenderer.ViewportTexture,
+                size,
+                new Vector2(0, 1),
+                new Vector2(1, 0));
+        }
 
-        ImGui.Begin("Console");
-        ImGui.Text("Debug Console");
-        ImGui.Separator();
         ImGui.End();
     }
 
@@ -236,11 +212,9 @@ public class EditorWindow : GameWindow
     {
         base.OnResize(e);
 
-        // resize UI backbuffer
+        // UI backbuffer
         GL.Viewport(0, 0, e.Width, e.Height);
-
-        // сцену НЕ ресайзим тут, потому что в Editor размер сцены = размер ImGui viewport-а,
-        // и ты уже делаешь Resize внутри GraphicsRenderer.RenderImGuiViewport().
+        // сцену не трогаем — она под ImGui viewport
     }
 
     protected override void OnUnload()

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using GraphicsEngineOpenGL;
 
 namespace DustyEngineHub;
 
@@ -13,19 +14,16 @@ public class MainWindow : Window
     private const string DefaultRunnerPath =
         "/home/maksym/DustyEngine/Runner/bin/Debug/net9.0/Runner";
 
-    private const string DefaultEditorExe =
-        "/home/maksym/DustyEngine/DustyEngineEditor/bin/Debug/net9.0/DustyEngineEditor";
-
     private readonly TextBox _projectPathBox;
     private readonly TextBox _runnerPathBox;
-    private readonly TextBox _editorPathBox;
+    private readonly ComboBox _renderModeBox;
     private readonly CheckBox _useDefaultCheck;
 
     public MainWindow()
     {
         Title = "DustyEngine Hub";
         Width = 620;
-        Height = 300;
+        Height = 280;
 
         _useDefaultCheck = new CheckBox
         {
@@ -45,10 +43,12 @@ public class MainWindow : Window
             IsEnabled = false
         };
 
-        _editorPathBox = new TextBox
+        _renderModeBox = new ComboBox
         {
-            Text = DefaultEditorExe,
-            IsEnabled = false
+            ItemsSource = new[] { RenderMode.Standalone.ToString(), RenderMode.Editor.ToString() },
+            SelectedIndex = 0,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Width = 200
         };
 
         _useDefaultCheck.Checked += (_, _) => SetDefault(true);
@@ -56,11 +56,33 @@ public class MainWindow : Window
 
         var runButton = new Button
         {
+            Content = "Run",
+            HorizontalAlignment = HorizontalAlignment.Left
+        };
+        runButton.Click += (_, _) => RunRunner();
+
+        // (опционально) две кнопки быстрее
+        var runStandalone = new Button
+        {
+            Content = "Run Standalone",
+            HorizontalAlignment = HorizontalAlignment.Left
+        };
+        runStandalone.Click += (_, _) =>
+        {
+            _renderModeBox.SelectedItem = RenderMode.Standalone.ToString();
+            RunRunner();
+        };
+
+        var runEditor = new Button
+        {
             Content = "Run Editor",
             HorizontalAlignment = HorizontalAlignment.Left
         };
-
-        runButton.Click += (_, _) => RunEditor();
+        runEditor.Click += (_, _) =>
+        {
+            _renderModeBox.SelectedItem = RenderMode.Editor.ToString();
+            RunRunner();
+        };
 
         Content = new StackPanel
         {
@@ -76,10 +98,20 @@ public class MainWindow : Window
                 new TextBlock { Text = "Runner path:" },
                 _runnerPathBox,
 
-                new TextBlock { Text = "Editor path:" },
-                _editorPathBox,
+                new TextBlock { Text = "Render mode:" },
+                _renderModeBox,
 
-                runButton
+                new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Spacing = 8,
+                    Children =
+                    {
+                        runButton,
+                        runStandalone,
+                        runEditor
+                    }
+                }
             }
         };
     }
@@ -88,33 +120,42 @@ public class MainWindow : Window
     {
         _projectPathBox.IsEnabled = !useDefault;
         _runnerPathBox.IsEnabled = !useDefault;
-        _editorPathBox.IsEnabled = !useDefault;
 
         if (!useDefault) return;
 
         _projectPathBox.Text = DefaultProjectPath;
         _runnerPathBox.Text = DefaultRunnerPath;
-        _editorPathBox.Text = DefaultEditorExe;
     }
 
-
-    private void RunEditor()
+    private void RunRunner()
     {
-        var projectPath = _projectPathBox.Text ?? "";
-        var runnerPath = _runnerPathBox.Text ?? "";
+        var projectPath = (_projectPathBox.Text ?? "").Trim();
+        var runnerExe = (_runnerPathBox.Text ?? "").Trim();
 
-        var editorExe =  _editorPathBox.Text  ?? "";
-        var editorDll =  _editorPathBox.Text + ".dll";
+        var selectedMode = (_renderModeBox.SelectedItem as string) ?? RenderMode.Standalone.ToString();
+        if (!Enum.TryParse(selectedMode, true, out RenderMode mode))
+            mode = RenderMode.Standalone;
+
+        if (string.IsNullOrWhiteSpace(projectPath) || string.IsNullOrWhiteSpace(runnerExe))
+            return;
+
+        var runnerDll = runnerExe + ".dll";
 
         string cmd;
-
-        if (File.Exists(editorExe))
-            cmd = $"setsid \"{editorExe}\" \"{projectPath}\" \"{runnerPath}\" >/tmp/dusty_editor.log 2>&1 </dev/null &";
-
-        else if (File.Exists(editorDll))
-            cmd = $"setsid dotnet \"{editorDll}\" \"{projectPath}\" \"{runnerPath}\" >/tmp/dusty_editor.log 2>&1 </dev/null &";
-
-        else return;
+        if (File.Exists(runnerExe))
+        {
+            // Runner <ProjectPath> <RenderMode>
+            cmd = $"setsid \"{runnerExe}\" \"{projectPath}\" \"{mode}\" >/tmp/dusty_runner.log 2>&1 </dev/null &";
+        }
+        else if (File.Exists(runnerDll))
+        {
+            cmd = $"setsid dotnet \"{runnerDll}\" \"{projectPath}\" \"{mode}\" >/tmp/dusty_runner.log 2>&1 </dev/null &";
+        }
+        else
+        {
+            // можно сделать MessageBox, но пока просто выходим
+            return;
+        }
 
         var psi = new ProcessStartInfo
         {

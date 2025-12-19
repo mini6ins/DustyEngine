@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using DustyEngine;
+using GraphicsEngineOpenGL;
 using ImGuiNET;
 
 namespace DustyEngineEditor.Panels.ConsolePanel;
@@ -22,7 +23,6 @@ public class ConsolePanel : IRenderablePanel
         [CallerFilePath] string file = "",
         [CallerLineNumber] int line = 0)
     {
-        Editor.RemoteRenderer?.LogMessage(message, level, isDebugMessage, source, caller, file, line);
     }
 
     public static void Out(string text) => Lines.Add(new LogEntry(text, DetectLogLevel(text)));

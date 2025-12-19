@@ -1,5 +1,6 @@
 using System.Numerics;
 using DustyEngine.Scene;
+using GraphicsEngineOpenGL;
 using ImGuiNET;
 
 namespace DustyEngineEditor.Panels.HierarchyPanel;

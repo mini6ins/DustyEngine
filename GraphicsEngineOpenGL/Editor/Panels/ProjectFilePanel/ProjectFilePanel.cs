@@ -1,12 +1,13 @@
 using System.Numerics;
 using System.Text;
+using GraphicsEngineOpenGL;
 using ImGuiNET;
 
 namespace DustyEngineEditor.Panels.HierarchyPanel;
 
 internal class ProjectFilePanel : IRenderablePanel
 {
-    private readonly ProjectFileManager _fileManager = new(Editor.ProjectPath);
+    private readonly ProjectFileManager _fileManager = null;
 
     private string? _renamingPath;
     private string _renameBuffer = "";
