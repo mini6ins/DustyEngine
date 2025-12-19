@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using DustyEngine;
+using DustyEngine.Scene;
 using GraphicsEngineOpenGL;
 
 namespace DustyEngineEditor.Panels.ViewPortPanel.RemoteRenderer;
@@ -22,4 +23,6 @@ public interface IRemoteRenderer
         [CallerMemberName] string caller = "",
         [CallerFilePath] string file = "", [CallerLineNumber] int line = 0
     );
+
+    Task<Scene?> GetCurrentScene();
 }

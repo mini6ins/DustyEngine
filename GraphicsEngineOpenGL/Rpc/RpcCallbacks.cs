@@ -1,4 +1,5 @@
 using DustyEngine;
+using DustyEngine.Scene;
 
 namespace GraphicsEngineOpenGL;
 
@@ -25,4 +26,6 @@ public class RpcCallbacks
     public Action? OnStopEngine { get; set; }
 
     public Action<object, Debug.LogLevel, bool, string, string, string, int>? OnLogMessage { get; init; }
+
+    public Func<Scene?> OnGetCurrentScene { get; init; }
 }

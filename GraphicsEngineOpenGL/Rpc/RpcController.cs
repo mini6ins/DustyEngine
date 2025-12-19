@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO.Pipes;
+using DustyEngine.Scene;
 using OpenTK.Graphics.OpenGL.Compatibility;
 using StreamJsonRpc;
 using Utils;
@@ -164,36 +165,70 @@ public class RpcController : IDisposable
         }
     }
 
-    private async Task HandleRpcClient(NamedPipeServerStream stream)
+  private async Task HandleRpcClient(NamedPipeServerStream stream)
+{
+    try
     {
-        try
+        await using (stream)
         {
-            await using (stream)
+            var callbacks = new RpcCallbacks
             {
-                var callbacks = new RpcCallbacks
+                OnKeyEvent = HandleKeyEvent,
+                OnMouseMove = HandleMouseMove,
+                OnMouseEvent = HandleMouseEvent,
+                OnPlayEngine = HandlePlayEngine,
+                OnStopEngine = HandleStopEngine,
+                OnLogMessage = HandleLogMessage,
+                OnGetCurrentScene = HandleGetCurrentScene,
+            };
+
+            var rpcService = new RpcService(() => GetCurrentFrame(800, 600), callbacks);
+
+            // ✅ Настройка JSON сериализатора для циклических ссылок
+            var jsonSettings = new Newtonsoft.Json.JsonSerializerSettings
+            {
+                PreserveReferencesHandling = Newtonsoft.Json.PreserveReferencesHandling.All,
+                ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Serialize,
+                TypeNameHandling = Newtonsoft.Json.TypeNameHandling.Auto,
+                NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore
+            };
+
+            // ✅ Создаем formatter с настройками в конструкторе
+            var formatter = new StreamJsonRpc.JsonMessageFormatter();
+
+            // ✅ Применяем настройки через рефлексию или создаем новый MessageHandler
+            var jsonRpc = new StreamJsonRpc.JsonRpc(stream, stream, rpcService);
+
+            // Применяем настройки к внутреннему сериализатору
+            var formatterProperty = jsonRpc.GetType()
+                .GetProperty("MessageFormatter", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+            if (formatterProperty?.GetValue(jsonRpc) is StreamJsonRpc.JsonMessageFormatter currentFormatter)
+            {
+                var serializerField = currentFormatter.GetType()
+                    .GetField("jsonSerializer", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+                if (serializerField != null)
                 {
-                    OnKeyEvent = HandleKeyEvent,
-                    OnMouseMove = HandleMouseMove,
-                    OnMouseEvent = HandleMouseEvent,
-                    OnPlayEngine = HandlePlayEngine,
-                    OnStopEngine = HandleStopEngine,
-                    OnLogMessage = HandleLogMessage,
-                };
-
-                var rpcService = new RpcService(() => GetCurrentFrame(800, 600), callbacks);
-
-                var jsonRpc = JsonRpc.Attach(stream, rpcService);
-
-                jsonRpc.Disconnected += (_, _) => ConnectedClients--;
-
-                await jsonRpc.Completion;
+                    serializerField.SetValue(currentFormatter, Newtonsoft.Json.JsonSerializer.Create(jsonSettings));
+                }
             }
-        }
-        catch (Exception)
-        {
-            ConnectedClients--;
+
+            jsonRpc.StartListening();
+
+            jsonRpc.Disconnected += (_, _) => ConnectedClients--;
+
+            await jsonRpc.Completion;
         }
     }
+    catch (Exception ex)
+    {
+        Debug.Log($"RPC Client error: {ex.Message}");
+        ConnectedClients--;
+    }
+}
+
+    private static Scene? HandleGetCurrentScene() => SceneManager.CurrentScene;
 
     private static void HandleLogMessage(object logMessage, Debug.LogLevel logLevel, bool isDebug, string source,
         string caller, string file, int line)
@@ -201,15 +236,8 @@ public class RpcController : IDisposable
         Debug.Log($"{logMessage}", logLevel, isDebug, source, caller, file, line);
     }
 
-    private static void HandlePlayEngine()
-    {
-        Debug.Log("PLAY ENGINE - Game Started!");
-    }
-
-    private static void HandleStopEngine()
-    {
-        Debug.Log("STOP ENGINE - Game Stopped!");
-    }
+    private static void HandlePlayEngine() => Debug.Log("PLAY ENGINE - Game Started!");
+    private static void HandleStopEngine() => Debug.Log("STOP ENGINE - Game Stopped!");
 
     private static void HandleKeyEvent(string key, bool isPressed)
     {
@@ -219,10 +247,8 @@ public class RpcController : IDisposable
             Input.Input.RpcKeyUp(key);
     }
 
-    private static void HandleMouseMove(float normalizedX, float normalizedY)
-    {
+    private static void HandleMouseMove(float normalizedX, float normalizedY) =>
         Input.Input.RpcMouseMove(normalizedX, normalizedY);
-    }
 
     private static void HandleMouseEvent(float normalizedX, float normalizedY, int button, bool isPressed)
     {
@@ -266,4 +292,6 @@ public class RpcService(Func<FrameData> getFrameData, RpcCallbacks callbacks)
     {
         callbacks.OnLogMessage?.Invoke(message, level, isDebug, source, caller, file, line);
     }
+
+    public Task<Scene?> GetCurrentScene() => Task.FromResult(callbacks.OnGetCurrentScene?.Invoke());
 }
