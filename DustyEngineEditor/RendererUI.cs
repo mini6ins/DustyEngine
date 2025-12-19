@@ -1,7 +1,6 @@
 using DustyEngineEditor.Panels.ConsolePanel;
 using DustyEngineEditor.Panels.HierarchyPanel;
 using DustyEngineEditor.Panels.ViewPortPanel;
-using DustyEngineEditor.Panels.ViewPortPanel.RemoteRenderer;
 using DustyEngineEditor.Panels.ViewPortPanel.Themes;
 using ImGuiNET;
 using OpenTK.Windowing.GraphicsLibraryFramework;
@@ -13,51 +12,46 @@ internal interface IRenderablePanel
     void Render();
 }
 
-internal class RendererUI
+internal class RendererUI : IDisposable
 {
-    private readonly InputHandler _inputHandler;
-
-    private readonly List<IRenderablePanel> _renderablePanels;
-    private readonly ViewportPanel _viewportPanel;
+    private readonly InputHandler? _inputHandler;
+    private readonly List<IRenderablePanel>? _renderablePanels;
+    private readonly ViewportPanel? _viewportPanel;
 
     public RendererUI()
     {
-        if (Editor.RemoteRenderer == null) return;
+        if (Editor.RemoteRenderer == null)
+            return;
 
         _inputHandler = new InputHandler(Editor.RemoteRenderer);
-
         _viewportPanel = new ViewportPanel(_inputHandler);
 
         _renderablePanels =
-            [new HierarchyPanel(), _viewportPanel, new ProjectFilePanel(), new InspectorPanel(), new ConsolePanel()];
-
-
-        _viewportPanel.OnStartClicked = () => Editor.RemoteRenderer.PlayEngine();
-        _viewportPanel.OnStopClicked = () => Editor.RemoteRenderer.StopEngine();
+        [
+            new HierarchyPanel(),
+            _viewportPanel,
+            new ProjectFilePanel(),
+            new InspectorPanel(),
+            new ConsolePanel()
+        ];
     }
 
-    public void Update(KeyboardState keyboardState)
+    public void Update(KeyboardState keyboardState, float deltaTime)
     {
-        if (_viewportPanel.IsRemoteWindowFocused)
-        {
-            _inputHandler.ProcessFunctionKeys(keyboardState);
-        }
+        _viewportPanel?.Update(deltaTime);
+
+        if (_viewportPanel!.IsRemoteWindowFocused)
+            _inputHandler?.ProcessFunctionKeys(keyboardState);
     }
 
-    public void Render(int texture, int textureWidth, int textureHeight, ref int framesDisplayed)
+    public void Render()
     {
         RenderTopMenuBar();
 
         ImGui.DockSpaceOverViewport();
 
-        _viewportPanel.UpdateData(texture, textureWidth, textureHeight, framesDisplayed);
-
-        foreach (var panel in _renderablePanels)
-        {
+        foreach (var panel in _renderablePanels!)
             panel.Render();
-        }
-
-        framesDisplayed = _viewportPanel.GetFramesDisplayed();
     }
 
     private static void RenderTopMenuBar()
@@ -77,9 +71,8 @@ internal class RendererUI
                 // ----- Themes -----
                 if (ImGui.BeginMenu("Themes"))
                 {
-
-                    var isDark    = ThemeSelector.CurrentTheme == EditorTheme.Dark;
-                    var isLight   = ThemeSelector.CurrentTheme == EditorTheme.Light;
+                    var isDark = ThemeSelector.CurrentTheme == EditorTheme.Dark;
+                    var isLight = ThemeSelector.CurrentTheme == EditorTheme.Light;
                     var isClassic = ThemeSelector.CurrentTheme == EditorTheme.LegacyClassic;
                     var isGruvbox = ThemeSelector.CurrentTheme == EditorTheme.Gruvbox;
 
@@ -95,7 +88,6 @@ internal class RendererUI
                     if (ImGui.MenuItem("Gruvbox", "", isGruvbox, !isGruvbox))
                         ThemeSelector.ApplyTheme(EditorTheme.Gruvbox);
 
-
                     ImGui.EndMenu();
                 }
 
@@ -104,7 +96,7 @@ internal class RendererUI
 
             if (ImGui.MenuItem("Exit"))
             {
-                // Close app
+                // TODO: Close app
             }
 
             ImGui.EndMenu();
@@ -120,4 +112,8 @@ internal class RendererUI
         ImGui.EndMainMenuBar();
     }
 
+    public void Dispose()
+    {
+        _viewportPanel?.Dispose();
+    }
 }

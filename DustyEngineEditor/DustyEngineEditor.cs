@@ -135,7 +135,7 @@ internal class Editor
         var jsonRpc = JsonRpc.Attach(stream);
         RemoteRenderer = jsonRpc.Attach<IRemoteRenderer>();
 
-        using var clientWindow = new ViewportRenderer();
+        using var clientWindow = new EditorWindow();
         clientWindow.Run();
     }
 }

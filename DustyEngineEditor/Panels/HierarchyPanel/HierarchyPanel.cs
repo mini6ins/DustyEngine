@@ -15,6 +15,21 @@ internal class HierarchyPanel : IRenderablePanel
             ImGui.Separator();
         }
 
+        DrawDirectory("/home/maksym/DustyEngine/TestProject/TestProject");
         ImGui.End();
     }
+
+
+    void DrawDirectory(string path)
+    {
+
+        if (ImGui.TreeNode("Node 1"))
+        {
+            ImGui.Text("Inside node 1");
+            ImGui.TreePop();
+
+        }
+
+    }
+
 }
