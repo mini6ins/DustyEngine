@@ -1,4 +1,5 @@
 using DustyEngine;
+using DustyEngineEditor.Panels.ViewPortPanel.Themes;
 using GraphicsEngineOpenGL;
 using ImGui_OpenTK.Backends;
 using ImGuiNET;
@@ -46,7 +47,8 @@ public class ViewportRenderer() : GameWindow(GameWindowSettings.Default, new Nat
         ImGui.CreateContext();
         var io = ImGui.GetIO();
         io.ConfigFlags |= ImGuiConfigFlags.DockingEnable;
-        ImGui.StyleColorsDark();
+
+        ThemeSelector.ApplyTheme(EditorTheme.Dark);
 
         ImguiImplOpenTK4.Init(this);
         ImguiImplOpenGL3.Init();
@@ -54,12 +56,13 @@ public class ViewportRenderer() : GameWindow(GameWindowSettings.Default, new Nat
         InitializeTexture();
         IconLoader.InitIcons();
 
-        _ui = new RendererUI(Editor.RemoteRenderer);
+        _ui = new RendererUI();
 
         _fetcherTask = Task.Run(FetchFramesLoop);
 
         Debug.Log("Editor ready. WASD to move camera, mouse to rotate.");
     }
+
 
     private void InitializeTexture()
     {

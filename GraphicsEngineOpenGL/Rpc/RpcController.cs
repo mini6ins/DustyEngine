@@ -203,12 +203,12 @@ public class RpcController : IDisposable
 
     private static void HandlePlayEngine()
     {
-        Console.WriteLine("[ENGINE] ▶️ PLAY ENGINE - Game Started!");
+        Debug.Log("PLAY ENGINE - Game Started!");
     }
 
     private static void HandleStopEngine()
     {
-        Console.WriteLine("[ENGINE] ⏹️ STOP ENGINE - Game Stopped!");
+        Debug.Log("STOP ENGINE - Game Stopped!");
     }
 
     private static void HandleKeyEvent(string key, bool isPressed)

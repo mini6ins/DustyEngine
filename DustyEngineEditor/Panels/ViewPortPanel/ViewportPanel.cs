@@ -3,7 +3,7 @@ using ImGuiNET;
 
 namespace DustyEngineEditor.Panels.ViewPortPanel;
 
-internal class ViewPortPanel(InputHandler inputHandler) : IRenderablePanel
+internal class ViewportPanel(InputHandler inputHandler) : IRenderablePanel
 {
     private int _textureWidth;
     private int _textureHeight;
