@@ -1,7 +1,9 @@
+using SceneSystem.Attributes;
 using Vector3 = DustyEngine.Engine.Math.Vectors.Vector3;
 
 namespace DustyEngine.Components;
 
+[HideInAddComponentMenu]
 public class EditorCamera : CameraBase
 {
     private float _yaw;

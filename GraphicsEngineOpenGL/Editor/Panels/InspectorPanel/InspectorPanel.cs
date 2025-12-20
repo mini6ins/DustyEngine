@@ -2,6 +2,8 @@ using System.Numerics;
 using System.Reflection;
 using System.Text;
 using DustyEngine;
+using DustyEngine.Components;
+using GraphicsEngineOpenGL.Editor.Panels.HierarchyPanel;
 using ImGuiNET;
 using SceneSystem.Attributes;
 using NumVec3 = System.Numerics.Vector3;
@@ -39,12 +41,68 @@ internal class InspectorPanel : IRenderablePanel
 
         DrawObjectComponents(_selectedGameObject);
 
+        ImGui.Separator();
+
+        DrawAddComponent();
+
         ImGui.End();
     }
 
+    private static string _addCompSearch = "";
+    private static IReadOnlyList<Type> _types = ComponentTypeCache.GetAll();
+
+
+    private static void DrawAddComponent()
+    {
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (ImGui.GetContentRegionAvail().X - 200f) * 0.5f);
+
+        if (ImGui.Button("Add Component", new Vector2(200f, 25f)))
+            ImGui.OpenPopup("add_component_popup");
+
+
+        var popupPos = ImGui.GetCursorScreenPos();
+        ImGui.SetNextWindowPos(popupPos, ImGuiCond.Always);
+
+        ImGui.SetNextWindowSize(new Vector2(340, 420), ImGuiCond.Always);
+
+        if (!ImGui.BeginPopup("add_component_popup")) return;
+
+        if (ImGui.IsWindowAppearing())
+            ImGui.SetKeyboardFocusHere();
+
+        ImGui.PushItemWidth(-1);
+        ImGui.InputTextWithHint("##search", "Type to search...", ref _addCompSearch, 128);
+        ImGui.PopItemWidth();
+
+        ImGui.Separator();
+
+        if (ImGui.BeginChild("##list", new Vector2(0, 0)))
+        {
+            foreach (var item in _types)
+            {
+                if (!ImGui.Selectable(item.Name, false)) continue;
+
+                if (Activator.CreateInstance(item) is Component comp)
+                {
+                    _selectedGameObject.AddComponent(comp);
+                }
+                else
+                {
+                    Debug.Log($"Can't create component: {item.FullName}", Debug.LogLevel.Error, true);
+                }
+                ImGui.CloseCurrentPopup();
+            }
+
+            ImGui.EndChild();
+        }
+
+        ImGui.EndPopup();
+    }
+
+
     private static void DrawGameObjectInfo()
     {
-        if(_selectedGameObject == null) return;
+        if (_selectedGameObject == null) return;
 
         var active = _selectedGameObject.IsActive;
         if (ImGui.Checkbox("##enabled", ref active))
@@ -52,7 +110,7 @@ internal class InspectorPanel : IRenderablePanel
 
         ImGui.SameLine();
 
-        var objectName =  _selectedGameObject.Name;
+        var objectName = _selectedGameObject.Name;
         if (ImGui.InputText("##name", ref objectName, 256, ImGuiInputTextFlags.EnterReturnsTrue))
             _selectedGameObject.Name = objectName;
     }
@@ -66,22 +124,46 @@ internal class InspectorPanel : IRenderablePanel
             return;
         }
 
-        foreach (var component in gameObject.Components.Where(component =>
-                     ImGui.CollapsingHeader(component.GetType().Name, ImGuiTreeNodeFlags.DefaultOpen)))
+        Component? toRemove = null;
+
+        foreach (var component in gameObject.Components)
         {
-            DrawComponentFields(component);
-            DrawComponentProperties(component);
+            ImGui.PushID(component.GetHashCode());
+
+            var opened = ImGui.CollapsingHeader(component.GetType().Name, ImGuiTreeNodeFlags.DefaultOpen);
+
+            if (ImGui.IsItemClicked(ImGuiMouseButton.Right))
+                ImGui.OpenPopup("comp_menu");
+
+            if (ImGui.BeginPopup("comp_menu"))
+            {
+                if (ImGui.MenuItem("Remove"))
+                {
+                    toRemove = component;
+                    ImGui.CloseCurrentPopup();
+                }
+
+                ImGui.EndPopup();
+            }
+
+            if (opened)
+            {
+                DrawComponentFields(component);
+                DrawComponentProperties(component);
+            }
+
+            ImGui.PopID();
         }
+
+        if (toRemove != null) return;
+            // gameObject.RemoveComponent(toRemove); //TODO добавить удаление компонентов по айди
     }
 
-    private static bool IsReadOnly(PropertyInfo prop) =>
-        !prop.CanWrite || HasAttrByFullName(prop, typeof(ReadOnlyInInspectorAttribute));
 
 
-    private static bool HasAttrByFullName(MemberInfo member, Type attrType) =>
-        attrType.FullName != null &&
-        member.CustomAttributes.Any(cad => cad.AttributeType.FullName == attrType.FullName);
+    private static bool IsReadOnly(PropertyInfo prop) => !prop.CanWrite || HasAttrByFullName(prop, typeof(ReadOnlyInInspectorAttribute));
 
+    private static bool HasAttrByFullName(MemberInfo member, Type attrType) => attrType.FullName != null && member.CustomAttributes.Any(cad => cad.AttributeType.FullName == attrType.FullName);
 
     private static bool ShouldDraw(FieldInfo field)
     {
@@ -194,7 +276,7 @@ internal class InspectorPanel : IRenderablePanel
 
     private static void DrawField(object target, FieldInfo field)
     {
-        var  label = field.Name;
+        var label = field.Name;
         var value = field.GetValue(target);
 
         switch (value)

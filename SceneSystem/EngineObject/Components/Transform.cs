@@ -2,109 +2,109 @@
 using SceneSystem.Attributes;
 using Vector3 = DustyEngine.Engine.Math.Vectors.Vector3;
 
-namespace DustyEngine.Components
+namespace DustyEngine.Components;
+
+[HideInAddComponentMenu]
+public class Transform : Component
 {
-    public class Transform : Component
+    public Vector3 LocalPosition
     {
-        public Vector3 LocalPosition
+        get => _localPosition;
+        set { _localPosition = value; }
+    }
+
+    public Vector3 LocalRotation
+    {
+        get => _localRotation;
+        set { _localRotation = value; }
+    }
+
+    public Vector3 LocalScale
+    {
+        get => _localScale;
+        set { _localScale = value; }
+    }
+
+    [JsonIgnore] private Vector3 _localPosition = new Vector3(0, 0, 0);
+    [JsonIgnore] private Vector3 _localRotation = new Vector3(0, 0, 0);
+    [JsonIgnore] private Vector3 _localScale = new Vector3(1, 1, 1);
+
+    [HideInInspector]
+    [JsonIgnore]
+    public Vector3 GlobalPosition
+    {
+        get
         {
-            get => _localPosition;
-            set { _localPosition = value; }
-        }
+            if (Parent.Parent == null)
+                return _localPosition;
 
-        public Vector3 LocalRotation
+            var parentTransform = Parent.Parent.GetComponent<Transform>();
+            return parentTransform != null ? parentTransform.GlobalPosition + _localPosition : _localPosition;
+        }
+    }
+
+    [HideInInspector]
+    [JsonIgnore]
+    public Vector3 GlobalRotation
+    {
+        get
         {
-            get => _localRotation;
-            set { _localRotation = value; }
-        }
+            if (Parent.Parent == null)
+                return _localRotation;
 
-        public Vector3 LocalScale
+            var parentTransform = Parent.Parent.GetComponent<Transform>();
+            return parentTransform != null ? parentTransform.GlobalRotation + _localRotation : _localRotation;
+        }
+    }
+
+    [HideInInspector]
+    [JsonIgnore]
+    public Vector3 GlobalScale
+    {
+        get
         {
-            get => _localScale;
-            set { _localScale = value; }
+            if (Parent.Parent == null)
+                return _localScale;
+
+            var parentTransform = Parent.Parent.GetComponent<Transform>();
+            return parentTransform != null
+                ? new Vector3(
+                    parentTransform.GlobalScale.X * _localScale.X,
+                    parentTransform.GlobalScale.Y * _localScale.Y,
+                    parentTransform.GlobalScale.Z * _localScale.Z)
+                : _localScale;
         }
-
-        [JsonIgnore] private Vector3 _localPosition = new Vector3(0, 0, 0);
-        [JsonIgnore] private Vector3 _localRotation = new Vector3(0, 0, 0);
-        [JsonIgnore] private Vector3 _localScale = new Vector3(1, 1, 1);
-
-        [HideInInspector]
-        [JsonIgnore]
-        public Vector3 GlobalPosition
-        {
-            get
-            {
-                if (Parent.Parent == null)
-                    return _localPosition;
-
-                var parentTransform = Parent.Parent.GetComponent<Transform>();
-                return parentTransform != null ? parentTransform.GlobalPosition + _localPosition : _localPosition;
-            }
-        }
-
-        [HideInInspector]
-        [JsonIgnore]
-        public Vector3 GlobalRotation
-        {
-            get
-            {
-                if (Parent.Parent == null)
-                    return _localRotation;
-
-                var parentTransform = Parent.Parent.GetComponent<Transform>();
-                return parentTransform != null ? parentTransform.GlobalRotation + _localRotation : _localRotation;
-            }
-        }
-
-        [HideInInspector]
-        [JsonIgnore]
-        public Vector3 GlobalScale
-        {
-            get
-            {
-                if (Parent.Parent == null)
-                    return _localScale;
-
-                var parentTransform = Parent.Parent.GetComponent<Transform>();
-                return parentTransform != null
-                    ? new Vector3(
-                        parentTransform.GlobalScale.X * _localScale.X,
-                        parentTransform.GlobalScale.Y * _localScale.Y,
-                        parentTransform.GlobalScale.Z * _localScale.Z)
-                    : _localScale;
-            }
-        }
+    }
 
 
-        [HideInInspector] [JsonIgnore] public Quaternion LocalRotationQuat { get; set; } = new Quaternion(0, 0, 0, 1);
+    [HideInInspector] [JsonIgnore] public Quaternion LocalRotationQuat { get; set; } = new Quaternion(0, 0, 0, 1);
 
-        [HideInInspector]
-        [JsonIgnore]
-        public Vector3 Forward => LocalRotationQuat.Rotate(new Vector3(0, 0, -1)).Normalized();
+    [HideInInspector]
+    [JsonIgnore]
+    public Vector3 Forward => LocalRotationQuat.Rotate(new Vector3(0, 0, -1)).Normalized();
 
-        [HideInInspector]
-        [JsonIgnore]
-        public Vector3 Right => LocalRotationQuat.Rotate(new Vector3(1, 0, 0)).Normalized();
+    [HideInInspector]
+    [JsonIgnore]
+    public Vector3 Right => LocalRotationQuat.Rotate(new Vector3(1, 0, 0)).Normalized();
 
-        [HideInInspector] [JsonIgnore] public Vector3 Up => LocalRotationQuat.Rotate(new Vector3(0, 1, 0)).Normalized();
+    [HideInInspector] [JsonIgnore] public Vector3 Up => LocalRotationQuat.Rotate(new Vector3(0, 1, 0)).Normalized();
 
-        public Transform(Vector3? localPosition = null, Vector3? localRotation = null,
-            Vector3? localScale = null, Quaternion? localRotationQuat = null)
-        {
-            _localPosition = localPosition ?? Vector3.Zero;
-            _localRotation = localRotation ?? Vector3.Zero;
-            _localScale = localScale ?? Vector3.One;
-            LocalRotationQuat = localRotationQuat ?? Quaternion.Identity;
-        }
+    public Transform(Vector3? localPosition = null, Vector3? localRotation = null,
+        Vector3? localScale = null, Quaternion? localRotationQuat = null)
+    {
+        _localPosition = localPosition ?? Vector3.Zero;
+        _localRotation = localRotation ?? Vector3.Zero;
+        _localScale = localScale ?? Vector3.One;
+        LocalRotationQuat = localRotationQuat ?? Quaternion.Identity;
+    }
 
-        public Transform() : this(Vector3.Zero, Vector3.Zero, Vector3.One, Quaternion.Identity)
-        {
-        }
+    public Transform() : this(Vector3.Zero, Vector3.Zero, Vector3.One, Quaternion.Identity)
+    {
+    }
 
-        public override string ToString()
-        {
-            return $"Local: {LocalPosition}, Rotation: {LocalRotation}, Scale: {LocalScale}, " +
-                   $"Global: {GlobalPosition}, GlobalRotation: {GlobalRotation}, GlobalScale: {GlobalScale}";
-        }
+    public override string ToString()
+    {
+        return $"Local: {LocalPosition}, Rotation: {LocalRotation}, Scale: {LocalScale}, " +
+               $"Global: {GlobalPosition}, GlobalRotation: {GlobalRotation}, GlobalScale: {GlobalScale}";
     }
 }

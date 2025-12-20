@@ -4,6 +4,7 @@ using SceneSystem.Attributes;
 
 namespace DustyEngine;
 
+[HideInAddComponentMenu]
 public class Behaviour : Component
 {
     public bool Enabled { get; set; } = true;
