@@ -9,8 +9,10 @@ namespace GraphicsEngineOpenGL.Editor.Panels.HierarchyPanel;
 internal class HierarchyPanel : IRenderablePanel
 {
     private GameObject? _selected;
-
     private readonly Scene _scene;
+
+    // Очередь отложенных операций
+    private readonly Queue<Action> _deferredActions = new();
 
     public HierarchyPanel() => _scene = SceneManager.CurrentScene;
 
@@ -21,18 +23,22 @@ internal class HierarchyPanel : IRenderablePanel
 
         if (ImGui.Begin("Hierarchy Panel"))
         {
-            ImGui.Text("Scene: "  + _scene.Name);
+            ImGui.Text("Scene: " + _scene.Name);
             ImGui.Separator();
         }
 
         DrawSceneHierarchy();
         ImGui.End();
+
+        // Выполняем отложенные операции ПОСЛЕ отрисовки
+        ExecuteDeferredActions();
     }
 
     private void DrawSceneHierarchy()
     {
-        foreach (var gameObject in _scene.GameObjects)
-            DrawGameObjectNode(gameObject,true);
+        // ToList() создает копию - безопасно для модификации оригинала
+        foreach (var gameObject in _scene.GameObjects.ToList())
+            DrawGameObjectNode(gameObject, true);
     }
 
     private void DrawGameObjectNode(GameObject gameObject, bool parentActive)
@@ -50,16 +56,14 @@ internal class HierarchyPanel : IRenderablePanel
                 ImGui.GetStyle().Colors[(int)ImGuiCol.Text] * new Vector4(1, 1, 1, 0.4f));
         }
 
-        DrawTreeNode(
-            gameObject.Name,
-            hasChildren
+        DrawTreeNode(gameObject.Name, hasChildren
                 ? () =>
                 {
-                    foreach (var child in gameObject.Children)
+                    // ToList() для безопасной итерации по детям
+                    foreach (var child in gameObject.Children.ToList())
                         DrawGameObjectNode(child, activeInHierarchy);
                 }
-                : null,
-            gameObject
+                : null, gameObject
         );
 
         if (!activeInHierarchy)
@@ -67,6 +71,8 @@ internal class HierarchyPanel : IRenderablePanel
 
         ImGui.PopID();
     }
+
+    private GameObject? _copiedGameObject;
 
     private void DrawTreeNode(string label, Action? drawChildren, GameObject gameObject)
     {
@@ -88,9 +94,56 @@ internal class HierarchyPanel : IRenderablePanel
             InspectorPanel.InspectorPanel.SetSelectedGameObject(_selected);
         }
 
-        if (!hasChildren || !opened) return;
+        if (ImGui.IsItemClicked(ImGuiMouseButton.Right))
+        {
+            _selected = gameObject;
+            ImGui.OpenPopup("object_menu");
+        }
 
-        drawChildren!();
-        ImGui.TreePop();
+        if (ImGui.BeginPopup("object_menu"))
+        {
+            if (ImGui.BeginMenu("Create"))
+            {
+                if (ImGui.MenuItem("Empty GameObject"))
+                {
+                    var parent = _selected;
+
+                    _deferredActions.Enqueue(() =>
+                    {
+                        SceneManager.AddGameObjectRecursively(new GameObject("Empty GameObject"), parent);
+                    });
+                    ImGui.CloseCurrentPopup();
+                }
+
+                ImGui.EndMenu();
+            }
+
+            if (ImGui.MenuItem("Delete", "Del"))
+            {
+                var toDelete = _selected;
+                _deferredActions.Enqueue(() =>
+                {
+                    if (toDelete != null)
+                        SceneManager.RemoveGameObjectRecursively(toDelete);
+                });
+            }
+
+            ImGui.EndPopup();
+        }
+
+        if (hasChildren && opened)
+        {
+            drawChildren!();
+            ImGui.TreePop();
+        }
+    }
+
+    private void ExecuteDeferredActions()
+    {
+        while (_deferredActions.Count > 0)
+        {
+            var action = _deferredActions.Dequeue();
+            action?.Invoke();
+        }
     }
 }

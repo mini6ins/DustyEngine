@@ -44,24 +44,17 @@ internal class InspectorPanel : IRenderablePanel
 
     private static void DrawGameObjectInfo()
     {
-        var active = _selectedGameObject.IsActive;
+        if(_selectedGameObject == null) return;
 
+        var active = _selectedGameObject.IsActive;
         if (ImGui.Checkbox("##enabled", ref active))
-        {
             _selectedGameObject.IsActive = active;
-        }
 
         ImGui.SameLine();
-        ImGui.Text(_selectedGameObject.Name);
 
-        var buttonWidth = 60f;
-        var avail = ImGui.GetContentRegionAvail().X;
-
-        ImGui.SameLine(avail - buttonWidth);
-
-        if (ImGui.Button("...", new Vector2(buttonWidth, 0)))
-        {
-        }
+        var objectName =  _selectedGameObject.Name;
+        if (ImGui.InputText("##name", ref objectName, 256, ImGuiInputTextFlags.EnterReturnsTrue))
+            _selectedGameObject.Name = objectName;
     }
 
 
