@@ -1,14 +1,15 @@
 ﻿using System.Text.Json.Serialization;
 using DustyEngine.Engine.Math.Vectors;
 using DustyEngine.Scene;
+using SceneSystem.Attributes;
 
 namespace DustyEngine.Components;
 
 public class Component : EngineObject
 {
-    public GameObject? Parent { get; set; }
+    [HideInInspector]  public GameObject? Parent { get; set; }
     
-    public override string Name
+    [HideInInspector]  public override string Name
     {
         get => Parent?.Name ?? "<No GameObject>";
         set
@@ -17,12 +18,12 @@ public class Component : EngineObject
                 Parent.Name = value;
         }
     }
+    [HideInInspector]  public GameObject? GameObject => Parent;
     
-    public GameObject? GameObject => Parent;
-    
-    [JsonIgnore] 
+    [HideInInspector] [JsonIgnore]
     public Transform? transform => GameObject?.GetComponent<Transform>();
-    
+
+
     public T? GetComponent<T>() where T : Component
     {
         return Parent?.GetComponent<T>();

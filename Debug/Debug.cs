@@ -24,12 +24,17 @@ namespace DustyEngine
             object? message,
             LogLevel level = LogLevel.Info,
             bool isDebugMessage = false,
-            string source = "Engine",
+            string? source = null,
             [CallerMemberName] string caller = "",
             [CallerFilePath] string file = "",
             [CallerLineNumber] int line = 0
         )
         {
+            if (string.IsNullOrEmpty(source))
+            {
+                source = DetermineSource(file);
+            }
+
             var formattedMessage =
                 $"[{source}] " +
                 $"[{DateTime.Now:HH:mm:ss}] " +
@@ -51,7 +56,13 @@ namespace DustyEngine
                 return;
 
             Console.WriteLine(formattedMessage);
+
             Console.Out.Flush();
+        }
+
+        private static string DetermineSource(string filePath)
+        {
+            return filePath.Contains("GraphicsEngineOpenGL") ? "Editor" : "Engine";
         }
 
 

@@ -14,13 +14,27 @@
     <ItemGroup>
       <PackageReference Include="OpenTK" Version="5.0.0-pre.15" />
       <PackageReference Include="StbImageSharp" Version="2.30.15" />
-      <PackageReference Include="StreamJsonRpc" Version="2.23.32-alpha" />
     </ItemGroup>
-
+    
     <ItemGroup>
-      <Reference Include="StreamJsonRpc">
-        <HintPath>..\..\.nuget\packages\streamjsonrpc\2.23.32-alpha\lib\net8.0\StreamJsonRpc.dll</HintPath>
-      </Reference>
+      <None Update="Editor\Editor\Icons\csharpIcon.png">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Editor\Editor\Icons\fileIcon.png">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Editor\Editor\Icons\folderIcon.png">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Editor\Editor\Icons\imageIcon.png">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Editor\Editor\Icons\ObjIcon.png">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Editor\Editor\Icons\sceneIcon.png">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 

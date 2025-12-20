@@ -2,6 +2,7 @@
 using DustyEngine.Components;
 using DustyEngine.Scene;
 using GraphicsEngine;
+using GraphicsEngineOpenGL.Editor;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using Vector2i = OpenTK.Mathematics.Vector2i;
@@ -11,22 +12,22 @@ namespace GraphicsEngineOpenGL;
 public class GraphicsEngineOpenGl : IRenderer
 {
     private GameWindow? _window;
-    private GraphicsRenderer? _renderer;
+    public static GraphicsRenderer? Renderer;
 
     public static RenderMode RenderMode;
+    public static string ProjectPath;
 
     public void RunMainLoop(
-        Scene scene,
         Action updateCallback,
         Vector2i resolution,
         string programTitle,
         string vertShaderPath,
         string fragShaderPath,
         bool vsync,
-        RenderMode renderMode)
+        RenderMode renderMode, string _projectPath)
     {
         Debug.Log("GraphicsEngineOpenGl is working", Debug.LogLevel.Info, true);
-
+        ProjectPath = _projectPath;
         RenderMode = renderMode;
         var nativeWindowSettings = new NativeWindowSettings
         {
@@ -34,12 +35,12 @@ public class GraphicsEngineOpenGl : IRenderer
             Title = programTitle,
         };
 
-        _renderer = new GraphicsRenderer(vertShaderPath, fragShaderPath, nativeWindowSettings.ClientSize.X,
+        Renderer = new GraphicsRenderer(vertShaderPath, fragShaderPath, nativeWindowSettings.ClientSize.X,
             nativeWindowSettings.ClientSize.Y);
 
 
         var cursorState = RenderMode == RenderMode.Editor ? CursorState.Normal : CursorState.Hidden;
-        var windowSettings = new WindowSettings(GameWindowSettings.Default,  nativeWindowSettings, vsync, cursorState, _renderer );
+        var windowSettings = new WindowSettings(GameWindowSettings.Default,  nativeWindowSettings, vsync, cursorState );
 
         _window = RenderMode == RenderMode.Editor ? new EditorWindow(windowSettings) : new StandaloneWindow(windowSettings);
 
@@ -47,8 +48,8 @@ public class GraphicsEngineOpenGl : IRenderer
         _window.Run();
     }
 
-    public void AddRenderer(MeshRenderer meshRenderer) => _renderer?.AddRenderer(meshRenderer);
-    public bool RemoveRenderer(int objectId) => _renderer != null && _renderer.RemoveRenderer(objectId);
+    public void AddRenderer(MeshRenderer meshRenderer) => Renderer?.AddRenderer(meshRenderer);
+    public bool RemoveRenderer(int objectId) => Renderer != null && Renderer.RemoveRenderer(objectId);
 }
 
 
@@ -59,11 +60,10 @@ public enum RenderMode
 }
 
 
-public class WindowSettings(GameWindowSettings gameWindowSettings, NativeWindowSettings nativeWindowSettings, bool vSync, CursorState cursorState, GraphicsRenderer renderer)
+public class WindowSettings(GameWindowSettings gameWindowSettings, NativeWindowSettings nativeWindowSettings, bool vSync, CursorState cursorState)
 {
     public readonly GameWindowSettings GameWindowSettings = gameWindowSettings;
     public readonly NativeWindowSettings NativeWindowSettings = nativeWindowSettings;
     public bool VSync = vSync;
     public CursorState CursorState = cursorState;
-    public readonly GraphicsRenderer Renderer = renderer;
 }

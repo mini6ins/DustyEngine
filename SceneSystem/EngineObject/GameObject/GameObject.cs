@@ -45,10 +45,7 @@ public sealed class GameObject : EngineObject
 
     public T? GetComponent<T>() where T : Component
     {
-        if (Components.Count == 0)
-            return null;
-
-        return Components.OfType<T>().FirstOrDefault();
+        return Components.Count == 0 ? null : Components.OfType<T>().FirstOrDefault();
     }
 
     public void InvokeMethodInComponents(string methodName)

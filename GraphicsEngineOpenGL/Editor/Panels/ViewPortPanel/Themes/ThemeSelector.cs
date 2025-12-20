@@ -1,7 +1,7 @@
 using System.Numerics;
 using ImGuiNET;
 
-namespace DustyEngineEditor.Panels.ViewPortPanel.Themes;
+namespace GraphicsEngineOpenGL.Editor.Panels.ViewPortPanel.Themes;
 
 public enum EditorTheme
 {

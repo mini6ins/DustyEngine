@@ -1,7 +1,7 @@
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using DustyEngine;
-using GraphicsEngineOpenGL;
+using GraphicsEngineOpenGL.Editor;
+using GraphicsEngineOpenGL.Editor.Panels.ConsolePanel;
 using ImGuiNET;
 
 namespace DustyEngineEditor.Panels.ConsolePanel;
@@ -16,16 +16,18 @@ public class ConsolePanel : IRenderablePanel
 
     private static readonly List<LogEntry> Lines = [];
     private const bool AutoScroll = true;
+    private static ConsoleInterceptor? _interceptor;
 
-    public static void Log(object? message, Debug.LogLevel level = Debug.LogLevel.Info, bool isDebugMessage = false,
-        string source = "Editor",
-        [CallerMemberName] string caller = "DustyEngineEditor",
-        [CallerFilePath] string file = "",
-        [CallerLineNumber] int line = 0)
+    public  static void InitializeConsoleInterceptor()
     {
+        var originalOutput = Console.Out;
+        _interceptor = new ConsoleInterceptor(originalOutput, OnConsoleLineWritten);
+        Console.SetOut(_interceptor);
+
+        Console.WriteLine("[Editor] Console interceptor initialized");
     }
 
-    public static void Out(string text) => Lines.Add(new LogEntry(text, DetectLogLevel(text)));
+    private static void OnConsoleLineWritten(string line) => Lines.Add(new LogEntry(line, DetectLogLevel(line)));
 
     public void Render()
     {
@@ -38,7 +40,12 @@ public class ConsolePanel : IRenderablePanel
             return;
         }
 
-        ImGui.TextDisabled("Debug mode: true");
+        if (ImGui.Button("Clear"))
+            Lines.Clear();
+
+        ImGui.SameLine();
+        ImGui.TextDisabled($"Lines: {Lines.Count}");
+
         ImGui.Separator();
 
         ImGui.BeginChild("ConsoleScroll", new Vector2(0, 0), ImGuiChildFlags.None,
@@ -79,5 +86,13 @@ public class ConsolePanel : IRenderablePanel
             Debug.LogLevel.FatalError => new Vector4(1.0f, 0.0f, 0.0f, 1.0f),
             _ => new Vector4(1.0f, 1.0f, 1.0f, 1.0f)
         };
+    }
+
+    public static void Shutdown()
+    {
+        if (_interceptor == null) return;
+
+        Console.SetOut(Console.Out);
+        _interceptor = null;
     }
 }

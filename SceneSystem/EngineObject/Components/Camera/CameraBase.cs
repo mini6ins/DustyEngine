@@ -10,10 +10,11 @@ namespace DustyEngine.Components
         [SerializeField] private float _nearPlane = 0.5f;
         [SerializeField] private float _farPlane = 200.0f;
 
-        public float AspectRatio { get; set; } = 16f / 9f;
+        [ReadOnlyInInspector] public float AspectRatio { get; set; } = 16f / 9f;
 
         protected virtual Transform TransformSource => InternalTransform;
 
+        [HideInInspector]
         public Transform InternalTransform { get; } = new(
             new V3(0, 2.5f, 5),
             new V3(0, 0, 0),

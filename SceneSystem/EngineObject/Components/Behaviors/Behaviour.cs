@@ -1,5 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 using DustyEngine.Components;
+using SceneSystem.Attributes;
 
 namespace DustyEngine;
 
@@ -7,7 +8,7 @@ public class Behaviour : Component
 {
     public bool Enabled { get; set; } = true;
 
-    [JsonIgnore] public bool IsActiveAndEnabled => Parent?.IsActive == true && Enabled;
+    [HideInInspector]  [JsonIgnore] public bool IsActiveAndEnabled => Parent?.IsActive == true && Enabled;
 
     public void SetActive(bool active)
     {

@@ -13,9 +13,9 @@ public static class IconLoader
 
     public static void InitIcons()
     {
-        // чтобы работало из bin/Debug/netX
+
         var baseDir = AppContext.BaseDirectory;
-        var iconsDir = Path.Combine(baseDir, "Editor", "Icons");
+        var iconsDir = Path.Combine(baseDir, "Editor","Editor", "Icons");
 
         FolderIcon = LoadTexture(Path.Combine(iconsDir, "folderIcon.png"));
         FileIcon = LoadTexture(Path.Combine(iconsDir, "fileIcon.png"));

@@ -1,13 +1,13 @@
 using System.Numerics;
 using System.Text;
-using GraphicsEngineOpenGL;
+using DustyEngineEditor.Panels.HierarchyPanel;
 using ImGuiNET;
 
-namespace DustyEngineEditor.Panels.HierarchyPanel;
+namespace GraphicsEngineOpenGL.Editor.Panels.ProjectFilePanel;
 
 internal class ProjectFilePanel : IRenderablePanel
 {
-    private readonly ProjectFileManager _fileManager = null;
+    private readonly ProjectFileManager _fileManager;
 
     private string? _renamingPath;
     private string _renameBuffer = "";
@@ -15,6 +15,13 @@ internal class ProjectFilePanel : IRenderablePanel
     private string? _draggedPath;
     private double _lastClickTime;
     private string? _lastClickedPath;
+
+
+    public ProjectFilePanel()
+    {
+        _fileManager = new ProjectFileManager(GraphicsEngineOpenGl.ProjectPath);
+        IconLoader.InitIcons();
+    }
 
     public void Render()
     {
@@ -110,6 +117,7 @@ internal class ProjectFilePanel : IRenderablePanel
     {
         const float icon = 48f;
         var tileW = ImGui.GetColumnWidth() - ImGui.GetStyle().ItemSpacing.X - 10;
+
         const float tileH = 80f;
 
         ImGui.PushID(fullPath);

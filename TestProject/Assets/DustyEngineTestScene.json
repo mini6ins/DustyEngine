@@ -3,132 +3,79 @@
   "GameObjects": [
     {
       "IsActive": true,
-      "Children": [],
+      "Name": "TestGameObject0",
       "Components": [
         {
           "Type": "Transform",
-          "LocalPosition": {
-            "X": 0,
-            "Y": 0,
-            "Z": 0,
-            "Length": 0,
-            "LengthSquared": 0
-          },
-          "LocalRotation": {
-            "X": 0,
-            "Y": 0,
-            "Z": 0,
-            "Length": 0,
-            "LengthSquared": 0
-          },
-          "LocalScale": {
-            "X": 1,
-            "Y": 1,
-            "Z": 1,
-            "Length": 1.7320508,
-            "LengthSquared": 3
-          },
-          "Name": "\u003CNo GameObject\u003E"
-        },
-        {
-          "Type": "MeshRenderer",
-          "Path": "Assets/cube.obj",
-          "Enabled": true,
-          "Name": "\u003CNo GameObject\u003E"
+          "LocalPosition": { "X": 0, "Y": 0, "Z": 0 },
+          "LocalRotation": { "X": 0, "Y": 0, "Z": 0 },
+          "LocalScale": { "X": 1, "Y": 1, "Z": 1 }
         },
         {
           "Type": "MoveBoxCode",
           "SourcePath": "Assets/MoveBoxCode.cs",
-          "Enabled": true,
-          "Name": "\u003CNo GameObject\u003E"
+          "Enabled": true
         }
       ],
-      "Name": "TestGameObject0"
+      "Children": [
+        {
+          "IsActive": true,
+          "Name": "ChildCube",
+          "Components": [
+            {
+              "Type": "Transform",
+              "LocalPosition": { "X": 1, "Y": 0, "Z": 0 },
+              "LocalRotation": { "X": 0, "Y": 0, "Z": 0 },
+              "LocalScale": { "X": 1, "Y": 1, "Z": 1 }
+            },
+            {
+              "Type": "MeshRenderer",
+              "Path": "Assets/cube.obj",
+              "Enabled": true
+            }
+          ],
+          "Children": []
+        }
+      ]
     },
     {
       "IsActive": true,
-      "Children": [],
+      "Name": "TestGameObject1",
       "Components": [
         {
           "Type": "Transform",
-          "LocalPosition": {
-            "X": 5,
-            "Y": 0,
-            "Z": 0,
-            "Length": 5,
-            "LengthSquared": 25
-          },
-          "LocalRotation": {
-            "X": 0,
-            "Y": 0,
-            "Z": 0,
-            "Length": 0,
-            "LengthSquared": 0
-          },
-          "LocalScale": {
-            "X": 5,
-            "Y": 5,
-            "Z": 5,
-            "Length": 8.6602545,
-            "LengthSquared": 75
-          },
-          "Name": "\u003CNo GameObject\u003E"
+          "LocalPosition": { "X": 5, "Y": 0, "Z": 0 },
+          "LocalRotation": { "X": 0, "Y": 0, "Z": 0 },
+          "LocalScale": { "X": 5, "Y": 5, "Z": 5 }
         },
         {
           "Type": "MeshRenderer",
           "Path": "Assets/TeddyBear.obj",
-          "Enabled": true,
-          "Name": "\u003CNo GameObject\u003E"
+          "Enabled": true
         }
       ],
-      "Name": "TestGameObject1"
+      "Children": []
     },
     {
       "IsActive": true,
-      "Children": [],
+      "Name": "Camera",
       "Components": [
         {
           "Type": "Transform",
-          "LocalPosition": {
-            "X": 0,
-            "Y": 0,
-            "Z": 10,
-            "Length": 10,
-            "LengthSquared": 100
-          },
-          "LocalRotation": {
-            "X": 0,
-            "Y": 0,
-            "Z": 0,
-            "Length": 0,
-            "LengthSquared": 0
-          },
-          "LocalScale": {
-            "X": 1,
-            "Y": 1,
-            "Z": 1,
-            "Length": 1.7320508,
-            "LengthSquared": 3
-          },
-          "Name": "\u003CNo GameObject\u003E"
+          "LocalPosition": { "X": 0, "Y": 0, "Z": 10 },
+          "LocalRotation": { "X": 0, "Y": 0, "Z": 0 },
+          "LocalScale": { "X": 1, "Y": 1, "Z": 1 }
         },
         {
           "Type": "Camera",
           "AspectRatio": 1.3333334,
           "Enabled": true,
-          "Name": "\u003CNo GameObject\u003E",
           "_fieldOfView": 45,
           "_nearPlane": 0.5,
           "_farPlane": 200
-        },
-        {
-          "Type": "Player",
-          "SourcePath": "Assets/Player.cs",
-          "Enabled": true,
-          "Name": "\u003CNo GameObject\u003E"
         }
       ],
-      "Name": "Camera"
+      "Children": []
     }
   ],
   "Components": []

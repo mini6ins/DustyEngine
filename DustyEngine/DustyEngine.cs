@@ -1,5 +1,6 @@
 ﻿using DustyEngine.Components;
 using DustyEngine.Scene;
+using DustyEngineEditor.Panels.ConsolePanel;
 using GraphicsEngine;
 using GraphicsEngineOpenGL;
 
@@ -17,6 +18,9 @@ namespace DustyEngine
         {
             Debug.ClearLogs();
 
+            if(renderMode == RenderMode.Editor)
+                ConsolePanel.InitializeConsoleInterceptor();
+
             if (path.Length == 0)
             {
                 Debug.Log("No project path provided", Debug.LogLevel.FatalError, true);
@@ -25,7 +29,7 @@ namespace DustyEngine
 
             ProjectFolderPath = path;
             _settings = ProjectSettings.DeserializeProjectSettings(ProjectFolderPath);
-            
+
     
             Debug.EnableDebugMode(_settings.Debug);
             Debug.SetLogLevel(_settings.LogLevel);
@@ -59,9 +63,9 @@ namespace DustyEngine
 
             SceneManager.AddRenderer2 += _addRenderer;
 
-            _graphicsEngineOpenGl.RunMainLoop(loadedScene!, GameLoopAction,
+            _graphicsEngineOpenGl.RunMainLoop(GameLoopAction,
                 _settings.ScreenSize.ToOpenTK(), _settings.ProjectName, _settings.PathToVertShader,
-                _settings.PathToFragShader, _settings.Vsync, renderMode);
+                _settings.PathToFragShader, _settings.Vsync, renderMode, ProjectFolderPath);
             return;
 
             void GameLoopAction()

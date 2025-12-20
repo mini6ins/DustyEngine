@@ -1,18 +1,18 @@
 using System.Numerics;
+using DustyEngine;
 using DustyEngine.Scene;
-using GraphicsEngineOpenGL;
+using DustyEngineEditor.Panels.HierarchyPanel;
 using ImGuiNET;
 
-namespace DustyEngineEditor.Panels.HierarchyPanel;
+namespace GraphicsEngineOpenGL.Editor.Panels.HierarchyPanel;
 
 internal class HierarchyPanel : IRenderablePanel
 {
+    private GameObject? _selected;
 
-    public HierarchyPanel()
-    {
-        // Scene scene = Editor.RemoteRenderer!.GetCurrentScene().Result; // ⚠️ Опасно!
-        // ConsolePanel.ConsolePanel.Log("scene: " + scene.Name);
-    }
+    private readonly Scene _scene;
+
+    public HierarchyPanel() => _scene = SceneManager.CurrentScene;
 
     public void Render()
     {
@@ -21,62 +21,76 @@ internal class HierarchyPanel : IRenderablePanel
 
         if (ImGui.Begin("Hierarchy Panel"))
         {
+            ImGui.Text("Scene: "  + _scene.Name);
             ImGui.Separator();
         }
 
         DrawSceneHierarchy();
-
-
-
         ImGui.End();
     }
 
-
-    private string? _selectedNode;
-
-
     private void DrawSceneHierarchy()
     {
-        DrawTreeNode("Node A", () =>
-        {
-            DrawTreeNode("A - item 1");
-
-            DrawTreeNode("Node B", () =>
-            {
-                DrawTreeNode("B - item 1");
-                DrawTreeNode("B - item 2");
-
-                DrawTreeNode("Node C", () => { DrawTreeNode("C - item"); });
-            });
-        });
+        foreach (var gameObject in _scene.GameObjects)
+            DrawGameObjectNode(gameObject,true);
     }
 
-
-    private void DrawTreeNode(string label, Action? children = null)
+    private void DrawGameObjectNode(GameObject gameObject, bool parentActive)
     {
-        var hasChildren = children != null;
+        var selfActive = gameObject.IsActive;
+        var activeInHierarchy = parentActive && selfActive;
+
+        var hasChildren = gameObject.Children.Count > 0;
+
+        ImGui.PushID(gameObject.GetHashCode());
+
+        if (!activeInHierarchy)
+        {
+            ImGui.PushStyleColor(ImGuiCol.Text,
+                ImGui.GetStyle().Colors[(int)ImGuiCol.Text] * new Vector4(1, 1, 1, 0.4f));
+        }
+
+        DrawTreeNode(
+            gameObject.Name,
+            hasChildren
+                ? () =>
+                {
+                    foreach (var child in gameObject.Children)
+                        DrawGameObjectNode(child, activeInHierarchy);
+                }
+                : null,
+            gameObject
+        );
+
+        if (!activeInHierarchy)
+            ImGui.PopStyleColor();
+
+        ImGui.PopID();
+    }
+
+    private void DrawTreeNode(string label, Action? drawChildren, GameObject gameObject)
+    {
+        var hasChildren = drawChildren != null;
 
         var flags = ImGuiTreeNodeFlags.SpanFullWidth;
 
-        if (hasChildren)
-            flags |= ImGuiTreeNodeFlags.OpenOnArrow;
-        else
+        if (!hasChildren)
             flags |= ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.NoTreePushOnOpen;
 
-        if (_selectedNode == label)
+        if (_selected == gameObject)
             flags |= ImGuiTreeNodeFlags.Selected;
 
-        var open = ImGui.TreeNodeEx(label, flags);
+        var opened = ImGui.TreeNodeEx(label, flags);
 
-        if (ImGui.IsItemClicked())
+        if (ImGui.IsItemClicked(ImGuiMouseButton.Left))
         {
-            _selectedNode = label;
-            InspectorPanel.SetSelectedNode(_selectedNode);
+            _selected = gameObject;
+            InspectorPanel.InspectorPanel.SetSelectedGameObject(_selected);
         }
 
-        if (!hasChildren || !open) return;
+        if (!hasChildren || !opened) return;
 
-        children!.Invoke();
+        drawChildren!();
         ImGui.TreePop();
     }
 }

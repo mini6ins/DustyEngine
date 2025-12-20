@@ -4,8 +4,6 @@ namespace DustyEngine.Components;
 
 public class MeshRenderer : MonoBehaviour
 {
-    private string? _path;
-
     public string? Path
     {
         get => _path;
@@ -19,9 +17,10 @@ public class MeshRenderer : MonoBehaviour
         }
     }
 
+    private string? _path;
     private Mesh? _mesh;
 
-    public MeshRenderer() : this(null, null)
+    public MeshRenderer()
     {
     }
 
@@ -36,16 +35,12 @@ public class MeshRenderer : MonoBehaviour
             return;
         }
 
-        Path = path; 
+        Path = path;
 
-        if (string.IsNullOrEmpty(Path))
-        {
-            Debug.Log("MeshRenderer: No mesh or path provided. MeshRenderer will be empty.", Debug.LogLevel.Warning,
-                false);
-            return;
-        }
+        if (!string.IsNullOrEmpty(Path)) return;
+        Debug.Log("MeshRenderer: No mesh or path provided. MeshRenderer will be empty.", Debug.LogLevel.Warning);
     }
-    
+
     public void EnsureLoaded()
     {
         if (_mesh == null && !string.IsNullOrEmpty(Path))
@@ -77,8 +72,7 @@ public class MeshRenderer : MonoBehaviour
         }
         catch (Exception ex)
         {
-            Debug.Log($"MeshRenderer: Exception while loading mesh from '{Path}': {ex.Message}", Debug.LogLevel.Error,
-                false);
+            Debug.Log($"MeshRenderer: Exception while loading mesh from '{Path}': {ex.Message}", Debug.LogLevel.Error);
         }
     }
 
