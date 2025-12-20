@@ -18,32 +18,25 @@ public class RenderableObject
     public MeshRenderer MeshRenderer = null!;
 }
 
-public enum RenderMode
-{
-    Standalone,
-    Editor
-}
 
-public class GraphicsRenderer(string vertShaderPath, string fragShaderPath, int viewportWidth, int viewportHeight, RenderMode renderMode)
+public class GraphicsRenderer(string vertShaderPath, string fragShaderPath, int viewportWidth, int viewportHeight)
 {
-    public int ViewportTexture => _viewportTexture;
-
     private ShaderProgram _shaderProgram = null!;
     private readonly List<VAOManager> _vaoList = [];
     private readonly List<RenderableObject> _sceneObjects = [];
 
     private List<Camera> _sceneCameras = null!;
+    private CameraBase ActiveCamera => IsEditorMode && _editorCamera != null ? _editorCamera : _sceneCameras.First();
     private EditorCamera? _editorCamera;
     private Matrix4 _projection;
 
+    public int ViewportTexture { get; private set; }
     private int _viewportFramebuffer;
-    private int _viewportTexture;
     private int _viewportDepthBuffer;
     private int _currentViewportWidth;
     private int _currentViewportHeight;
 
-    private CameraBase ActiveCamera => IsEditorMode && _editorCamera != null ? _editorCamera : _sceneCameras.First();
-    private bool IsEditorMode => renderMode == RenderMode.Editor;
+    private static bool IsEditorMode => GraphicsEngineOpenGl.RenderMode == RenderMode.Editor;
 
     public void Load()
     {
@@ -77,7 +70,7 @@ public class GraphicsRenderer(string vertShaderPath, string fragShaderPath, int 
 
         CreateViewportFramebuffer();
 
-        if (IsEditorMode && _editorCamera != null || _sceneCameras != null && _sceneCameras.Count > 0)
+        if (IsEditorMode && _editorCamera != null || _sceneCameras is { Count: > 0 })
         {
             ActiveCamera.AspectRatio = viewportWidth / (float)viewportHeight;
             _projection = ActiveCamera.GetProjectionMatrix();
@@ -98,21 +91,17 @@ public class GraphicsRenderer(string vertShaderPath, string fragShaderPath, int 
         _viewportFramebuffer = GL.GenFramebuffer();
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, _viewportFramebuffer);
 
-        _viewportTexture = GL.GenTexture();
-        GL.BindTexture(TextureTarget.Texture2d, _viewportTexture);
-        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgb, viewportWidth, viewportHeight,
-            0, PixelFormat.Rgb, PixelType.UnsignedByte, IntPtr.Zero);
+        ViewportTexture = GL.GenTexture();
+        GL.BindTexture(TextureTarget.Texture2d, ViewportTexture);
+        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgb, viewportWidth, viewportHeight, 0, PixelFormat.Rgb, PixelType.UnsignedByte, IntPtr.Zero);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0,
-            TextureTarget.Texture2d, _viewportTexture, 0);
+        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2d, ViewportTexture, 0);
 
         _viewportDepthBuffer = GL.GenRenderbuffer();
         GL.BindRenderbuffer(RenderbufferTarget.Renderbuffer, _viewportDepthBuffer);
-        GL.RenderbufferStorage(RenderbufferTarget.Renderbuffer, InternalFormat.Depth24Stencil8,
-            viewportWidth, viewportHeight);
-        GL.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthStencilAttachment,
-            RenderbufferTarget.Renderbuffer, _viewportDepthBuffer);
+        GL.RenderbufferStorage(RenderbufferTarget.Renderbuffer, InternalFormat.Depth24Stencil8, viewportWidth, viewportHeight);
+        GL.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthStencilAttachment, RenderbufferTarget.Renderbuffer, _viewportDepthBuffer);
 
         var status = GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer);
         if (status != FramebufferStatus.FramebufferComplete)
@@ -131,9 +120,8 @@ public class GraphicsRenderer(string vertShaderPath, string fragShaderPath, int 
         _currentViewportWidth = width;
         _currentViewportHeight = height;
 
-        GL.BindTexture(TextureTarget.Texture2d, _viewportTexture);
-        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgb, width, height,
-            0, PixelFormat.Rgb, PixelType.UnsignedByte, IntPtr.Zero);
+        GL.BindTexture(TextureTarget.Texture2d, ViewportTexture);
+        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgb, width, height, 0, PixelFormat.Rgb, PixelType.UnsignedByte, IntPtr.Zero);
 
         GL.BindRenderbuffer(RenderbufferTarget.Renderbuffer, _viewportDepthBuffer);
         GL.RenderbufferStorage(RenderbufferTarget.Renderbuffer, InternalFormat.Depth24Stencil8, width, height);
@@ -352,8 +340,8 @@ public class GraphicsRenderer(string vertShaderPath, string fragShaderPath, int 
 
         if (_viewportFramebuffer != 0)
             GL.DeleteFramebuffer(_viewportFramebuffer);
-        if (_viewportTexture != 0)
-            GL.DeleteTexture(_viewportTexture);
+        if (ViewportTexture != 0)
+            GL.DeleteTexture(ViewportTexture);
         if (_viewportDepthBuffer != 0)
             GL.DeleteRenderbuffer(_viewportDepthBuffer);
 

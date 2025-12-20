@@ -7,23 +7,21 @@ namespace GraphicsEngineOpenGL;
 public class StandaloneWindow : GameWindow
 {
     private GraphicsRenderer GraphicsRenderer { get; }
-    private readonly RenderMode _renderMode;
 
-    public StandaloneWindow(GameWindowSettings gws, NativeWindowSettings nws, string windowName, bool isVsync,
-        CursorState cursorState, RenderMode renderMode, GraphicsRenderer graphicsRenderer) : base(gws, nws)
+
+    public StandaloneWindow(WindowSettings windowSettings) : base(windowSettings.GameWindowSettings,
+        windowSettings.NativeWindowSettings)
     {
-        Title = windowName;
-        VSync = isVsync ? VSyncMode.On : VSyncMode.Off;
-        CursorState = cursorState;
+        Title = windowSettings.NativeWindowSettings.Title;
+        VSync = windowSettings.VSync ? VSyncMode.On : VSyncMode.Off;
+        CursorState = windowSettings.CursorState;
 
-        _renderMode = renderMode;
-        GraphicsRenderer = graphicsRenderer;
+        GraphicsRenderer = windowSettings.Renderer;
     }
 
     protected override void OnLoad()
     {
         base.OnLoad();
-
         GL.Viewport(0, 0, FramebufferSize.X, FramebufferSize.Y);
 
         GraphicsRenderer.Load();
@@ -33,34 +31,30 @@ public class StandaloneWindow : GameWindow
     protected override void OnResize(ResizeEventArgs e)
     {
         base.OnResize(e);
-
         GL.Viewport(0, 0, e.Width, e.Height);
 
-        if (_renderMode == RenderMode.Standalone)
+        if (GraphicsEngineOpenGl.RenderMode == RenderMode.Standalone)
             GraphicsRenderer.ResizeViewport(e.Width, e.Height);
     }
 
     protected override void OnUpdateFrame(FrameEventArgs args)
     {
         base.OnUpdateFrame(args);
-
         GraphicsRenderer.Update((float)args.Time, KeyboardState, MouseState);
     }
 
     protected override void OnMouseMove(MouseMoveEventArgs e)
     {
         base.OnMouseMove(e);
-
         GraphicsRenderer.OnMouseMove(e.X, e.Y);
     }
 
     protected override void OnRenderFrame(FrameEventArgs args)
     {
         base.OnRenderFrame(args);
-
         GraphicsRenderer.Render();
 
-        if (_renderMode == RenderMode.Standalone)
+        if (GraphicsEngineOpenGl.RenderMode == RenderMode.Standalone)
         {
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
             GL.Viewport(0, 0, FramebufferSize.X, FramebufferSize.Y);

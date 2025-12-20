@@ -11,19 +11,13 @@ public class EditorWindow : GameWindow
 {
     private GraphicsRenderer GraphicsRenderer { get; }
 
-    public EditorWindow(
-        GameWindowSettings gws,
-        NativeWindowSettings nws,
-        string windowName,
-        bool isVsync,
-        GraphicsRenderer graphicsRenderer)
-        : base(gws, nws)
+    public EditorWindow(WindowSettings windowSettings) : base(windowSettings.GameWindowSettings, windowSettings.NativeWindowSettings)
     {
-        Title = windowName;
-        VSync = isVsync ? VSyncMode.On : VSyncMode.Off;
+        Title = windowSettings.NativeWindowSettings.Title;
+        VSync = windowSettings.VSync? VSyncMode.On : VSyncMode.Off;
         CursorState = CursorState.Normal;
 
-        GraphicsRenderer = graphicsRenderer;
+        GraphicsRenderer = windowSettings.Renderer;
     }
 
     protected override void OnLoad()
@@ -38,10 +32,6 @@ public class EditorWindow : GameWindow
 
         var io = ImGui.GetIO();
         io.ConfigFlags |= ImGuiConfigFlags.DockingEnable;
-
-        // 🔴 КЛЮЧЕВОЕ: чтобы через Hub и напрямую было одинаково
-        // (иначе imgui.ini берётся из разных working directory)
-
 
         GraphicsRenderer.Load();
         GraphicsRenderer.ResizeViewport(FramebufferSize.X, FramebufferSize.Y);
@@ -128,10 +118,8 @@ public class EditorWindow : GameWindow
     {
         base.OnRenderFrame(args);
 
-        // 1) сцена -> FBO
         GraphicsRenderer.Render();
 
-        // 2) UI -> экран
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
         GL.Viewport(0, 0, FramebufferSize.X, FramebufferSize.Y);
         GL.ClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -161,13 +149,13 @@ public class EditorWindow : GameWindow
 
         ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 0.0f);
         ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 0.0f);
-        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new System.Numerics.Vector2(0, 0));
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(0, 0));
 
         ImGui.Begin("DockSpace", windowFlags);
         ImGui.PopStyleVar(3);
 
         var dockspaceId = ImGui.GetID("MainDockSpace");
-        ImGui.DockSpace(dockspaceId, new System.Numerics.Vector2(0, 0), ImGuiDockNodeFlags.None);
+        ImGui.DockSpace(dockspaceId, new Vector2(0, 0), ImGuiDockNodeFlags.None);
 
         RenderEditorUI();
 
@@ -211,10 +199,7 @@ public class EditorWindow : GameWindow
     protected override void OnResize(ResizeEventArgs e)
     {
         base.OnResize(e);
-
-        // UI backbuffer
         GL.Viewport(0, 0, e.Width, e.Height);
-        // сцену не трогаем — она под ImGui viewport
     }
 
     protected override void OnUnload()

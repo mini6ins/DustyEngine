@@ -13,11 +13,13 @@ public class GraphicsEngineOpenGl : IRenderer
     private GameWindow? _window;
     private GraphicsRenderer? _renderer;
 
+    public static RenderMode RenderMode;
+
     public void RunMainLoop(
         Scene scene,
         Action updateCallback,
         Vector2i resolution,
-        string programName,
+        string programTitle,
         string vertShaderPath,
         string fragShaderPath,
         bool vsync,
@@ -25,38 +27,43 @@ public class GraphicsEngineOpenGl : IRenderer
     {
         Debug.Log("GraphicsEngineOpenGl is working", Debug.LogLevel.Info, true);
 
+        RenderMode = renderMode;
         var nativeWindowSettings = new NativeWindowSettings
         {
             ClientSize = new Vector2i(resolution.X, resolution.Y),
-            Title = programName,
+            Title = programTitle,
         };
 
-        // 1) создаём ОДИН renderer тут
-        _renderer = new GraphicsRenderer(
-            vertShaderPath,
-            fragShaderPath,
-            nativeWindowSettings.ClientSize.X,
-            nativeWindowSettings.ClientSize.Y,
-            renderMode);
+        _renderer = new GraphicsRenderer(vertShaderPath, fragShaderPath, nativeWindowSettings.ClientSize.X,
+            nativeWindowSettings.ClientSize.Y);
 
-        // 2) создаём нужное окно и ПЕРЕДАЁМ renderer
-        _window = renderMode == RenderMode.Editor
-            ? new EditorWindow(GameWindowSettings.Default, nativeWindowSettings, programName, vsync, _renderer)
-            : new StandaloneWindow(GameWindowSettings.Default, nativeWindowSettings, programName, vsync, CursorState.Normal, renderMode, _renderer);
 
-        // внешний апдейт твоего движка
-        _window.UpdateFrame += _ => updateCallback?.Invoke();
+        var cursorState = RenderMode == RenderMode.Editor ? CursorState.Normal : CursorState.Hidden;
+        var windowSettings = new WindowSettings(GameWindowSettings.Default,  nativeWindowSettings, vsync, cursorState, _renderer );
 
+        _window = RenderMode == RenderMode.Editor ? new EditorWindow(windowSettings) : new StandaloneWindow(windowSettings);
+
+        _window.UpdateFrame += _ => updateCallback.Invoke();
         _window.Run();
     }
 
-    public void AddRenderer(MeshRenderer meshRenderer)
-    {
-        _renderer?.AddRenderer(meshRenderer);
-    }
+    public void AddRenderer(MeshRenderer meshRenderer) => _renderer?.AddRenderer(meshRenderer);
+    public bool RemoveRenderer(int objectId) => _renderer != null && _renderer.RemoveRenderer(objectId);
+}
 
-    public bool RemoveRenderer(int objectId)
-    {
-        return _renderer != null && _renderer.RemoveRenderer(objectId);
-    }
+
+public enum RenderMode
+{
+    Standalone,
+    Editor
+}
+
+
+public class WindowSettings(GameWindowSettings gameWindowSettings, NativeWindowSettings nativeWindowSettings, bool vSync, CursorState cursorState, GraphicsRenderer renderer)
+{
+    public readonly GameWindowSettings GameWindowSettings = gameWindowSettings;
+    public readonly NativeWindowSettings NativeWindowSettings = nativeWindowSettings;
+    public bool VSync = vSync;
+    public CursorState CursorState = cursorState;
+    public readonly GraphicsRenderer Renderer = renderer;
 }
