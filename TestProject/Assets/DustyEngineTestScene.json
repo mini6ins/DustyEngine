@@ -2,80 +2,181 @@
   "Name": "DustyEngineTestScene",
   "GameObjects": [
     {
-      "IsActive": true,
-      "Name": "TestGameObject0",
-      "Components": [
-        {
-          "Type": "Transform",
-          "LocalPosition": { "X": 0, "Y": 0, "Z": 0 },
-          "LocalRotation": { "X": 0, "Y": 0, "Z": 0 },
-          "LocalScale": { "X": 1, "Y": 1, "Z": 1 }
-        },
-        {
-          "Type": "MoveBoxCode",
-          "SourcePath": "Assets/MoveBoxCode.cs",
-          "Enabled": true
-        }
-      ],
+      "ActiveSelf": true,
       "Children": [
         {
-          "IsActive": true,
-          "Name": "ChildCube",
+          "ActiveSelf": false,
+          "Children": [],
           "Components": [
             {
               "Type": "Transform",
-              "LocalPosition": { "X": 1, "Y": 0, "Z": 0 },
-              "LocalRotation": { "X": 0, "Y": 0, "Z": 0 },
-              "LocalScale": { "X": 1, "Y": 1, "Z": 1 }
+              "LocalPosition": {
+                "X": 1,
+                "Y": 0,
+                "Z": 0,
+                "Length": 1,
+                "LengthSquared": 1
+              },
+              "LocalRotation": {
+                "X": 0,
+                "Y": 0,
+                "Z": 0,
+                "Length": 0,
+                "LengthSquared": 0
+              },
+              "LocalScale": {
+                "X": 1,
+                "Y": 1,
+                "Z": 1,
+                "Length": 1.7320508,
+                "LengthSquared": 3
+              },
+              "Name": "ChildCube"
             },
             {
               "Type": "MeshRenderer",
               "Path": "Assets/cube.obj",
-              "Enabled": true
+              "Enabled": true,
+              "Name": "ChildCube"
             }
           ],
-          "Children": []
+          "Name": "ChildCube"
         }
-      ]
-    },
-    {
-      "IsActive": true,
-      "Name": "TestGameObject1",
+      ],
       "Components": [
         {
           "Type": "Transform",
-          "LocalPosition": { "X": 5, "Y": 0, "Z": 0 },
-          "LocalRotation": { "X": 0, "Y": 0, "Z": 0 },
-          "LocalScale": { "X": 5, "Y": 5, "Z": 5 }
+          "LocalPosition": {
+            "X": 0,
+            "Y": 0,
+            "Z": 0,
+            "Length": 0,
+            "LengthSquared": 0
+          },
+          "LocalRotation": {
+            "X": 0,
+            "Y": 0,
+            "Z": 0,
+            "Length": 0,
+            "LengthSquared": 0
+          },
+          "LocalScale": {
+            "X": 1,
+            "Y": 1,
+            "Z": 1,
+            "Length": 1.7320508,
+            "LengthSquared": 3
+          },
+          "Name": "TestGameObject0"
+        },
+        {
+          "Type": "MoveBoxCode",
+          "SourcePath": "Assets/MoveBoxCode.cs",
+          "Enabled": true,
+          "Name": "TestGameObject0"
+        }
+      ],
+      "Name": "TestGameObject0"
+    },
+    {
+      "ActiveSelf": true,
+      "Children": [],
+      "Components": [
+        {
+          "Type": "Transform",
+          "LocalPosition": {
+            "X": 6,
+            "Y": 0,
+            "Z": 0,
+            "Length": 6,
+            "LengthSquared": 36
+          },
+          "LocalRotation": {
+            "X": 0,
+            "Y": 0,
+            "Z": 0,
+            "Length": 0,
+            "LengthSquared": 0
+          },
+          "LocalScale": {
+            "X": 5,
+            "Y": 5,
+            "Z": 5,
+            "Length": 8.6602545,
+            "LengthSquared": 75
+          },
+          "Name": "TestGameObject1"
         },
         {
           "Type": "MeshRenderer",
           "Path": "Assets/TeddyBear.obj",
-          "Enabled": true
+          "Enabled": true,
+          "Name": "TestGameObject1"
         }
       ],
-      "Children": []
+      "Name": "TestGameObject1"
     },
     {
-      "IsActive": true,
-      "Name": "Camera",
+      "ActiveSelf": true,
+      "Children": [],
       "Components": [
         {
           "Type": "Transform",
-          "LocalPosition": { "X": 0, "Y": 0, "Z": 10 },
-          "LocalRotation": { "X": 0, "Y": 0, "Z": 0 },
-          "LocalScale": { "X": 1, "Y": 1, "Z": 1 }
+          "LocalPosition": {
+            "X": 0,
+            "Y": 0,
+            "Z": 10,
+            "Length": 10,
+            "LengthSquared": 100
+          },
+          "LocalRotation": {
+            "X": 0,
+            "Y": 0,
+            "Z": 0,
+            "Length": 0,
+            "LengthSquared": 0
+          },
+          "LocalScale": {
+            "X": 1,
+            "Y": 1,
+            "Z": 1,
+            "Length": 1.7320508,
+            "LengthSquared": 3
+          },
+          "Name": "Camera"
         },
         {
           "Type": "Camera",
           "AspectRatio": 1.3333334,
+          "InternalTransform": {
+            "LocalPosition": {
+              "X": 0,
+              "Y": 2.5,
+              "Z": 5,
+              "Length": 5.59017,
+              "LengthSquared": 31.25
+            },
+            "LocalRotation": {
+              "X": 0,
+              "Y": 0,
+              "Z": 0,
+              "Length": 0,
+              "LengthSquared": 0
+            },
+            "LocalScale": {
+              "X": 1,
+              "Y": 1,
+              "Z": 1,
+              "Length": 1.7320508,
+              "LengthSquared": 3
+            },
+            "Name": "\u003CNo GameObject\u003E"
+          },
           "Enabled": true,
-          "_fieldOfView": 45,
-          "_nearPlane": 0.5,
-          "_farPlane": 200
+          "Name": "Camera"
         }
       ],
-      "Children": []
+      "Name": "Camera"
     }
   ],
   "Components": []

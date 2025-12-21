@@ -27,44 +27,43 @@ namespace DustyEngine.Core.Converters
 
         public override Component Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            using (JsonDocument doc = JsonDocument.ParseValue(ref reader))
+            using var doc = JsonDocument.ParseValue(ref reader);
+
+            var typeName = doc.RootElement.GetProperty("Type").GetString() ?? "";
+
+            ComponentTypes.TryGetValue(typeName, out var componentType);
+
+            if (doc.RootElement.TryGetProperty("SourcePath", out var externalSourcePathEl))
             {
-                var typeName = doc.RootElement.GetProperty("Type").GetString() ?? "";
+                var raw = externalSourcePathEl.GetString() ?? string.Empty;
+                var sourcePath = ResolvePath(raw);
+                Debug.Log($"Source Path: {sourcePath}", Debug.LogLevel.Info, true);
 
-                ComponentTypes.TryGetValue(typeName, out Type? componentType);
-
-                if (doc.RootElement.TryGetProperty("SourcePath", out JsonElement externalSourcePathEl))
+                var externalComponent = LoadOrCompileComponent(sourcePath);
+                if (externalComponent != null)
                 {
-                    var raw = externalSourcePathEl.GetString() ?? string.Empty;
-                    var sourcePath = ResolvePath(raw);
-                    Debug.Log($"Source Path: {sourcePath}", Debug.LogLevel.Info, true);
-
-                    var externalComponent = LoadOrCompileComponent(sourcePath);
-                    if (externalComponent != null)
-                    {
-                        componentType = externalComponent.GetType();
-                        ComponentSourcePaths[componentType] = sourcePath;
-                    }
+                    componentType = externalComponent.GetType();
+                    ComponentSourcePaths[componentType] = sourcePath;
                 }
-
-                if (componentType == null)
-                    throw new JsonException($"Unknown component type '{typeName}'.");
-
-                var newOptions = new JsonSerializerOptions(options)
-                {
-                    Converters = { this }
-                };
-
-                var instance = (Component)JsonSerializer.Deserialize(
-                    doc.RootElement.GetRawText(),
-                    componentType,
-                    newOptions
-                )!;
-
-                ResolveObjPathInComponent(instance);
-
-                return instance;
             }
+
+            if (componentType == null)
+                throw new JsonException($"Unknown component type '{typeName}'.");
+
+            var newOptions = new JsonSerializerOptions(options)
+            {
+                Converters = { this }
+            };
+
+            var instance = (Component)JsonSerializer.Deserialize(
+                doc.RootElement.GetRawText(),
+                componentType,
+                newOptions
+            )!;
+
+            ResolveObjPathInComponent(instance);
+
+            return instance;
         }
 
         private static Component? LoadOrCompileComponent(string path)

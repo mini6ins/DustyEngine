@@ -5,6 +5,7 @@ using GraphicsEngineOpenGL.RenderUtils;
 using OpenTK.Graphics.OpenGL.Compatibility;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.GraphicsLibraryFramework;
+using SceneSystem.EngineObject.GameObject;
 using Utils;
 using MouseButton = Utils.MouseButton;
 using Vector3 = DustyEngine.Engine.Math.Vectors.Vector3;
@@ -14,10 +15,10 @@ namespace GraphicsEngineOpenGL;
 public class RenderableObject
 {
     public int VaoIndex;
+    public int GameObjectId;
     public Transform Transform = new();
     public MeshRenderer MeshRenderer = null!;
 }
-
 
 public class GraphicsRenderer(string vertShaderPath, string fragShaderPath, int viewportWidth, int viewportHeight)
 {
@@ -93,15 +94,19 @@ public class GraphicsRenderer(string vertShaderPath, string fragShaderPath, int 
 
         ViewportTexture = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2d, ViewportTexture);
-        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgb, viewportWidth, viewportHeight, 0, PixelFormat.Rgb, PixelType.UnsignedByte, IntPtr.Zero);
+        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgb, viewportWidth, viewportHeight, 0, PixelFormat.Rgb,
+            PixelType.UnsignedByte, IntPtr.Zero);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2d, ViewportTexture, 0);
+        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0,
+            TextureTarget.Texture2d, ViewportTexture, 0);
 
         _viewportDepthBuffer = GL.GenRenderbuffer();
         GL.BindRenderbuffer(RenderbufferTarget.Renderbuffer, _viewportDepthBuffer);
-        GL.RenderbufferStorage(RenderbufferTarget.Renderbuffer, InternalFormat.Depth24Stencil8, viewportWidth, viewportHeight);
-        GL.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthStencilAttachment, RenderbufferTarget.Renderbuffer, _viewportDepthBuffer);
+        GL.RenderbufferStorage(RenderbufferTarget.Renderbuffer, InternalFormat.Depth24Stencil8, viewportWidth,
+            viewportHeight);
+        GL.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthStencilAttachment,
+            RenderbufferTarget.Renderbuffer, _viewportDepthBuffer);
 
         var status = GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer);
         if (status != FramebufferStatus.FramebufferComplete)
@@ -121,7 +126,8 @@ public class GraphicsRenderer(string vertShaderPath, string fragShaderPath, int 
         _currentViewportHeight = height;
 
         GL.BindTexture(TextureTarget.Texture2d, ViewportTexture);
-        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgb, width, height, 0, PixelFormat.Rgb, PixelType.UnsignedByte, IntPtr.Zero);
+        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgb, width, height, 0, PixelFormat.Rgb,
+            PixelType.UnsignedByte, IntPtr.Zero);
 
         GL.BindRenderbuffer(RenderbufferTarget.Renderbuffer, _viewportDepthBuffer);
         GL.RenderbufferStorage(RenderbufferTarget.Renderbuffer, InternalFormat.Depth24Stencil8, width, height);
@@ -304,32 +310,80 @@ public class GraphicsRenderer(string vertShaderPath, string fragShaderPath, int 
         vao.CreateVAO(mesh.Vertices, mesh.Indices);
         _vaoList.Add(vao);
 
-        _sceneObjects.Add(new RenderableObject
+        var renderableObject = new RenderableObject
         {
             VaoIndex = _vaoList.Count - 1,
+            GameObjectId = transform.GameObject!.Id,
             Transform = transform,
             MeshRenderer = meshRenderer,
-        });
+        };
+
+        _sceneObjects.Add(renderableObject);
+        Debug.Log("RenderableObject ID: " + renderableObject.GameObjectId, Debug.LogLevel.Error);
     }
 
-    public bool RemoveRenderer(int objectId)
+
+    private int FindRenderableIndexByGameObjectId(int gameObjectId)
     {
-        if (objectId < 0 || objectId >= _sceneObjects.Count) return false;
+        for (var i = 0; i < _sceneObjects.Count; i++)
+            if (_sceneObjects[i].GameObjectId == gameObjectId)
+                return i;
 
-        var obj = _sceneObjects[objectId];
+        return -1;
+    }
 
-        if (obj.VaoIndex < _vaoList.Count)
+    public bool RemoveRendererByGameObjectId(int gameObjectId)
+    {
+        var index = FindRenderableIndexByGameObjectId(gameObjectId);
+        if (index < 0) return false;
+
+        var obj = _sceneObjects[index];
+
+        if ((uint)obj.VaoIndex < (uint)_vaoList.Count)
         {
             _vaoList[obj.VaoIndex].Dispose();
             _vaoList.RemoveAt(obj.VaoIndex);
 
-            foreach (var t in _sceneObjects.Where(t => t.VaoIndex > obj.VaoIndex))
-                t.VaoIndex--;
+            foreach (var renderableObject in _sceneObjects.Where(t => t.VaoIndex > obj.VaoIndex))
+                renderableObject.VaoIndex--;
         }
 
-        _sceneObjects.RemoveAt(objectId);
+        _sceneObjects.RemoveAt(index);
         return true;
     }
+
+    public bool RemoveRendererByGameObject(GameObject gameObject)
+    {
+        if (gameObject == null) return false;
+
+        var idx = -1;
+        for (var i = 0; i < _sceneObjects.Count; i++)
+        {
+            if (_sceneObjects[i].GameObjectId == gameObject.Id)
+            {
+                idx = i;
+                break;
+            }
+        }
+
+        if (idx < 0) return false;
+
+        var obj = _sceneObjects[idx];
+
+        if ((uint)obj.VaoIndex < (uint)_vaoList.Count)
+        {
+            _vaoList[obj.VaoIndex].Dispose();
+            _vaoList.RemoveAt(obj.VaoIndex);
+
+            foreach (var renderableObject in _sceneObjects.Where(t => t.VaoIndex > obj.VaoIndex)) renderableObject.VaoIndex--;
+        }
+
+        _sceneObjects.RemoveAt(idx);
+        return true;
+    }
+
+
+
 
     public void Dispose()
     {

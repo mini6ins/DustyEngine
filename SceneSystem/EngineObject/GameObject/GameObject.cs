@@ -2,15 +2,17 @@
 using System.Text.Json.Serialization;
 using DustyEngine;
 using DustyEngine.Components;
+using DustyEngine.Scene;
+using SceneSystem.Attributes;
 
 namespace SceneSystem.EngineObject.GameObject;
 
 public sealed class GameObject : DustyEngine.EngineObject
 {
+    [HideInInspector] [JsonIgnore]  public int Id { get; }
     public bool ActiveSelf { get; set; } = true;
 
-    [JsonIgnore]
-    public bool ActiveInHierarchy => ActiveSelf && (Parent?.ActiveInHierarchy ?? true);
+    [JsonIgnore] public bool ActiveInHierarchy => ActiveSelf && (Parent?.ActiveInHierarchy ?? true);
 
 
     public List<GameObject> Children { get; set; } = [];
@@ -19,7 +21,12 @@ public sealed class GameObject : DustyEngine.EngineObject
     [JsonIgnore] public GameObject? Parent { get; set; }
 
 
-    public GameObject(string name = "New GameObject") => Name = name;
+    public GameObject(string name = "New GameObject")
+    {
+        Id = SceneManager.GenerateGameObjectId();
+        Debug.Log("Set Id: " + Id);
+        Name = name;
+    }
 
     public void SetActive(bool active)
     {

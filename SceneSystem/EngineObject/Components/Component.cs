@@ -8,9 +8,10 @@ namespace DustyEngine.Components;
 
 public class Component : EngineObject
 {
-    [HideInInspector]  public GameObject? Parent { get; set; }
-    
-    [HideInInspector]  public override string Name
+    [JsonIgnore] [HideInInspector] public GameObject? Parent { get; set; }
+
+    [HideInInspector]
+    public override string Name
     {
         get => Parent?.Name ?? "<No GameObject>";
         set
@@ -19,23 +20,17 @@ public class Component : EngineObject
                 Parent.Name = value;
         }
     }
-    [HideInInspector]  public GameObject? GameObject => Parent;
-    
-    [HideInInspector] [JsonIgnore]
-    public Transform? transform => GameObject?.GetComponent<Transform>();
+
+    [JsonIgnore] [HideInInspector] public GameObject? GameObject => Parent;
+
+    [HideInInspector] [JsonIgnore] public Transform? transform => GameObject?.GetComponent<Transform>();
 
 
-    public T? GetComponent<T>() where T : Component
-    {
-        return Parent?.GetComponent<T>();
-    }
-    
-    public bool HasComponent<T>() where T : Component
-    {
-        return Parent?.GetComponent<T>() != null;
-    }
-    
-    public void Instantiate(GameObject gameObject)
+    protected T? GetComponent<T>() where T : Component => Parent?.GetComponent<T>();
+    protected bool HasComponent<T>() where T : Component => Parent?.GetComponent<T>() != null;
+
+
+    protected void Instantiate(GameObject? gameObject)
     {
         if (gameObject == null)
         {
@@ -43,14 +38,16 @@ public class Component : EngineObject
             return;
         }
 
-        Debug.Log($"[Component: {Name}] Before Instantiate: GameObjects={SceneManager.GetTotalObjectsCount()}", Debug.LogLevel.Info, true);
-        
+        Debug.Log($"[Component: {Name}] Before Instantiate: GameObjects={SceneManager.GetTotalObjectsCount()}",
+            Debug.LogLevel.Info, true);
+
         SceneManager.AddGameObjectRecursively(gameObject, null);
-        
-        Debug.Log($"[Component: {Name}] After Instantiate: GameObjects={SceneManager.GetTotalObjectsCount()}", Debug.LogLevel.Info, true);
+
+        Debug.Log($"[Component: {Name}] After Instantiate: GameObjects={SceneManager.GetTotalObjectsCount()}",
+            Debug.LogLevel.Info, true);
     }
 
-    public void Instantiate(GameObject gameObject, Vector3 position, Vector3 rotation, Vector3 scale)
+    protected void Instantiate(GameObject gameObject, Vector3 position, Vector3 rotation, Vector3 scale)
     {
         if (gameObject == null)
         {
@@ -58,7 +55,9 @@ public class Component : EngineObject
             return;
         }
 
-        Debug.Log($"[Component: {Name}] Before Instantiate with Transform: GameObjects={SceneManager.GetTotalObjectsCount()}", Debug.LogLevel.Info, true);
+        Debug.Log(
+            $"[Component: {Name}] Before Instantiate with Transform: GameObjects={SceneManager.GetTotalObjectsCount()}",
+            Debug.LogLevel.Info, true);
 
         var targetTransform = gameObject.GetComponent<Transform>();
         if (targetTransform != null)
@@ -69,15 +68,19 @@ public class Component : EngineObject
         }
         else
         {
-            Debug.Log($"[Component: {Name}] [WARNING] GameObject [{gameObject.Name}] has no Transform component! Transform values ignored.", Debug.LogLevel.Warning, false);
+            Debug.Log(
+                $"[Component: {Name}] [WARNING] GameObject [{gameObject.Name}] has no Transform component! Transform values ignored.",
+                Debug.LogLevel.Warning, false);
         }
 
         SceneManager.AddGameObjectRecursively(gameObject, null);
 
-        Debug.Log($"[Component: {Name}] After Instantiate with Transform: GameObjects={SceneManager.GetTotalObjectsCount()}", Debug.LogLevel.Info, true);
+        Debug.Log(
+            $"[Component: {Name}] After Instantiate with Transform: GameObjects={SceneManager.GetTotalObjectsCount()}",
+            Debug.LogLevel.Info, true);
     }
 
-    public void Instantiate(GameObject gameObject, Vector3 position, Quaternion rotation, Vector3 scale)
+    protected void Instantiate(GameObject gameObject, Vector3 position, Quaternion rotation, Vector3 scale)
     {
         if (gameObject == null)
         {
@@ -85,7 +88,9 @@ public class Component : EngineObject
             return;
         }
 
-        Debug.Log($"[Component: {Name}] Before Instantiate with Quaternion Transform: GameObjects={SceneManager.GetTotalObjectsCount()}", Debug.LogLevel.Info, true);
+        Debug.Log(
+            $"[Component: {Name}] Before Instantiate with Quaternion Transform: GameObjects={SceneManager.GetTotalObjectsCount()}",
+            Debug.LogLevel.Info, true);
 
         var targetTransform = gameObject.GetComponent<Transform>();
         if (targetTransform != null)
@@ -96,15 +101,19 @@ public class Component : EngineObject
         }
         else
         {
-            Debug.Log($"[Component: {Name}] [WARNING] GameObject [{gameObject.Name}] has no Transform component! Transform values ignored.", Debug.LogLevel.Warning, false);
+            Debug.Log(
+                $"[Component: {Name}] [WARNING] GameObject [{gameObject.Name}] has no Transform component! Transform values ignored.",
+                Debug.LogLevel.Warning, false);
         }
 
         SceneManager.AddGameObjectRecursively(gameObject, null);
 
-        Debug.Log($"[Component: {Name}] After Instantiate with Quaternion Transform: GameObjects={SceneManager.GetTotalObjectsCount()}", Debug.LogLevel.Info, true);
+        Debug.Log(
+            $"[Component: {Name}] After Instantiate with Quaternion Transform: GameObjects={SceneManager.GetTotalObjectsCount()}",
+            Debug.LogLevel.Info, true);
     }
 
-    public void Instantiate(GameObject gameObject, Transform transformData)
+    protected void Instantiate(GameObject gameObject, Transform transformData)
     {
         if (transformData == null)
         {
@@ -114,8 +123,8 @@ public class Component : EngineObject
 
         Instantiate(gameObject, transformData.LocalPosition, transformData.LocalRotation, transformData.LocalScale);
     }
-    
-    public void Instantiate(GameObject gameObject, GameObject? parent)
+
+    protected void Instantiate(GameObject gameObject, GameObject? parent)
     {
         if (gameObject == null)
         {
@@ -123,14 +132,19 @@ public class Component : EngineObject
             return;
         }
 
-        Debug.Log($"[Component: {Name}] Before Instantiate with Parent: GameObjects={SceneManager.GetTotalObjectsCount()}", Debug.LogLevel.Info, true);
+        Debug.Log(
+            $"[Component: {Name}] Before Instantiate with Parent: GameObjects={SceneManager.GetTotalObjectsCount()}",
+            Debug.LogLevel.Info, true);
 
         SceneManager.AddGameObjectRecursively(gameObject, parent);
 
-        Debug.Log($"[Component: {Name}] After Instantiate with Parent: GameObjects={SceneManager.GetTotalObjectsCount()}", Debug.LogLevel.Info, true);
+        Debug.Log(
+            $"[Component: {Name}] After Instantiate with Parent: GameObjects={SceneManager.GetTotalObjectsCount()}",
+            Debug.LogLevel.Info, true);
     }
 
-    public void Instantiate(GameObject gameObject, GameObject? parent, Vector3 position, Vector3 rotation, Vector3 scale)
+    protected void Instantiate(GameObject gameObject, GameObject? parent, Vector3 position, Vector3 rotation,
+        Vector3 scale)
     {
         if (gameObject == null)
         {
@@ -138,7 +152,9 @@ public class Component : EngineObject
             return;
         }
 
-        Debug.Log($"[Component: {Name}] Before Instantiate with Parent and Transform: GameObjects={SceneManager.GetTotalObjectsCount()}", Debug.LogLevel.Info, true);
+        Debug.Log(
+            $"[Component: {Name}] Before Instantiate with Parent and Transform: GameObjects={SceneManager.GetTotalObjectsCount()}",
+            Debug.LogLevel.Info, true);
 
         var targetTransform = gameObject.GetComponent<Transform>();
         if (targetTransform != null)
@@ -149,15 +165,20 @@ public class Component : EngineObject
         }
         else
         {
-            Debug.Log($"[Component: {Name}] [WARNING] GameObject [{gameObject.Name}] has no Transform component! Transform values ignored.", Debug.LogLevel.Warning, false);
+            Debug.Log(
+                $"[Component: {Name}] [WARNING] GameObject [{gameObject.Name}] has no Transform component! Transform values ignored.",
+                Debug.LogLevel.Warning, false);
         }
 
         SceneManager.AddGameObjectRecursively(gameObject, parent);
 
-        Debug.Log($"[Component: {Name}] After Instantiate with Parent and Transform: GameObjects={SceneManager.GetTotalObjectsCount()}", Debug.LogLevel.Info, true);
+        Debug.Log(
+            $"[Component: {Name}] After Instantiate with Parent and Transform: GameObjects={SceneManager.GetTotalObjectsCount()}",
+            Debug.LogLevel.Info, true);
     }
 
-    public void Instantiate(GameObject gameObject, GameObject? parent, Vector3 position, Quaternion rotation, Vector3 scale)
+    protected void Instantiate(GameObject gameObject, GameObject? parent, Vector3 position, Quaternion rotation,
+        Vector3 scale)
     {
         if (gameObject == null)
         {
@@ -165,7 +186,9 @@ public class Component : EngineObject
             return;
         }
 
-        Debug.Log($"[Component: {Name}] Before Instantiate with Parent and Quaternion Transform: GameObjects={SceneManager.GetTotalObjectsCount()}", Debug.LogLevel.Info, true);
+        Debug.Log(
+            $"[Component: {Name}] Before Instantiate with Parent and Quaternion Transform: GameObjects={SceneManager.GetTotalObjectsCount()}",
+            Debug.LogLevel.Info, true);
 
         var targetTransform = gameObject.GetComponent<Transform>();
         if (targetTransform != null)
@@ -176,39 +199,48 @@ public class Component : EngineObject
         }
         else
         {
-            Debug.Log($"[Component: {Name}] [WARNING] GameObject [{gameObject.Name}] has no Transform component! Transform values ignored.", Debug.LogLevel.Warning, false);
+            Debug.Log(
+                $"[Component: {Name}] [WARNING] GameObject [{gameObject.Name}] has no Transform component! Transform values ignored.",
+                Debug.LogLevel.Warning, false);
         }
 
         SceneManager.AddGameObjectRecursively(gameObject, parent);
 
-        Debug.Log($"[Component: {Name}] After Instantiate with Parent and Quaternion Transform: GameObjects={SceneManager.GetTotalObjectsCount()}", Debug.LogLevel.Info, true);
+        Debug.Log(
+            $"[Component: {Name}] After Instantiate with Parent and Quaternion Transform: GameObjects={SceneManager.GetTotalObjectsCount()}",
+            Debug.LogLevel.Info, true);
     }
 
-    public void Destroy(GameObject gameObject)
+    protected void Destroy(GameObject gameObject)
     {
         if (gameObject == null)
         {
-            Debug.Log($"[Component: {Name}] [WARNING] Attempted to destroy null GameObject!", Debug.LogLevel.Warning, false);
+            Debug.Log($"[Component: {Name}] [WARNING] Attempted to destroy null GameObject!", Debug.LogLevel.Warning,
+                false);
             return;
         }
 
-        Debug.Log($"[Component: {Name}] Before Destroy: GameObjects={SceneManager.GetTotalObjectsCount()}", Debug.LogLevel.Info, true);
+        Debug.Log($"[Component: {Name}] Before Destroy: GameObjects={SceneManager.GetTotalObjectsCount()}",
+            Debug.LogLevel.Info, true);
 
         SceneManager.RemoveGameObjectRecursively(gameObject);
 
-        Debug.Log($"[Component: {Name}] After Destroy: GameObjects={SceneManager.GetTotalObjectsCount()}", Debug.LogLevel.Info, true);
+        Debug.Log($"[Component: {Name}] After Destroy: GameObjects={SceneManager.GetTotalObjectsCount()}",
+            Debug.LogLevel.Info, true);
     }
 
-    public void DestroyImmediate(GameObject gameObject)
+    protected void DestroyImmediate(GameObject gameObject)
     {
         if (gameObject == null)
         {
-            Debug.Log($"[Component: {Name}] [WARNING] Attempted to destroy null GameObject immediately!", Debug.LogLevel.Warning, false);
+            Debug.Log($"[Component: {Name}] [WARNING] Attempted to destroy null GameObject immediately!",
+                Debug.LogLevel.Warning, false);
             return;
         }
 
-        Debug.Log($"[Component: {Name}] Destroying GameObject [{gameObject.Name}] immediately", Debug.LogLevel.Info, true);
-        
+        Debug.Log($"[Component: {Name}] Destroying GameObject [{gameObject.Name}] immediately", Debug.LogLevel.Info,
+            true);
+
         SceneManager.RemoveGameObjectRecursively(gameObject);
     }
 }

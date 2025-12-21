@@ -30,7 +30,7 @@ public class SceneConverter : JsonConverter<Scene.Scene>
         return scene;
     }
 
-    private List<GameObject> DeserializeGameObjects(JsonElement element, GameObject parent,
+    private static List<GameObject> DeserializeGameObjects(JsonElement element, GameObject parent,
         JsonSerializerOptions options)
     {
         var gameObjects = new List<GameObject>();
@@ -44,7 +44,7 @@ public class SceneConverter : JsonConverter<Scene.Scene>
                 gameObject.Name = nameElement.GetString();
             }
 
-            if (objElement.TryGetProperty("IsActive", out var isActiveElement))
+            if (objElement.TryGetProperty("ActiveSelf", out var isActiveElement))
             {
                 gameObject.ActiveSelf = isActiveElement.GetBoolean();
             }

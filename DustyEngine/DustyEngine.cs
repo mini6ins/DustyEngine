@@ -4,23 +4,25 @@ using DustyEngineEditor.Panels.ConsolePanel;
 using GraphicsEngine;
 using GraphicsEngineOpenGL;
 using GraphicsEngineOpenGL.Editor;
+using SceneSystem.EngineObject.GameObject;
 
 namespace DustyEngine
 {
-    public class DustyEngine
+    public class DustyEngine :  IDisposable
     {
         public static string ProjectFolderPath { get; set; } = null!;
         private static ProjectSettings _settings = new(); 
-        private static IRenderer _graphicsEngineOpenGl = null!;
+        private static IRenderer GraphicsEngineOpenGl = null!;
 
-        private static Action<MeshRenderer> _addRenderer = (renderer) => { _graphicsEngineOpenGl.AddRenderer(renderer); };
+        private static readonly Action<MeshRenderer> AddRenderer = renderer => { GraphicsEngineOpenGl.AddRenderer(renderer); };
+        private static readonly Action<GameObject> RemoveRenderer = gameObject => { GraphicsEngineOpenGl.RemoveRenderer(gameObject); };
+
 
         public static void StartEngine(string path, RenderMode renderMode)
         {
             Debug.ClearLogs();
 
-            if(renderMode == RenderMode.Editor)
-                ConsolePanel.InitializeConsoleInterceptor();
+            if(renderMode == RenderMode.Editor) ConsolePanel.InitializeConsoleInterceptor();
 
             if (path.Length == 0)
             {
@@ -62,11 +64,12 @@ namespace DustyEngine
 
             GameLoop.Initialize(loadedScene!);
             Time.Init();
-            _graphicsEngineOpenGl = new GraphicsEngineOpenGl();
+            GraphicsEngineOpenGl = new GraphicsEngineOpenGl();
 
-            SceneManager.AddRenderer2 += _addRenderer;
+            SceneManager.AddRenderer2 += AddRenderer;
+            SceneManager.RemoveRenderer += RemoveRenderer;
 
-            _graphicsEngineOpenGl.RunMainLoop(GameLoopAction,
+            GraphicsEngineOpenGl.RunMainLoop(GameLoopAction,
                 _settings.ScreenSize.ToOpenTK(), _settings.ProjectName, _settings.PathToVertShader,
                 _settings.PathToFragShader, _settings.Vsync, renderMode, ProjectFolderPath);
             return;
@@ -81,7 +84,8 @@ namespace DustyEngine
 
         public void Dispose()
         {
-            SceneManager.AddRenderer2 -= _addRenderer;
+            SceneManager.AddRenderer2 -= AddRenderer;
+            SceneManager.RemoveRenderer -= RemoveRenderer;
 
             RendererUI.OnProjectSave -= () => SceneSerializer.SaveScene(SceneManager.CurrentScene, _settings.PathToScenes.FirstOrDefault());
         }

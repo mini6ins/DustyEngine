@@ -5,6 +5,7 @@ using GraphicsEngineOpenGL.Editor;
 using GraphicsEngineOpenGL.Editor.Panels.ViewPortPanel;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
+using SceneSystem.EngineObject.GameObject;
 using Vector2i = OpenTK.Mathematics.Vector2i;
 
 namespace GraphicsEngineOpenGL;
@@ -58,7 +59,8 @@ public class GraphicsEngineOpenGl : IRenderer, IDisposable
     }
 
     public void AddRenderer(MeshRenderer meshRenderer) => Renderer?.AddRenderer(meshRenderer);
-    public bool RemoveRenderer(int objectId) => Renderer != null && Renderer.RemoveRenderer(objectId);
+    public bool RemoveRenderer(int objectId) => Renderer != null && Renderer.RemoveRendererByGameObjectId(objectId);
+    public bool RemoveRenderer(GameObject  gameObject) => Renderer != null && Renderer.RemoveRendererByGameObject(gameObject);
 
     public void Dispose() => ViewportPanel.OnPlayModeChanged -= ChangePlayMode;
 }

@@ -24,6 +24,7 @@ public class MeshRenderer : MonoBehaviour
     {
     }
 
+
     public MeshRenderer(Mesh? mesh = null, string? path = null)
     {
         if (mesh != null)

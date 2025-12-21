@@ -8,6 +8,11 @@ public static class SceneManager
     private static readonly List<Scene> sceneList = [];
     private static Scene? currentScene;
     public static Action<MeshRenderer> AddRenderer2 = _ => { };
+    public static Action<GameObject> RemoveRenderer = _ => { };
+
+    private static int _nextGameObjectId = 1;
+    public static int GenerateGameObjectId() => _nextGameObjectId++;
+
 
     public static Scene? CurrentScene
     {
@@ -88,7 +93,16 @@ public static class SceneManager
 
         gameObject.InvokeMethodInComponents("OnDisable");
 
-        bool removed = false;
+
+        foreach (var component in gameObject.Components)
+        {
+            if (component is MeshRenderer meshRenderer)
+            {
+                RemoveRenderer?.Invoke(gameObject);
+            }
+        }
+
+        var removed = false;
         if (CurrentScene.GameObjects.Remove(gameObject))
         {
             removed = true;
