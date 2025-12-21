@@ -269,15 +269,4 @@ public static class SceneManager
             InvokeRecursive(child, methodName);
         }
     }
-
-
-    public static void SaveScene(Scene scene)
-    {
-       Debug.Log($"[SceneManager] Saving scene: {scene.Name}", Debug.LogLevel.Info, true);
-    }
-
-    public static void SaveScene(string sceneName)
-    {
-        Debug.Log($"[SceneManager] Saving scene: {FindScene(sceneName)?.Name}", Debug.LogLevel.Info, true);
-    }
 }

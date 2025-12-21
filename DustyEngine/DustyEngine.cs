@@ -58,7 +58,7 @@ namespace DustyEngine
                 }
             }
             else
-                RendererUI.OnProjectSave += () => SceneManager.SaveScene(SceneManager.CurrentScene);
+                RendererUI.OnProjectSave += () => SceneSerializer.SaveScene(SceneManager.CurrentScene, _settings.PathToScenes.FirstOrDefault());
 
             GameLoop.Initialize(loadedScene!);
             Time.Init();
@@ -83,7 +83,7 @@ namespace DustyEngine
         {
             SceneManager.AddRenderer2 -= _addRenderer;
 
-            RendererUI.OnProjectSave -= () => SceneManager.SaveScene(SceneManager.CurrentScene);
+            RendererUI.OnProjectSave -= () => SceneSerializer.SaveScene(SceneManager.CurrentScene, _settings.PathToScenes.FirstOrDefault());
         }
     }
 }

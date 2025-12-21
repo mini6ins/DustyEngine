@@ -31,9 +31,7 @@ namespace DustyEngine
         )
         {
             if (string.IsNullOrEmpty(source))
-            {
                 source = DetermineSource(file);
-            }
 
             var formattedMessage =
                 $"[{source}] " +
@@ -41,30 +39,22 @@ namespace DustyEngine
                 $"[{level}] " +
                 $"({Path.GetFileName(file)}:{line} in {caller}) {message}";
 
-            if (_writeToFile)
-                File.AppendAllText(LogFilePath, formattedMessage + Environment.NewLine);
+            if (_writeToFile) File.AppendAllText(LogFilePath, formattedMessage + Environment.NewLine);
 
-            if ((int)level < (int)GetLogLevel())
-                return;
+            if ((int)level < (int)GetLogLevel()) return;
 
             LogMessages.Add(formattedMessage);
 
-            if (!_isDebugMode && isDebugMessage)
-                return;
-
-            if (!_writeToConsole)
-                return;
+            if (!_isDebugMode && isDebugMessage) return;
+            if (!_writeToConsole) return;
 
             Console.WriteLine(formattedMessage);
 
             Console.Out.Flush();
         }
 
-        private static string DetermineSource(string filePath)
-        {
-            return filePath.Contains("GraphicsEngineOpenGL") ? "Editor" : "Engine";
-        }
-
+        private static string DetermineSource(string filePath) =>
+            filePath.Contains("GraphicsEngineOpenGL") ? "Editor" : "Engine";
 
         public static void SetLogLevel(LogLevel level) => _currentLogLevel = level;
         public static LogLevel GetLogLevel() => _currentLogLevel;

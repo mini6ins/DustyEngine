@@ -32,7 +32,7 @@ public static class SceneSerializer
                         }
                     });
 
-                Debug.Log("Scene successfully loaded!", Debug.LogLevel.Info, false);
+                Debug.Log("Scene successfully loaded!");
             }
             catch (Exception ex)
             {
@@ -60,15 +60,15 @@ public static class SceneSerializer
                     }
                 };
 
-                string json = JsonSerializer.Serialize(sceneToSave, options);
+                var json = JsonSerializer.Serialize(sceneToSave, options);
                 File.WriteAllText(scenePath, json);
 
-                Debug.Log("Scene successfully saved!", Debug.LogLevel.Info, false);
+                Debug.Log("Scene successfully saved!");
                 return true;
             }
             catch (Exception ex)
             {
-                Debug.Log($"Error saving scene: {ex.Message}", Debug.LogLevel.FatalError, false);
+                Debug.Log($"Error saving scene: {ex.Message}", Debug.LogLevel.FatalError);
                 return false;
             }
         }
