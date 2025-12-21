@@ -9,11 +9,11 @@ public class Behaviour : Component
 {
     public bool Enabled { get; set; } = true;
 
-    [HideInInspector]  [JsonIgnore] public bool IsActiveAndEnabled => Parent?.IsActive == true && Enabled;
+    [HideInInspector]  [JsonIgnore] public bool IsActiveAndEnabled => Parent?.ActiveInHierarchy == true && Enabled;
 
     public void SetActive(bool active)
     {
-        if (!Parent.IsActive) return;
+        if (!Parent.ActiveInHierarchy) return;
         var method = GetType().GetMethod(active ? "OnEnable" : "OnDisable")!;
         method.Invoke(this, null);
 

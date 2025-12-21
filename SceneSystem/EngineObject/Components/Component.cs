@@ -2,6 +2,7 @@
 using DustyEngine.Engine.Math.Vectors;
 using DustyEngine.Scene;
 using SceneSystem.Attributes;
+using SceneSystem.EngineObject.GameObject;
 
 namespace DustyEngine.Components;
 

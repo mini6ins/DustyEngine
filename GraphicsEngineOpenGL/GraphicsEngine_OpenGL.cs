@@ -1,6 +1,5 @@
 ﻿using DustyEngine;
 using DustyEngine.Components;
-using DustyEngine.Scene;
 using GraphicsEngine;
 using GraphicsEngineOpenGL.Editor;
 using GraphicsEngineOpenGL.Editor.Panels.ViewPortPanel;
@@ -41,9 +40,11 @@ public class GraphicsEngineOpenGl : IRenderer, IDisposable
 
 
         var cursorState = RenderMode == RenderMode.Editor ? CursorState.Normal : CursorState.Hidden;
-        var windowSettings = new WindowSettings(GameWindowSettings.Default,  nativeWindowSettings, vsync, cursorState );
+        var windowSettings = new WindowSettings(GameWindowSettings.Default, nativeWindowSettings, vsync, cursorState);
 
-        _window = RenderMode == RenderMode.Editor ? new EditorWindow(windowSettings) : new StandaloneWindow(windowSettings);
+        _window = RenderMode == RenderMode.Editor
+            ? new EditorWindow(windowSettings)
+            : new StandaloneWindow(windowSettings);
 
         ViewportPanel.OnPlayModeChanged += ChangePlayMode;
         _window.UpdateFrame += _ => updateCallback.Invoke();
@@ -53,7 +54,7 @@ public class GraphicsEngineOpenGl : IRenderer, IDisposable
 
     private static void ChangePlayMode(bool isPlayMode)
     {
-        Debug.Log("Is play mode: " + isPlayMode,  Debug.LogLevel.Info, true);
+        Debug.Log("Is play mode: " + isPlayMode, Debug.LogLevel.Info, true);
     }
 
     public void AddRenderer(MeshRenderer meshRenderer) => Renderer?.AddRenderer(meshRenderer);
@@ -62,15 +63,17 @@ public class GraphicsEngineOpenGl : IRenderer, IDisposable
     public void Dispose() => ViewportPanel.OnPlayModeChanged -= ChangePlayMode;
 }
 
-
 public enum RenderMode
 {
     Standalone,
     Editor
 }
 
-
-public class WindowSettings(GameWindowSettings gameWindowSettings, NativeWindowSettings nativeWindowSettings, bool vSync, CursorState cursorState)
+public class WindowSettings(
+    GameWindowSettings gameWindowSettings,
+    NativeWindowSettings nativeWindowSettings,
+    bool vSync,
+    CursorState cursorState)
 {
     public readonly GameWindowSettings GameWindowSettings = gameWindowSettings;
     public readonly NativeWindowSettings NativeWindowSettings = nativeWindowSettings;

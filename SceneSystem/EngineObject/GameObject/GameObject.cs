@@ -1,26 +1,47 @@
 ﻿using System.Reflection;
 using System.Text.Json.Serialization;
+using DustyEngine;
 using DustyEngine.Components;
 
-namespace DustyEngine;
+namespace SceneSystem.EngineObject.GameObject;
 
-public sealed class GameObject : EngineObject
+public sealed class GameObject : DustyEngine.EngineObject
 {
-    public bool IsActive { get; set; } = true;
+    public bool ActiveSelf { get; set; } = true;
+
+    [JsonIgnore]
+    public bool ActiveInHierarchy => ActiveSelf && (Parent?.ActiveInHierarchy ?? true);
+
 
     public List<GameObject> Children { get; set; } = [];
     public List<Component> Components { get; set; } = [];
 
-    [JsonIgnore] public GameObject Parent { get; set; }
+    [JsonIgnore] public GameObject? Parent { get; set; }
+
 
     public GameObject(string name = "New GameObject") => Name = name;
 
-    public void SetActive(bool isActive)
+    public void SetActive(bool active)
     {
-        InvokeMethodInComponents(isActive ? "OnEnable" : "OnDisable");
-        Debug.Log($"{Name} is {(IsActive ? "active" : "inactive")}", Debug.LogLevel.Info, true);
-        IsActive = isActive;
+        if (ActiveSelf == active)
+            return;
+
+        ActiveSelf = active;
+
+        InvokeMethodInComponents(ActiveInHierarchy ? "OnEnable" : "OnDisable");
+
+        foreach (var child in Children)
+            child.OnParentActivityChanged();
     }
+
+    private void OnParentActivityChanged()
+    {
+        InvokeMethodInComponents(ActiveInHierarchy ? "OnEnable" : "OnDisable");
+
+        foreach (var child in Children)
+            child.OnParentActivityChanged();
+    }
+
 
     public void AddComponent(Component component)
     {
@@ -64,7 +85,7 @@ public sealed class GameObject : EngineObject
 
             if (component is MonoBehaviour monoBehaviour)
             {
-                if (!monoBehaviour.Enabled || !IsActive)
+                if (!monoBehaviour.Enabled || !ActiveInHierarchy)
                 {
                     Debug.Log(
                         $"Skipping {methodName} on [{component.GetType().Name}] in [{Name}]: GameObject or component is inactive",

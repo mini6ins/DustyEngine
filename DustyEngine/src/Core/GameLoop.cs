@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using DustyEngine.Components;
+using SceneSystem.EngineObject.GameObject;
 
 namespace DustyEngine;
 
@@ -38,7 +39,7 @@ public static class GameLoop
         
         foreach (var gameObject in gameObjectsSnapshot)
         {
-            if (!gameObject.IsActive) continue;
+            if (!gameObject.ActiveInHierarchy) continue;
             
             var componentsSnapshot = gameObject.Components?.ToList() ?? new List<Component>();
             
@@ -82,7 +83,7 @@ public static class GameLoop
             
             foreach (var gameObject in gameObjectsSnapshot)
             {
-                if (!gameObject.IsActive) continue;
+                if (!gameObject.ActiveInHierarchy) continue;
                 
                 var componentsSnapshot = gameObject.Components?.ToList() ?? new List<Component>();
                 

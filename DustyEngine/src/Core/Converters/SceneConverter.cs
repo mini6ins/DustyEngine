@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using DustyEngine.Components;
+using SceneSystem.EngineObject.GameObject;
 
 namespace DustyEngine.Core.Converters;
 
@@ -45,7 +46,7 @@ public class SceneConverter : JsonConverter<Scene.Scene>
 
             if (objElement.TryGetProperty("IsActive", out var isActiveElement))
             {
-                gameObject.IsActive = isActiveElement.GetBoolean();
+                gameObject.ActiveSelf = isActiveElement.GetBoolean();
             }
 
             gameObject.Parent = parent;

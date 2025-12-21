@@ -1,4 +1,5 @@
 ﻿using DustyEngine.Components;
+using SceneSystem.EngineObject.GameObject;
 
 namespace DustyEngine.Scene;
 
@@ -258,7 +259,7 @@ public static class SceneManager
 
     public static void InvokeRecursive(GameObject gameObject, string methodName)
     {
-        if (gameObject.IsActive)
+        if (gameObject.ActiveInHierarchy)
         {
             gameObject.InvokeMethodInComponents(methodName);
         }

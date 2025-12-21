@@ -2,6 +2,7 @@ using System.Numerics;
 using DustyEngine;
 using DustyEngine.Scene;
 using ImGuiNET;
+using SceneSystem.EngineObject.GameObject;
 
 namespace GraphicsEngineOpenGL.Editor.Panels.HierarchyPanel;
 
@@ -40,7 +41,7 @@ internal class HierarchyPanel : IRenderablePanel
 
     private void DrawGameObjectNode(GameObject gameObject, bool parentActive)
     {
-        var selfActive = gameObject.IsActive;
+        var selfActive = gameObject.ActiveSelf;
         var activeInHierarchy = parentActive && selfActive;
 
         var hasChildren = gameObject.Children.Count > 0;

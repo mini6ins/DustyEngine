@@ -6,6 +6,7 @@ using DustyEngine.Components;
 using GraphicsEngineOpenGL.Editor.Panels.HierarchyPanel;
 using ImGuiNET;
 using SceneSystem.Attributes;
+using SceneSystem.EngineObject.GameObject;
 using NumVec3 = System.Numerics.Vector3;
 using DeVec3 = DustyEngine.Engine.Math.Vectors.Vector3;
 
@@ -104,9 +105,9 @@ internal class InspectorPanel : IRenderablePanel
     {
         if (_selectedGameObject == null) return;
 
-        var active = _selectedGameObject.IsActive;
+        var active = _selectedGameObject.ActiveSelf;
         if (ImGui.Checkbox("##enabled", ref active))
-            _selectedGameObject.IsActive = active;
+            _selectedGameObject.ActiveSelf = active;
 
         ImGui.SameLine();
 
