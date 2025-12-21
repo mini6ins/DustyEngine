@@ -3,6 +3,7 @@ using DustyEngine.Scene;
 using DustyEngineEditor.Panels.ConsolePanel;
 using GraphicsEngine;
 using GraphicsEngineOpenGL;
+using GraphicsEngineOpenGL.Editor;
 
 namespace DustyEngine
 {
@@ -36,7 +37,7 @@ namespace DustyEngine
             Debug.EnableConsoleLogging(_settings.LogToConsole);
             Debug.EnableFileLogging(_settings.LogToFile);
 
-            Debug.Log("Project settings loaded", Debug.LogLevel.Info, false);
+            Debug.Log("Project settings loaded");
 
             Debug.Log($"Initial currentLogLevel:  {Debug.GetLogLevel()}", Debug.LogLevel.Info, true);
             Debug.Log("Test INFO", Debug.LogLevel.Info, true);
@@ -56,6 +57,8 @@ namespace DustyEngine
                     }
                 }
             }
+            else
+                RendererUI.OnProjectSave += () => SceneManager.SaveScene(SceneManager.CurrentScene);
 
             GameLoop.Initialize(loadedScene!);
             Time.Init();
@@ -74,6 +77,13 @@ namespace DustyEngine
                 GameLoop.ExecuteFrame(loadedScene!);
                 Time.Tick();
             }
+        }
+
+        public void Dispose()
+        {
+            SceneManager.AddRenderer2 -= _addRenderer;
+
+            RendererUI.OnProjectSave -= () => SceneManager.SaveScene(SceneManager.CurrentScene);
         }
     }
 }

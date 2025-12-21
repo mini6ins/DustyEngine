@@ -1,10 +1,8 @@
-using DustyEngine;
 using DustyEngineEditor.Panels.ConsolePanel;
-using DustyEngineEditor.Panels.HierarchyPanel;
-using DustyEngineEditor.Panels.ViewPortPanel;
 using GraphicsEngineOpenGL.Editor.Panels.HierarchyPanel;
 using GraphicsEngineOpenGL.Editor.Panels.InspectorPanel;
 using GraphicsEngineOpenGL.Editor.Panels.ProjectFilePanel;
+using GraphicsEngineOpenGL.Editor.Panels.ViewPortPanel;
 using GraphicsEngineOpenGL.Editor.Panels.ViewPortPanel.Themes;
 using ImGuiNET;
 using OpenTK.Windowing.Desktop;
@@ -18,6 +16,7 @@ internal interface IRenderablePanel
 
 public  class RendererUI
 {
+    public static Action? OnProjectSave;
     private readonly List<IRenderablePanel>? _renderablePanels =
     [
         new ViewportPanel(),
@@ -47,7 +46,7 @@ public  class RendererUI
         if (ImGui.BeginMenu("File"))
         {
             if (ImGui.MenuItem("Save"))
-                Debug.Log("Saved");
+                OnProjectSave?.Invoke();
 
             // ----- Settings -----
             if (ImGui.BeginMenu("Settings"))

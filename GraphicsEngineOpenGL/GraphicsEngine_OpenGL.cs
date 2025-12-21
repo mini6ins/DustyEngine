@@ -3,13 +3,14 @@ using DustyEngine.Components;
 using DustyEngine.Scene;
 using GraphicsEngine;
 using GraphicsEngineOpenGL.Editor;
+using GraphicsEngineOpenGL.Editor.Panels.ViewPortPanel;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using Vector2i = OpenTK.Mathematics.Vector2i;
 
 namespace GraphicsEngineOpenGL;
 
-public class GraphicsEngineOpenGl : IRenderer
+public class GraphicsEngineOpenGl : IRenderer, IDisposable
 {
     private GameWindow? _window;
     public static GraphicsRenderer? Renderer;
@@ -44,12 +45,21 @@ public class GraphicsEngineOpenGl : IRenderer
 
         _window = RenderMode == RenderMode.Editor ? new EditorWindow(windowSettings) : new StandaloneWindow(windowSettings);
 
+        ViewportPanel.OnPlayModeChanged += ChangePlayMode;
         _window.UpdateFrame += _ => updateCallback.Invoke();
         _window.Run();
     }
 
+
+    private static void ChangePlayMode(bool isPlayMode)
+    {
+        Debug.Log("Is play mode: " + isPlayMode,  Debug.LogLevel.Info, true);
+    }
+
     public void AddRenderer(MeshRenderer meshRenderer) => Renderer?.AddRenderer(meshRenderer);
     public bool RemoveRenderer(int objectId) => Renderer != null && Renderer.RemoveRenderer(objectId);
+
+    public void Dispose() => ViewportPanel.OnPlayModeChanged -= ChangePlayMode;
 }
 
 

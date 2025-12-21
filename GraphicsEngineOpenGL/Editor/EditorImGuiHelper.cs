@@ -1,5 +1,4 @@
 using System.Numerics;
-using DustyEngineEditor;
 using ImGui_OpenTK.Backends;
 using ImGuiNET;
 using OpenTK.Windowing.Desktop;
@@ -9,6 +8,7 @@ namespace GraphicsEngineOpenGL.Editor;
 public static class EditorImGuiHelper
 {
     private static RendererUI? _renderUI;
+
     public static void ImGuiInit(GameWindow window)
     {
         ImGui.CreateContext();

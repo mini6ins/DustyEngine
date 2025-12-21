@@ -1,3 +1,4 @@
+using GraphicsEngineOpenGL.Editor.Panels.ViewPortPanel;
 using ImGui_OpenTK.Backends;
 using ImGuiNET;
 using OpenTK.Graphics.OpenGL.Compatibility;
@@ -35,7 +36,7 @@ public class EditorWindow : GameWindow
     {
         base.OnUpdateFrame(args);
 
-        if (Input.Input.IsRpcInputActive)
+        if (Input.Input.IsRpcInputActive && ViewportPanel.IsScenePanelActive)
         {
             EditorInputHandler.UpdateKeyboardInput(KeyboardState);
             EditorInputHandler.UpdateMouseInput(MouseState);
