@@ -4,8 +4,6 @@ using DustyEngine.Engine.Math.Vectors;
 using GraphicsEngineOpenGL.Input;
 using Utils;
 
-namespace GameTestEngine.Assets;
-
 public class MoveBoxCode : MonoBehaviour
 {
     private Transform _boxTransform;
@@ -25,7 +23,7 @@ public class MoveBoxCode : MonoBehaviour
 
         _direction = Vector3.Zero;
         // if(Input.IsKeyDown(KeyCode.I)) Debug.Log(_direction);
-            if (Input.IsKeyDown(KeyCode.I)) _direction += _boxTransform.Forward;
+        if (Input.IsKeyDown(KeyCode.I)) _direction += _boxTransform.Forward;
         MoveBox();
     }
 

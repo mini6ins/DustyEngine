@@ -170,6 +170,9 @@ namespace DustyEngine.Core.Converters
                 MetadataReference.CreateFromFile(Assembly.Load("System.Console").Location),
                 MetadataReference.CreateFromFile(Assembly.Load("Microsoft.CSharp").Location),
                 MetadataReference.CreateFromFile(Assembly.GetExecutingAssembly().Location), // DustyEngine.dll
+                MetadataReference.CreateFromFile(typeof(GraphicsEngineOpenGL.Input.Input).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(Utils.KeyCode).Assembly.Location), // если KeyCode там
+
             };
 
             foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())

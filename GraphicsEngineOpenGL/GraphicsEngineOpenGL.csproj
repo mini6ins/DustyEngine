@@ -8,6 +8,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Dear ImGui Sample\ImGui_OpenTK.Backends.csproj" />
+      <ProjectReference Include="..\InputSystem\InputSystem.csproj" />
       <ProjectReference Include="..\SceneSystem\SceneSystem.csproj" />
     </ItemGroup>
 
@@ -50,6 +51,10 @@
       <None Update="Editor\Editor\Icons\sceneIcon.png">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+    </ItemGroup>
+    
+    <ItemGroup>
+      <Folder Include="Input\" />
     </ItemGroup>
 
 
