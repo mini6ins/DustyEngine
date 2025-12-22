@@ -30,7 +30,7 @@ public class Player : MonoBehaviour
         _testObject = new GameObject("testObject");
         _testObject.AddComponent(new Transform(new Vector3(0f, 5f, 0f)));
         _testObject.AddComponent(new MeshRenderer(null,
-            "Assets/cube.ob"));
+            "Assets/cube.obj"));
     }
 
     private void Update()
