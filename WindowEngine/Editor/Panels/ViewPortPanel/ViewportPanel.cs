@@ -50,9 +50,9 @@ internal class ViewportPanel : IRenderablePanel
         var size = ImGui.GetContentRegionAvail();
         if (!(size.X > 0) || !(size.Y > 0)) return;
 
-        GraphicsEngineOpenGl.Renderer?.ResizeViewport((int)size.X, (int)size.Y);
+        Window.Renderer?.ResizeViewport((int)size.X, (int)size.Y);
 
-        if (GraphicsEngineOpenGl.Renderer != null)
-            ImGui.Image(GraphicsEngineOpenGl.Renderer.ViewportTexture, size, new Vector2(0, 1), new Vector2(1, 0));
+        if (Window.Renderer != null)
+            ImGui.Image(Window.Renderer.ViewportTexture, size, new Vector2(0, 1), new Vector2(1, 0));
     }
 }

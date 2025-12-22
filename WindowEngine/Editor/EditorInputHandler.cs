@@ -1,6 +1,8 @@
+using InputSystem;
 using OpenTK.Windowing.GraphicsLibraryFramework;
+using MouseButton = OpenTK.Windowing.GraphicsLibraryFramework.MouseButton;
 
-namespace GraphicsEngineOpenGL.Editor;
+namespace WindowEngine.Editor;
 
 public static class EditorInputHandler
 {
@@ -24,25 +26,25 @@ public static class EditorInputHandler
         var deltaY = mousePos.Y - _lastMouseY;
 
         if (System.Math.Abs(deltaX) > 0.001f || System.Math.Abs(deltaY) > 0.001f)
-            Input.Input.RpcMouseMove(deltaX, deltaY);
+            Input.RpcMouseMove(deltaX, deltaY);
 
         _lastMouseX = mousePos.X;
         _lastMouseY = mousePos.Y;
 
         if (mouseState.IsButtonDown(MouseButton.Middle))
-            Input.Input.RpcMouseDown(Utils.MouseButton.Middle);
+            Input.RpcMouseDown(InputSystem.MouseButton.Middle);
         else
-            Input.Input.RpcMouseUp(Utils.MouseButton.Middle);
+            Input.RpcMouseUp(InputSystem.MouseButton.Middle);
 
         if (mouseState.IsButtonDown(MouseButton.Left))
-            Input.Input.RpcMouseDown(Utils.MouseButton.Left);
+            Input.RpcMouseDown(InputSystem.MouseButton.Left);
         else
-            Input.Input.RpcMouseUp(Utils.MouseButton.Left);
+            Input.RpcMouseUp(InputSystem.MouseButton.Left);
 
         if (mouseState.IsButtonDown(MouseButton.Right))
-            Input.Input.RpcMouseDown(Utils.MouseButton.Right);
+            Input.RpcMouseDown(InputSystem.MouseButton.Right);
         else
-            Input.Input.RpcMouseUp(Utils.MouseButton.Right);
+            Input.RpcMouseUp(InputSystem.MouseButton.Right);
     }
 
     public static void UpdateKeyboardInput(KeyboardState keyboardState)
@@ -62,9 +64,9 @@ public static class EditorInputHandler
         foreach (var (key, name) in keys)
         {
             if (keyboardState.IsKeyDown(key))
-                Input.Input.RpcKeyDown(name);
+                Input.RpcKeyDown(name);
             else
-                Input.Input.RpcKeyUp(name);
+                Input.RpcKeyUp(name);
         }
     }
 }

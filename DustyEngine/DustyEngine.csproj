@@ -20,7 +20,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Debug\Debug.csproj" />
-      <ProjectReference Include="..\GraphicsEngineOpenGL\GraphicsEngineOpenGL.csproj" />
+      <ProjectReference Include="..\WindowEngine\WindowEngine.csproj" />
     </ItemGroup>
     
 </Project>

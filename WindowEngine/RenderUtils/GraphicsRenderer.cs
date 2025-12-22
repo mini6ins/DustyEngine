@@ -2,12 +2,12 @@ using DustyEngine;
 using DustyEngine.Components;
 using DustyEngine.Scene;
 using GraphicsEngineOpenGL.RenderUtils;
+using InputSystem;
 using OpenTK.Graphics.OpenGL.Compatibility;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using SceneSystem.EngineObject.GameObject;
-using Utils;
-using MouseButton = Utils.MouseButton;
+using MouseButton = InputSystem.MouseButton;
 using Vector3 = DustyEngine.Engine.Math.Vectors.Vector3;
 
 namespace GraphicsEngineOpenGL;
@@ -37,7 +37,7 @@ public class GraphicsRenderer(string vertShaderPath, string fragShaderPath, int 
     private int _currentViewportWidth;
     private int _currentViewportHeight;
 
-    private static bool IsEditorMode => GraphicsEngineOpenGl.RenderMode == RenderMode.Editor;
+    private static bool IsEditorMode => Window.RenderMode == RenderMode.Editor;
 
     public void Load()
     {
@@ -65,7 +65,7 @@ public class GraphicsRenderer(string vertShaderPath, string fragShaderPath, int 
             };
 
             _editorCamera?.InitializeController();
-            Input.Input.EnableRpcInput();
+            Input.EnableRpcInput();
             Debug.Log("RPC input mode enabled for Editor", Debug.LogLevel.Info, true);
         }
 
@@ -165,8 +165,8 @@ public class GraphicsRenderer(string vertShaderPath, string fragShaderPath, int 
     {
         if (!IsEditorMode)
         {
-            Input.Input.Update(keyboardState);
-            Input.Input.UpdateMouseState(mouseState);
+            Input.Update(keyboardState);
+            Input.UpdateMouseState(mouseState);
         }
         else
             UpdateEditorCamera(deltaTime);
@@ -177,40 +177,40 @@ public class GraphicsRenderer(string vertShaderPath, string fragShaderPath, int 
     public void OnMouseMove(float x, float y)
     {
         if (!IsEditorMode)
-            Input.Input.UpdateMouse(x, y);
+            Input.UpdateMouse(x, y);
     }
 
     private void UpdateEditorCamera(float deltaTime)
     {
         if (_editorCamera == null) return;
 
-        var isMiddleMouseDown = Input.Input.IsMouseButtonDown(MouseButton.Middle);
-        var mouseDelta = Input.Input.Delta;
+        var isMiddleMouseDown = Input.IsMouseButtonDown(MouseButton.Middle);
+        var mouseDelta = Input.Delta;
 
         var movementInput = new MovementInput
         {
-            Forward = Input.Input.IsKeyDown(KeyCode.W),
-            Backward = Input.Input.IsKeyDown(KeyCode.S),
-            Left = Input.Input.IsKeyDown(KeyCode.A),
-            Right = Input.Input.IsKeyDown(KeyCode.D),
-            Up = Input.Input.IsKeyDown(KeyCode.Space),
-            Down = Input.Input.IsKeyDown(KeyCode.LeftShift)
+            Forward = Input.IsKeyDown(KeyCode.W),
+            Backward = Input.IsKeyDown(KeyCode.S),
+            Left = Input.IsKeyDown(KeyCode.A),
+            Right = Input.IsKeyDown(KeyCode.D),
+            Up = Input.IsKeyDown(KeyCode.Space),
+            Down = Input.IsKeyDown(KeyCode.LeftShift)
         };
 
         _editorCamera.UpdateMovement(deltaTime, isMiddleMouseDown, mouseDelta, movementInput);
 
-        if (Input.Input.IsRpcInputActive)
-            Input.Input.RpcResetMouseDelta();
+        if (Input.IsRpcInputActive)
+            Input.RpcResetMouseDelta();
         else
-            Input.Input.ResetMouse();
+            Input.ResetMouse();
     }
 
     private static void HandleDebugInput()
     {
-        if (Input.Input.IsKeyJustActivatedOnce(KeyCode.F1))
+        if (Input.IsKeyJustActivatedOnce(KeyCode.F1))
             GL.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Line);
 
-        if (Input.Input.IsKeyJustActivatedOnce(KeyCode.F2))
+        if (Input.IsKeyJustActivatedOnce(KeyCode.F2))
             GL.PolygonMode(TriangleFace.FrontAndBack, PolygonMode.Fill);
     }
 
@@ -389,7 +389,7 @@ public class GraphicsRenderer(string vertShaderPath, string fragShaderPath, int 
     {
         if (IsEditorMode)
         {
-            Input.Input.DisableRpcInput();
+            Input.DisableRpcInput();
         }
 
         if (_viewportFramebuffer != 0)

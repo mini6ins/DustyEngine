@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using DustyEngine.Components;
+using InputSystem;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -170,8 +171,8 @@ namespace DustyEngine.Core.Converters
                 MetadataReference.CreateFromFile(Assembly.Load("System.Console").Location),
                 MetadataReference.CreateFromFile(Assembly.Load("Microsoft.CSharp").Location),
                 MetadataReference.CreateFromFile(Assembly.GetExecutingAssembly().Location), // DustyEngine.dll
-                MetadataReference.CreateFromFile(typeof(GraphicsEngineOpenGL.Input.Input).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(Utils.KeyCode).Assembly.Location), // если KeyCode там
+                MetadataReference.CreateFromFile(typeof(Input).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(KeyCode).Assembly.Location), // если KeyCode там
 
             };
 

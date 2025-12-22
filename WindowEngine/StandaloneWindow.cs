@@ -16,7 +16,7 @@ public class StandaloneWindow : GameWindow
         VSync = windowSettings.VSync ? VSyncMode.On : VSyncMode.Off;
         CursorState = windowSettings.CursorState;
 
-        GraphicsRenderer = GraphicsEngineOpenGl.Renderer;
+        GraphicsRenderer = Window.Renderer;
     }
 
     protected override void OnLoad()
@@ -33,7 +33,7 @@ public class StandaloneWindow : GameWindow
         base.OnResize(e);
         GL.Viewport(0, 0, e.Width, e.Height);
 
-        if (GraphicsEngineOpenGl.RenderMode == RenderMode.Standalone)
+        if (Window.RenderMode == RenderMode.Standalone)
             GraphicsRenderer?.ResizeViewport(e.Width, e.Height);
     }
 
@@ -54,7 +54,7 @@ public class StandaloneWindow : GameWindow
         base.OnRenderFrame(args);
         GraphicsRenderer?.Render();
 
-        if (GraphicsEngineOpenGl.RenderMode == RenderMode.Standalone)
+        if (Window.RenderMode == RenderMode.Standalone)
         {
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
             GL.Viewport(0, 0, FramebufferSize.X, FramebufferSize.Y);

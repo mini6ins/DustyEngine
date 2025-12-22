@@ -54,7 +54,7 @@ namespace DustyEngine
         }
 
         private static string DetermineSource(string filePath) =>
-            filePath.Contains("GraphicsEngineOpenGL") ? "Editor" : "Engine";
+            filePath.Contains("WindowEngine") ? "Editor" : "Engine";
 
         public static void SetLogLevel(LogLevel level) => _currentLogLevel = level;
         public static LogLevel GetLogLevel() => _currentLogLevel;

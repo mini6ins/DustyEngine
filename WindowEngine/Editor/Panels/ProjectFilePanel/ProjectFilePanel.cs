@@ -19,7 +19,7 @@ internal class ProjectFilePanel : IRenderablePanel
 
     public ProjectFilePanel()
     {
-        _fileManager = new ProjectFileManager(GraphicsEngineOpenGl.ProjectPath);
+        _fileManager = new ProjectFileManager(Window.ProjectPath);
         IconLoader.InitIcons();
     }
 

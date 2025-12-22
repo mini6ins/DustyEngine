@@ -64,7 +64,7 @@ public sealed class DustyEngine :  IDisposable
 
         GameLoop.Initialize(loadedScene!);
         Time.Init();
-        GraphicsEngineOpenGl = new GraphicsEngineOpenGl();
+        GraphicsEngineOpenGl = new Window();
 
         SceneManager.AddRenderer2 += AddRenderer;
         SceneManager.RemoveRenderer += RemoveRenderer;

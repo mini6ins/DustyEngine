@@ -1,4 +1,4 @@
-namespace Utils;
+namespace InputSystem;
 
 public enum MouseButton
 {

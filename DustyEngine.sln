@@ -9,7 +9,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Debug", "Debug\Debug.csproj
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Math", "Math\Math.csproj", "{AA308DF0-F4DB-4F61-9A3A-3A06B181A87E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GraphicsEngineOpenGL", "GraphicsEngineOpenGL\GraphicsEngineOpenGL.csproj", "{087CFCAC-C0E5-42E4-9726-BDB98F72AA65}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowEngine", "WindowEngine\WindowEngine.csproj", "{087CFCAC-C0E5-42E4-9726-BDB98F72AA65}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Utils", "Utils\Utils.csproj", "{BF0013D4-B4CA-4FC9-8987-C0947FD8D996}"
 EndProject

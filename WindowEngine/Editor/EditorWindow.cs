@@ -1,9 +1,11 @@
 using GraphicsEngineOpenGL.Editor.Panels.ViewPortPanel;
 using ImGui_OpenTK.Backends;
 using ImGuiNET;
+using InputSystem;
 using OpenTK.Graphics.OpenGL.Compatibility;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
+using WindowEngine.Editor;
 
 namespace GraphicsEngineOpenGL.Editor;
 
@@ -18,7 +20,7 @@ public class EditorWindow : GameWindow
         VSync = windowSettings.VSync ? VSyncMode.On : VSyncMode.Off;
         CursorState = CursorState.Normal;
 
-        _graphicsRenderer = GraphicsEngineOpenGl.Renderer;
+        _graphicsRenderer = Window.Renderer;
     }
 
     protected override void OnLoad()
@@ -36,7 +38,7 @@ public class EditorWindow : GameWindow
     {
         base.OnUpdateFrame(args);
 
-        if (Input.Input.IsRpcInputActive && ViewportPanel.IsScenePanelActive)
+        if (Input.IsRpcInputActive && ViewportPanel.IsScenePanelActive)
         {
             EditorInputHandler.UpdateKeyboardInput(KeyboardState);
             EditorInputHandler.UpdateMouseInput(MouseState);

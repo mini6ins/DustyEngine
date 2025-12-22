@@ -10,7 +10,7 @@ using Vector2i = OpenTK.Mathematics.Vector2i;
 
 namespace GraphicsEngineOpenGL;
 
-public class GraphicsEngineOpenGl : IRenderer, IDisposable
+public class Window : IRenderer, IDisposable
 {
     private GameWindow? _window;
     public static GraphicsRenderer? Renderer;

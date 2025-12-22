@@ -1,7 +1,7 @@
 using DustyEngine;
 using DustyEngine.Components;
 using DustyEngine.Engine.Math.Vectors;
-using GraphicsEngineOpenGL.Input;
+using InputSystem;
 using SceneSystem.EngineObject.GameObject;
 using Utils;
 
