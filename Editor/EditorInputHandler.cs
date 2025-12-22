@@ -2,7 +2,7 @@ using InputSystem;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using MouseButton = OpenTK.Windowing.GraphicsLibraryFramework.MouseButton;
 
-namespace WindowEngine.Editor;
+namespace Editor;
 
 public static class EditorInputHandler
 {

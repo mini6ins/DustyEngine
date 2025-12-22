@@ -3,16 +3,15 @@ using System.Reflection;
 using System.Text;
 using DustyEngine;
 using DustyEngine.Components;
-using GraphicsEngineOpenGL.Editor.Panels.HierarchyPanel;
 using ImGuiNET;
 using SceneSystem.Attributes;
 using SceneSystem.EngineObject.GameObject;
 using NumVec3 = System.Numerics.Vector3;
 using DeVec3 = DustyEngine.Engine.Math.Vectors.Vector3;
 
-namespace GraphicsEngineOpenGL.Editor.Panels.InspectorPanel;
+namespace Editor.Panels.InspectorPanel;
 
-internal class InspectorPanel : global::Editor.Editor.IRenderablePanel
+internal class InspectorPanel : IRenderablePanel
 {
     private static GameObject? _selectedGameObject;
 

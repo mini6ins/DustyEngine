@@ -27,6 +27,24 @@
       <None Update="Editor\Editor\Icons\sceneIcon.png">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="Icons\csharpIcon.png">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Icons\fileIcon.png">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Icons\folderIcon.png">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Icons\imageIcon.png">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Icons\ObjIcon.png">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Icons\sceneIcon.png">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
     <ItemGroup>
@@ -47,7 +65,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Dear ImGui Sample\ImGui_OpenTK.Backends.csproj" />
       <ProjectReference Include="..\GraphicsEngine\GraphicsEngine.csproj" />
     </ItemGroup>
 </Project>

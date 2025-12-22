@@ -1,7 +1,7 @@
 ﻿using DustyEngine.Components;
 using DustyEngine.Scene;
-using Editor.Editor;
-using Editor.Editor.Panels.ConsolePanel;
+using Editor;
+using Editor.Panels.ConsolePanel;
 using GraphicsEngine;
 using SceneSystem.EngineObject.GameObject;
 using WindowEngine;

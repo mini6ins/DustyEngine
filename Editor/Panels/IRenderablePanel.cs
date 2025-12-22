@@ -1,4 +1,4 @@
-namespace GraphicsEngineOpenGL;
+namespace Editor.Panels;
 
 public interface IRenderablePanel
 {

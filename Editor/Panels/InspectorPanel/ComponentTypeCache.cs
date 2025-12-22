@@ -2,7 +2,7 @@ using System.Reflection;
 using DustyEngine.Components;
 using SceneSystem.Attributes;
 
-namespace GraphicsEngineOpenGL.Editor.Panels.HierarchyPanel;
+namespace Editor.Panels.InspectorPanel;
 
 public static class ComponentTypeCache
 {

@@ -1,7 +1,7 @@
 ﻿using DustyEngine;
+using Editor;
+using Editor.Panels.ViewPortPanel;
 using GraphicsEngine;
-using GraphicsEngineOpenGL.Editor;
-using GraphicsEngineOpenGL.Editor.Panels.ViewPortPanel;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using Vector2i = OpenTK.Mathematics.Vector2i;

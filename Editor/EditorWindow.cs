@@ -1,14 +1,14 @@
+using Editor.ImGuI;
+using Editor.ImGuI.Impl;
+using Editor.Panels.ViewPortPanel;
 using GraphicsEngine;
-using GraphicsEngineOpenGL.Editor.Panels.ViewPortPanel;
-using ImGui_OpenTK.Backends;
 using ImGuiNET;
 using InputSystem;
 using OpenTK.Graphics.OpenGL.Compatibility;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
-using WindowEngine.Editor;
 
-namespace GraphicsEngineOpenGL.Editor;
+namespace Editor;
 
 public class EditorWindow : GameWindow
 {

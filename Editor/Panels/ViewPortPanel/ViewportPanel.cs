@@ -1,10 +1,9 @@
 using System.Numerics;
 using ImGuiNET;
-using WindowEngine;
 
-namespace GraphicsEngineOpenGL.Editor.Panels.ViewPortPanel;
+namespace Editor.Panels.ViewPortPanel;
 
-public class ViewportPanel : global::Editor.Editor.IRenderablePanel
+public class ViewportPanel : IRenderablePanel
 {
     public static bool IsScenePanelActive;
     private static bool _isPlayMode;

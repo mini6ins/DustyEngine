@@ -1,22 +1,19 @@
-using Editor.Editor.Panels.ConsolePanel;
-using GraphicsEngineOpenGL.Editor.Panels.HierarchyPanel;
-using GraphicsEngineOpenGL.Editor.Panels.InspectorPanel;
-using GraphicsEngineOpenGL.Editor.Panels.ProjectFilePanel;
-using GraphicsEngineOpenGL.Editor.Panels.ViewPortPanel;
-using GraphicsEngineOpenGL.Editor.Panels.ViewPortPanel.Themes;
+using Editor.Panels;
+using Editor.Panels.ConsolePanel;
+using Editor.Panels.HierarchyPanel;
+using Editor.Panels.InspectorPanel;
+using Editor.Panels.ProjectFilePanel;
+using Editor.Panels.ViewPortPanel;
+using Editor.Panels.ViewPortPanel.Themes;
 using ImGuiNET;
 using OpenTK.Windowing.Desktop;
 
-namespace Editor.Editor;
+namespace Editor;
 
-internal interface IRenderablePanel
-{
-    void Render();
-}
-
-public  class RendererUI
+public class RendererUI
 {
     public static Action? OnProjectSave;
+
     private readonly List<IRenderablePanel>? _renderablePanels =
     [
         new ViewportPanel(),
@@ -29,7 +26,7 @@ public  class RendererUI
 
     public void Render(GameWindow window)
     {
-        RenderTopMenuBar( window);
+        RenderTopMenuBar(window);
 
         ImGui.DockSpaceOverViewport();
 
@@ -94,5 +91,4 @@ public  class RendererUI
 
         ImGui.EndMainMenuBar();
     }
-
 }

@@ -1,12 +1,10 @@
 using System.Numerics;
 using System.Text;
-using DustyEngineEditor.Panels.HierarchyPanel;
 using ImGuiNET;
-using WindowEngine;
 
-namespace GraphicsEngineOpenGL.Editor.Panels.ProjectFilePanel;
+namespace Editor.Panels.ProjectFilePanel;
 
-internal class ProjectFilePanel : global::Editor.Editor.IRenderablePanel
+internal class ProjectFilePanel : IRenderablePanel
 {
     private readonly ProjectFileManager _fileManager;
 

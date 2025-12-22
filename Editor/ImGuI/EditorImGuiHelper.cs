@@ -1,10 +1,9 @@
 using System.Numerics;
-using Editor.Editor;
-using ImGui_OpenTK.Backends;
+using Editor.ImGuI.Impl;
 using ImGuiNET;
 using OpenTK.Windowing.Desktop;
 
-namespace GraphicsEngineOpenGL.Editor;
+namespace Editor.ImGuI;
 
 public static class EditorImGuiHelper
 {
@@ -55,7 +54,7 @@ public static class EditorImGuiHelper
         var dockspaceId = ImGui.GetID("MainDockSpace");
         ImGui.DockSpace(dockspaceId, new Vector2(0, 0), ImGuiDockNodeFlags.None);
 
-        _renderUI.Render(window);
+        _renderUI?.Render(window);
 
         ImGui.End();
 

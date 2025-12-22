@@ -1,12 +1,11 @@
 using System.Numerics;
-using DustyEngine;
 using DustyEngine.Scene;
 using ImGuiNET;
 using SceneSystem.EngineObject.GameObject;
 
-namespace GraphicsEngineOpenGL.Editor.Panels.HierarchyPanel;
+namespace Editor.Panels.HierarchyPanel;
 
-internal class HierarchyPanel : global::Editor.Editor.IRenderablePanel
+internal class HierarchyPanel : IRenderablePanel
 {
     private GameObject? _selected;
     private GameObject? _copiedGameObject;

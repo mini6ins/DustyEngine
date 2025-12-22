@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace GraphicsEngineOpenGL.Editor.Panels.ConsolePanel;
+namespace Editor.Panels.ConsolePanel;
 
 public class ConsoleInterceptor(TextWriter originalOutput, Action<string> onLineWritten) : TextWriter
 {

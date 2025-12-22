@@ -1,7 +1,7 @@
 using System.Numerics;
 using ImGuiNET;
 
-namespace GraphicsEngineOpenGL.Editor.Panels.ViewPortPanel.Themes;
+namespace Editor.Panels.ViewPortPanel.Themes;
 
 public enum EditorTheme
 {

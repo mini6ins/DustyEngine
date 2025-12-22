@@ -1,4 +1,4 @@
-namespace DustyEngineEditor.Panels.HierarchyPanel;
+namespace Editor.Panels.ProjectFilePanel;
 
 internal class ProjectFileManager
 {

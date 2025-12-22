@@ -1,20 +1,14 @@
-﻿using ImGuiNET;
-using OpenTK.Mathematics;
-using OpenTK.Platform;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Drawing;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml;
+using ImGuiNET;
+using OpenTK.Core.Utility;
+using OpenTK.Mathematics;
+using OpenTK.Platform;
 using SNVector2 = System.Numerics.Vector2;
 
-namespace ImGui_OpenTK.Backends
+namespace Editor.ImGuI.Impl
 {
     public unsafe static class ImguiImplOpenTKPAL2
     {
@@ -55,6 +49,7 @@ namespace ImGui_OpenTK.Backends
         static readonly List<WindowInfo> Windows = new List<WindowInfo>();
         static readonly Queue<nint> WindowIDFreelist = new Queue<nint>();
         static nint NextFreeID = 1;
+
         static nint RegisterWindow(WindowHandle handle, OpenGLContextHandle glContext)
         {
             nint id = AllocateWindowID();
@@ -73,6 +68,7 @@ namespace ImGui_OpenTK.Backends
                 }
             }
         }
+
         static WindowHandle GetWindowFromID(nint id)
         {
             for (int i = 0; i < Windows.Count; i++)
@@ -85,6 +81,7 @@ namespace ImGui_OpenTK.Backends
 
             throw new KeyNotFoundException($"Could not find window with id: {id}");
         }
+
         static OpenGLContextHandle GetContextFromID(nint id)
         {
             for (int i = 0; i < Windows.Count; i++)
@@ -97,6 +94,7 @@ namespace ImGui_OpenTK.Backends
 
             throw new KeyNotFoundException($"Could not find window with id: {id}");
         }
+
         static bool TryGetWindowFromID(nint id, [NotNullWhen(true)] out WindowHandle window)
         {
             for (int i = 0; i < Windows.Count; i++)
@@ -107,9 +105,11 @@ namespace ImGui_OpenTK.Backends
                     return true;
                 }
             }
+
             window = null;
             return false;
         }
+
         static bool TryGetContextFromID(nint id, out OpenGLContextHandle glContext)
         {
             for (int i = 0; i < Windows.Count; i++)
@@ -120,9 +120,11 @@ namespace ImGui_OpenTK.Backends
                     return true;
                 }
             }
+
             glContext = null;
             return false;
         }
+
         static bool TryGetIDFromWindow(WindowHandle window, [NotNullWhen(true)] out nint id)
         {
             for (int i = 0; i < Windows.Count; i++)
@@ -133,9 +135,11 @@ namespace ImGui_OpenTK.Backends
                     return true;
                 }
             }
+
             id = -1;
             return false;
         }
+
         static void FreeWindow(WindowHandle handle)
         {
             for (int i = 0; i < Windows.Count; i++)
@@ -243,15 +247,18 @@ namespace ImGui_OpenTK.Backends
 
             BackendData* bd = (BackendData*)NativeMemory.AllocZeroed((uint)sizeof(BackendData));
             io.BackendPlatformUserData = (nint)bd;
-            io.NativePtr->BackendPlatformName = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference("opentk_impl_opentk_pal2"u8));
+            io.NativePtr->BackendPlatformName =
+                (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference("opentk_impl_opentk_pal2"u8));
 
             bd->Context = ImGui.GetCurrentContext();
             bd->WindowID = RegisterWindow(window, glContext);
             bd->WantUpdateMonitors = true;
 
             var platformIO = ImGui.GetPlatformIO();
-            platformIO.NativePtr->Platform_SetClipboardTextFn = (nint)(delegate* unmanaged[Cdecl]<nint, byte*, void>)(&Platform_SetClipboardText);
-            platformIO.NativePtr->Platform_GetClipboardTextFn = (nint)(delegate* unmanaged[Cdecl]<nint, byte*>)(&Platform_GetClipboardText);
+            platformIO.NativePtr->Platform_SetClipboardTextFn =
+                (nint)(delegate* unmanaged[Cdecl]<nint, byte*, void>)(&Platform_SetClipboardText);
+            platformIO.NativePtr->Platform_GetClipboardTextFn =
+                (nint)(delegate* unmanaged[Cdecl]<nint, byte*>)(&Platform_GetClipboardText);
 
             platformIO.NativePtr->Monitors = default;
 
@@ -302,7 +309,8 @@ namespace ImGui_OpenTK.Backends
 
             io.NativePtr->BackendPlatformName = null;
             io.BackendPlatformUserData = 0;
-            io.BackendFlags &= ~(ImGuiBackendFlags.HasMouseCursors | ImGuiBackendFlags.HasSetMousePos | ImGuiBackendFlags.HasGamepad);
+            io.BackendFlags &= ~(ImGuiBackendFlags.HasMouseCursors | ImGuiBackendFlags.HasSetMousePos |
+                                 ImGuiBackendFlags.HasGamepad);
 
             NativeMemory.Free(bd);
         }
@@ -333,9 +341,9 @@ namespace ImGui_OpenTK.Backends
                     Console.WriteLine($"Current viewport: {viewportID} (frame: {ImGui.GetFrameCount()})");
                     lastViewportID = viewportID;
                 }
-                
             }
         }
+
         static uint lastViewportID = 0;
 
         static void UpdateMouseCursor(WindowHandle window)
@@ -405,19 +413,22 @@ namespace ImGui_OpenTK.Backends
 
             if (platformIO.NativePtr->Monitors.Data != 0)
                 Marshal.FreeHGlobal(platformIO.NativePtr->Monitors.Data);
-            platformIO.NativePtr->Monitors = new ImVector(displayCount, displayCount, Marshal.AllocHGlobal(displayCount * sizeof(ImGuiPlatformMonitor)));
+            platformIO.NativePtr->Monitors = new ImVector(displayCount, displayCount,
+                Marshal.AllocHGlobal(displayCount * sizeof(ImGuiPlatformMonitor)));
 
-            NativeMemory.Clear((void*)platformIO.NativePtr->Monitors.Data, (nuint)(platformIO.NativePtr->Monitors.Capacity * sizeof(ImGuiPlatformMonitor)));
+            NativeMemory.Clear((void*)platformIO.NativePtr->Monitors.Data,
+                (nuint)(platformIO.NativePtr->Monitors.Capacity * sizeof(ImGuiPlatformMonitor)));
             for (int i = 0; i < displayCount; i++)
             {
-                ref ImGuiPlatformMonitor imguiMonitor = ref Unsafe.Add(ref Unsafe.AsRef<ImGuiPlatformMonitor>((void*)platformIO.Monitors.Data), i);
+                ref ImGuiPlatformMonitor imguiMonitor =
+                    ref Unsafe.Add(ref Unsafe.AsRef<ImGuiPlatformMonitor>((void*)platformIO.Monitors.Data), i);
 
                 DisplayHandle displayHandle = Toolkit.Display.Open(i);
                 Toolkit.Display.GetVirtualPosition(displayHandle, out int posX, out int posY);
                 Toolkit.Display.GetResolution(displayHandle, out int resX, out int resY);
                 Toolkit.Display.GetWorkArea(displayHandle, out Box2i workArea);
                 Toolkit.Display.GetDisplayScale(displayHandle, out float scaleX, out float scaleY);
-                
+
                 imguiMonitor.MainPos = new(posX, posY);
                 imguiMonitor.MainSize = new(resX, resY);
 
@@ -453,11 +464,13 @@ namespace ImGui_OpenTK.Backends
             {
                 currentTime = bd->Time + 1;
             }
+
             io.DeltaTime = bd->Time > 0.0 ? (currentTime - bd->Time) / (float)Stopwatch.Frequency : 1.0f / 60.0f;
             bd->Time = currentTime;
 
             Toolkit.Mouse.GetGlobalMouseState(out MouseState mouseState);
-            if (bd->MousePendingLeaveFrame != 0 && bd->MousePendingLeaveFrame >= ImGui.GetFrameCount() && mouseState.PressedButtons == 0)
+            if (bd->MousePendingLeaveFrame != 0 && bd->MousePendingLeaveFrame >= ImGui.GetFrameCount() &&
+                mouseState.PressedButtons == 0)
             {
                 bd->MouseWindowID = 0;
                 bd->MousePendingLeaveFrame = 0;
@@ -520,6 +533,7 @@ namespace ImGui_OpenTK.Backends
                 {
                     io.AddMouseButtonEvent((int)mouseUp.Button, false);
                 }
+
                 Console.WriteLine($"Mouse btn up {mouseUp.Button}.");
             }
             else if (args is TextInputEventArgs text)
@@ -549,7 +563,8 @@ namespace ImGui_OpenTK.Backends
                 if (mouseEnter.Entered)
                 {
                     if (TryGetIDFromWindow(mouseEnter.Window, out nint windowID) == false)
-                        throw new UnreachableException("We should already have filtered out all windows we don't know about.");
+                        throw new UnreachableException(
+                            "We should already have filtered out all windows we don't know about.");
                     bd->MouseWindowID = windowID;
                     bd->MousePendingLeaveFrame = 0;
                 }
@@ -560,32 +575,37 @@ namespace ImGui_OpenTK.Backends
                 }
 
                 string title = Toolkit.Window.GetTitle(mouseEnter.Window);
-                Console.WriteLine($"Mouse {(mouseEnter.Entered ? "entered" : "left")} window '{title}'. (frame: {ImGui.GetFrameCount()})");
+                Console.WriteLine(
+                    $"Mouse {(mouseEnter.Entered ? "entered" : "left")} window '{title}'. (frame: {ImGui.GetFrameCount()})");
             }
             else if (args is FocusEventArgs focus)
             {
                 io.AddFocusEvent(focus.GotFocus);
                 string title = Toolkit.Window.GetTitle(focus.Window);
-                Console.WriteLine($"Window '{title}' {(focus.GotFocus ? "got focus." : "lost focus.")} (frame: {ImGui.GetFrameCount()})");
+                Console.WriteLine(
+                    $"Window '{title}' {(focus.GotFocus ? "got focus." : "lost focus.")} (frame: {ImGui.GetFrameCount()})");
             }
             else if (args is WindowMoveEventArgs windowMove)
             {
                 if (TryGetIDFromWindow(windowMove.Window, out nint windowID) == false)
-                    throw new UnreachableException("We should already have filtered out all windows we don't know about.");
+                    throw new UnreachableException(
+                        "We should already have filtered out all windows we don't know about.");
                 ImGuiViewportPtr viewport = ImGui.FindViewportByPlatformHandle(windowID);
                 viewport.PlatformRequestMove = true;
             }
             else if (args is WindowResizeEventArgs windowResize)
             {
                 if (TryGetIDFromWindow(windowResize.Window, out nint windowID) == false)
-                    throw new UnreachableException("We should already have filtered out all windows we don't know about.");
+                    throw new UnreachableException(
+                        "We should already have filtered out all windows we don't know about.");
                 ImGuiViewportPtr viewport = ImGui.FindViewportByPlatformHandle(windowID);
                 viewport.PlatformRequestResize = true;
             }
             else if (args is CloseEventArgs windowClose)
             {
                 if (TryGetIDFromWindow(windowClose.Window, out nint windowID) == false)
-                    throw new UnreachableException("We should already have filtered out all windows we don't know about.");
+                    throw new UnreachableException(
+                        "We should already have filtered out all windows we don't know about.");
                 ImGuiViewportPtr viewport = ImGui.FindViewportByPlatformHandle(windowID);
                 viewport.PlatformRequestClose = true;
             }
@@ -604,20 +624,34 @@ namespace ImGui_OpenTK.Backends
             var platformIO = ImGui.GetPlatformIO();
             BackendData* bd = GetBackendData();
 
-            platformIO.Platform_CreateWindow = (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, void>)&Platform_CreateWindow;
-            platformIO.Platform_DestroyWindow = (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, void>)&Platform_DestroyWindow;
-            platformIO.Platform_ShowWindow = (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, void>)&Platform_ShowWindow;
-            ImGuiNative.ImGuiPlatformIO_Set_Platform_GetWindowPos(platformIO, (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, SNVector2*, void>)&Platform_GetWindowPos);
-            platformIO.Platform_SetWindowPos = (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, SNVector2, void>)&Platform_SetWindowPos;
-            ImGuiNative.ImGuiPlatformIO_Set_Platform_GetWindowSize(platformIO, (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, SNVector2*, void>)&Platform_GetWindowSize);
-            platformIO.Platform_SetWindowSize = (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, SNVector2, void>)&Platform_SetWindowSize;
-            platformIO.Platform_SetWindowTitle = (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, nint, void>)&Platform_SetWindowTitle;
-            platformIO.Platform_SetWindowFocus = (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, void>)&Platform_SetWindowFocus;
-            platformIO.Platform_GetWindowFocus = (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, byte>)&Platform_GetWindowFocus;
-            platformIO.Platform_GetWindowMinimized = (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, byte>)&Platform_GetWindowMinimized;
-            platformIO.Platform_SetWindowAlpha = (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, float, void>)&Platform_SetWindowAlpha;
-            platformIO.Platform_RenderWindow = (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, void*, void>)&Platform_RenderWindow;
-            platformIO.Platform_SwapBuffers = (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, void*, void>)&Platform_SwapBuffers;
+            platformIO.Platform_CreateWindow =
+                (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, void>)&Platform_CreateWindow;
+            platformIO.Platform_DestroyWindow =
+                (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, void>)&Platform_DestroyWindow;
+            platformIO.Platform_ShowWindow =
+                (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, void>)&Platform_ShowWindow;
+            ImGuiNative.ImGuiPlatformIO_Set_Platform_GetWindowPos(platformIO,
+                (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, SNVector2*, void>)&Platform_GetWindowPos);
+            platformIO.Platform_SetWindowPos =
+                (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, SNVector2, void>)&Platform_SetWindowPos;
+            ImGuiNative.ImGuiPlatformIO_Set_Platform_GetWindowSize(platformIO,
+                (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, SNVector2*, void>)&Platform_GetWindowSize);
+            platformIO.Platform_SetWindowSize =
+                (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, SNVector2, void>)&Platform_SetWindowSize;
+            platformIO.Platform_SetWindowTitle =
+                (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, nint, void>)&Platform_SetWindowTitle;
+            platformIO.Platform_SetWindowFocus =
+                (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, void>)&Platform_SetWindowFocus;
+            platformIO.Platform_GetWindowFocus =
+                (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, byte>)&Platform_GetWindowFocus;
+            platformIO.Platform_GetWindowMinimized =
+                (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, byte>)&Platform_GetWindowMinimized;
+            platformIO.Platform_SetWindowAlpha =
+                (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, float, void>)&Platform_SetWindowAlpha;
+            platformIO.Platform_RenderWindow =
+                (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, void*, void>)&Platform_RenderWindow;
+            platformIO.Platform_SwapBuffers =
+                (nint)(delegate* unmanaged[Cdecl]<ImGuiViewportPtr, void*, void>)&Platform_SwapBuffers;
 
             ImGuiViewportPtr mainViewport = ImGui.GetMainViewport();
             ViewportData* vd = (ViewportData*)NativeMemory.AllocZeroed((uint)sizeof(ViewportData));
@@ -639,7 +673,8 @@ namespace ImGui_OpenTK.Backends
             ViewportData* vd = (ViewportData*)NativeMemory.AllocZeroed((uint)sizeof(ViewportData));
             viewport.PlatformUserData = (nint)vd;
 
-            bool useOpenGL = TryGetContextFromID(ImGui.GetMainViewport().PlatformHandle, out OpenGLContextHandle shareContext);
+            bool useOpenGL = TryGetContextFromID(ImGui.GetMainViewport().PlatformHandle,
+                out OpenGLContextHandle shareContext);
 
             GraphicsApiHints graphicsSettings;
             if (useOpenGL)
@@ -654,8 +689,8 @@ namespace ImGui_OpenTK.Backends
                 graphicsSettings = new VulkanGraphicsApiHints();
             }
 
-            OpenTK.Core.Utility.LogLevel prevFilter = Toolkit.Window.Logger.Filter;
-            Toolkit.Window.Logger.Filter = OpenTK.Core.Utility.LogLevel.Info;
+            LogLevel prevFilter = Toolkit.Window.Logger.Filter;
+            Toolkit.Window.Logger.Filter = LogLevel.Info;
             WindowHandle window = Toolkit.Window.Create(graphicsSettings);
             Toolkit.Window.Logger.Filter = prevFilter;
 
@@ -687,7 +722,7 @@ namespace ImGui_OpenTK.Backends
             OpenGLContextHandle glContext = null;
             if (useOpenGL)
             {
-                Toolkit.Window.Logger.Filter = OpenTK.Core.Utility.LogLevel.Info;
+                Toolkit.Window.Logger.Filter = LogLevel.Info;
                 glContext = Toolkit.OpenGL.CreateFromWindow(window);
                 Toolkit.Window.Logger.Filter = prevFilter;
 
@@ -727,6 +762,7 @@ namespace ImGui_OpenTK.Backends
 
                 NativeMemory.Free(vd);
             }
+
             viewport.PlatformUserData = 0;
             viewport.PlatformHandle = 0;
         }
