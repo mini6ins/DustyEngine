@@ -31,6 +31,7 @@ public static class SceneManager
         private set => currentScene = value;
     }
 
+
     public static void AddGameObjectRecursively(GameObject gameObject, GameObject? parent)
     {
         if (CurrentScene == null)
@@ -39,13 +40,17 @@ public static class SceneManager
             return;
         }
 
+        if (gameObject.GetComponent<Transform>() == null)
+        {
+            gameObject.AddComponent(new Transform());
+            Debug.Log($"[SceneManager] Added Transform to GameObject [{gameObject.Name}]", Debug.LogLevel.Info, true);
+        }
+
         if (parent == null)
         {
             if (!CurrentScene.GameObjects.Contains(gameObject))
             {
                 CurrentScene.GameObjects.Add(gameObject);
-                if (gameObject.GetComponent<Transform>() == null)
-                    gameObject.AddComponent(new Transform());
                 Debug.Log($"[Scene: {CurrentScene.Name}] Added GameObject [{gameObject.Name}] to Scene",
                     Debug.LogLevel.Info, true);
             }
@@ -55,8 +60,6 @@ public static class SceneManager
             if (!parent.Children.Contains(gameObject))
             {
                 parent.Children.Add(gameObject);
-                if (gameObject.GetComponent<Transform>() == null)
-                    gameObject.AddComponent(new Transform());
                 gameObject.Parent = parent;
                 Debug.Log(
                     $"[Scene: {CurrentScene.Name}] Added GameObject [{gameObject.Name}] under Parent [{parent.Name}]",
@@ -64,9 +67,14 @@ public static class SceneManager
             }
         }
 
-        gameObject.InvokeMethodInComponents("OnEnable");
-        gameObject.InvokeMethodInComponents("Start");
+        var children = gameObject.Children.ToList();
+        foreach (var child in children)
+        {
+            AddGameObjectRecursively(child, gameObject);
+        }
 
+        gameObject.InvokeMethodInComponents("OnEnable");
+    
         foreach (var component in gameObject.Components)
         {
             if (component is MeshRenderer meshRenderer)
@@ -74,13 +82,8 @@ public static class SceneManager
                 AddRenderer?.Invoke(meshRenderer);
             }
         }
-
-
-        var children = gameObject.Children.ToList();
-        foreach (var child in children)
-        {
-            AddGameObjectRecursively(child, gameObject);
-        }
+    
+        gameObject.InvokeMethodInComponents("Start");
     }
 
     public static void RemoveGameObjectRecursively(GameObject gameObject)

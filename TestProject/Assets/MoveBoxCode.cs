@@ -17,8 +17,11 @@ public class MoveBoxCode : MonoBehaviour
 
     public void Update()
     {
-        float rotationSpeed = 1f;
-        _boxTransform.LocalRotation.Y += rotationSpeed * (float)Time.DeltaTime;
+        const float rotationSpeed = 1f;
+
+        var rotation = _boxTransform.LocalRotation;
+        rotation.Y += rotationSpeed * Time.DeltaTime;
+        _boxTransform.LocalRotation = rotation;
 
         _direction = Vector3.Zero;
         if (Input.IsKeyDown(KeyCode.I)) _direction += _boxTransform.Forward;

@@ -1,5 +1,6 @@
 using System.Numerics;
 using System.Text;
+using DustyEngine;
 using ImGuiNET;
 
 namespace Editor.Panels.ProjectFilePanel;
@@ -230,10 +231,25 @@ internal class ProjectFilePanel : IRenderablePanel
 
         if (label != "..")
         {
+            if (ImGui.MenuItem("Copy absolute path"))
+            {
+                _fileManager.ClipboardPath = fullPath;
+
+                try
+                {
+                    CopyToClipboard(fullPath);
+                    Debug.Log($"Copied to clipboard: {fullPath}", Debug.LogLevel.Info, true);
+                }
+                catch (Exception ex)
+                {
+                    Debug.Log($"Failed to copy to system clipboard: {ex.Message}. Saved to internal clipboard.", Debug.LogLevel.Warning);
+                }
+            }
+
             if (ImGui.MenuItem("Copy", "Ctrl+C"))
             {
                 _fileManager.ClipboardPath = fullPath;
-                Console.WriteLine($"Copied: {_fileManager.ClipboardPath}");
+                Debug.Log($"Copied: {_fileManager.ClipboardPath}", Debug.LogLevel.Info, true);
             }
 
             var hasClipboard = !string.IsNullOrEmpty(_fileManager.ClipboardPath);
@@ -266,6 +282,73 @@ internal class ProjectFilePanel : IRenderablePanel
         }
 
         ImGui.EndPopup();
+    }
+
+    private static void CopyToClipboard(string text)
+    {
+        try
+        {
+            if (OperatingSystem.IsLinux())
+            {
+                if (TryCommand("xclip", "-selection clipboard", text)) return;
+                if (TryCommand("xsel", "-i --clipboard", text)) return;
+                if (TryCommand("wl-copy", "", text)) return;
+
+                throw new Exception("No clipboard utility found (xclip/xsel/wl-copy)");
+            }
+
+            if (OperatingSystem.IsMacOS())
+            {
+                if (TryCommand("pbcopy", "", text)) return;
+                throw new Exception("pbcopy not available");
+            }
+
+            if (!OperatingSystem.IsWindows()) return;
+
+            try
+            {
+                TextCopy.ClipboardService.SetText(text);
+            }
+            catch
+            {
+                if (TryCommand("clip", "", text)) return;
+                throw;
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Failed to copy to clipboard: {ex.Message}");
+        }
+    }
+
+    private static bool TryCommand(string command, string args, string input)
+    {
+        try
+        {
+            var process = new System.Diagnostics.Process
+            {
+                StartInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = command,
+                    Arguments = args,
+                    RedirectStandardInput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }
+            };
+
+            process.Start();
+            process.StandardInput.Write(input);
+            process.StandardInput.Close();
+            process.WaitForExit(1000);
+
+            return process.ExitCode == 0;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private void DrawSelectionHighlight(Vector2 start, float tileW, float tileH, string label, string fullPath)
