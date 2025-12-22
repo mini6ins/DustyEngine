@@ -1,19 +1,19 @@
 ﻿using DustyEngine;
-using DustyEngine.Components;
 using GraphicsEngine;
 using GraphicsEngineOpenGL.Editor;
 using GraphicsEngineOpenGL.Editor.Panels.ViewPortPanel;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
-using SceneSystem.EngineObject.GameObject;
 using Vector2i = OpenTK.Mathematics.Vector2i;
 
-namespace GraphicsEngineOpenGL;
+
+namespace WindowEngine;
 
 public class Window : IRenderer, IDisposable
 {
     private GameWindow? _window;
-    public static GraphicsRenderer? Renderer;
+    public GraphicsRenderer? Renderer => _renderer;
+    public static GraphicsRenderer? _renderer;
 
     public static RenderMode RenderMode;
     public static string ProjectPath;
@@ -36,16 +36,14 @@ public class Window : IRenderer, IDisposable
             Title = programTitle,
         };
 
-        Renderer = new GraphicsRenderer(vertShaderPath, fragShaderPath, nativeWindowSettings.ClientSize.X,
-            nativeWindowSettings.ClientSize.Y, RenderMode == RenderMode.Editor) ;
+        _renderer = new GraphicsRenderer(vertShaderPath, fragShaderPath, nativeWindowSettings.ClientSize.X,
+            nativeWindowSettings.ClientSize.Y, RenderMode == RenderMode.Editor);
 
 
         var cursorState = RenderMode == RenderMode.Editor ? CursorState.Normal : CursorState.Hidden;
         var windowSettings = new WindowSettings(GameWindowSettings.Default, nativeWindowSettings, vsync, cursorState);
 
-        _window = RenderMode == RenderMode.Editor
-            ? new EditorWindow(windowSettings)
-            : new StandaloneWindow(windowSettings);
+        _window = RenderMode == RenderMode.Editor ? new EditorWindow(GameWindowSettings.Default, nativeWindowSettings, vsync, _renderer, ProjectPath) : new StandaloneWindow(windowSettings);
 
         ViewportPanel.OnPlayModeChanged += ChangePlayMode;
         _window.UpdateFrame += _ => updateCallback.Invoke();
@@ -57,10 +55,6 @@ public class Window : IRenderer, IDisposable
     {
         Debug.Log("Is play mode: " + isPlayMode, Debug.LogLevel.Info, true);
     }
-
-    public void AddRenderer(MeshRenderer meshRenderer) => Renderer?.AddRenderer(meshRenderer);
-    public bool RemoveRenderer(int objectId) => Renderer != null && Renderer.RemoveRendererByGameObjectId(objectId);
-    public bool RemoveRenderer(GameObject  gameObject) => Renderer != null && Renderer.RemoveRendererByGameObject(gameObject);
 
     public void Dispose() => ViewportPanel.OnPlayModeChanged -= ChangePlayMode;
 }

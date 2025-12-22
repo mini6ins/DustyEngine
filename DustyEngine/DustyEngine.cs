@@ -1,28 +1,31 @@
 ﻿using DustyEngine.Components;
 using DustyEngine.Scene;
-using DustyEngineEditor.Panels.ConsolePanel;
+using Editor.Editor;
+using Editor.Editor.Panels.ConsolePanel;
 using GraphicsEngine;
-using GraphicsEngineOpenGL;
-using GraphicsEngineOpenGL.Editor;
 using SceneSystem.EngineObject.GameObject;
+using WindowEngine;
 
 namespace DustyEngine;
 
-public sealed class DustyEngine :  IDisposable
+public sealed class DustyEngine : IDisposable
 {
     public static string ProjectFolderPath { get; set; } = null!;
     private static ProjectSettings _settings = new();
     private static IRenderer GraphicsEngineOpenGl = null!;
 
-    private static readonly Action<MeshRenderer> AddRenderer = renderer => { GraphicsEngineOpenGl.AddRenderer(renderer); };
-    private static readonly Action<GameObject> RemoveRenderer = gameObject => { GraphicsEngineOpenGl.RemoveRenderer(gameObject); };
+    private static readonly Action<MeshRenderer> AddRenderer = meshRenderer =>
+        GraphicsEngineOpenGl.Renderer?.AddRenderer(meshRenderer);
+
+    private static readonly Action<GameObject> RemoveRenderer =
+        gameObject => GraphicsEngineOpenGl.Renderer?.RemoveRendererByGameObject(gameObject);
 
 
     public static void StartEngine(string path, RenderMode renderMode)
     {
         Debug.ClearLogs();
 
-        if(renderMode == RenderMode.Editor) ConsolePanel.InitializeConsoleInterceptor();
+        if (renderMode == RenderMode.Editor) ConsolePanel.InitializeConsoleInterceptor();
 
         if (path.Length == 0)
         {
@@ -60,7 +63,8 @@ public sealed class DustyEngine :  IDisposable
             }
         }
         else
-            RendererUI.OnProjectSave += () => SceneSerializer.SaveScene(SceneManager.CurrentScene, _settings.PathToScenes.FirstOrDefault());
+            RendererUI.OnProjectSave += () =>
+                SceneSerializer.SaveScene(SceneManager.CurrentScene, _settings.PathToScenes.FirstOrDefault());
 
         GameLoop.Initialize(loadedScene!);
         Time.Init();
@@ -87,6 +91,7 @@ public sealed class DustyEngine :  IDisposable
         SceneManager.AddRenderer2 -= AddRenderer;
         SceneManager.RemoveRenderer -= RemoveRenderer;
 
-        RendererUI.OnProjectSave -= () => SceneSerializer.SaveScene(SceneManager.CurrentScene, _settings.PathToScenes.FirstOrDefault());
+        RendererUI.OnProjectSave -= () =>
+            SceneSerializer.SaveScene(SceneManager.CurrentScene, _settings.PathToScenes.FirstOrDefault());
     }
 }

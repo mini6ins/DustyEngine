@@ -1,4 +1,4 @@
-using DustyEngineEditor.Panels.ConsolePanel;
+using Editor.Editor.Panels.ConsolePanel;
 using GraphicsEngineOpenGL.Editor.Panels.HierarchyPanel;
 using GraphicsEngineOpenGL.Editor.Panels.InspectorPanel;
 using GraphicsEngineOpenGL.Editor.Panels.ProjectFilePanel;
@@ -7,7 +7,7 @@ using GraphicsEngineOpenGL.Editor.Panels.ViewPortPanel.Themes;
 using ImGuiNET;
 using OpenTK.Windowing.Desktop;
 
-namespace GraphicsEngineOpenGL.Editor;
+namespace Editor.Editor;
 
 internal interface IRenderablePanel
 {

@@ -1,9 +1,10 @@
 using System.Numerics;
 using ImGuiNET;
+using WindowEngine;
 
 namespace GraphicsEngineOpenGL.Editor.Panels.ViewPortPanel;
 
-internal class ViewportPanel : IRenderablePanel
+public class ViewportPanel : global::Editor.Editor.IRenderablePanel
 {
     public static bool IsScenePanelActive;
     private static bool _isPlayMode;
@@ -50,9 +51,9 @@ internal class ViewportPanel : IRenderablePanel
         var size = ImGui.GetContentRegionAvail();
         if (!(size.X > 0) || !(size.Y > 0)) return;
 
-        Window.Renderer?.ResizeViewport((int)size.X, (int)size.Y);
+        EditorWindow.GraphicsRenderer?.ResizeViewport((int)size.X, (int)size.Y);
 
-        if (Window.Renderer != null)
-            ImGui.Image(Window.Renderer.ViewportTexture, size, new Vector2(0, 1), new Vector2(1, 0));
+        if (EditorWindow.GraphicsRenderer != null)
+            ImGui.Image(EditorWindow.GraphicsRenderer.ViewportTexture, size, new Vector2(0, 1), new Vector2(1, 0));
     }
 }

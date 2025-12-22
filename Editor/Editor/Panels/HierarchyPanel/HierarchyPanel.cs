@@ -6,7 +6,7 @@ using SceneSystem.EngineObject.GameObject;
 
 namespace GraphicsEngineOpenGL.Editor.Panels.HierarchyPanel;
 
-internal class HierarchyPanel : IRenderablePanel
+internal class HierarchyPanel : global::Editor.Editor.IRenderablePanel
 {
     private GameObject? _selected;
     private GameObject? _copiedGameObject;

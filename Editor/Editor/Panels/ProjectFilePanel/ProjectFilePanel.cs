@@ -2,10 +2,11 @@ using System.Numerics;
 using System.Text;
 using DustyEngineEditor.Panels.HierarchyPanel;
 using ImGuiNET;
+using WindowEngine;
 
 namespace GraphicsEngineOpenGL.Editor.Panels.ProjectFilePanel;
 
-internal class ProjectFilePanel : IRenderablePanel
+internal class ProjectFilePanel : global::Editor.Editor.IRenderablePanel
 {
     private readonly ProjectFileManager _fileManager;
 
@@ -19,7 +20,7 @@ internal class ProjectFilePanel : IRenderablePanel
 
     public ProjectFilePanel()
     {
-        _fileManager = new ProjectFileManager(Window.ProjectPath);
+        _fileManager = new ProjectFileManager(EditorWindow.ProjectPath);
         IconLoader.InitIcons();
     }
 

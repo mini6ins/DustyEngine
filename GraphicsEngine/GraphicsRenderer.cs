@@ -10,7 +10,7 @@ using SceneSystem.EngineObject.GameObject;
 using MouseButton = InputSystem.MouseButton;
 using Vector3 = DustyEngine.Engine.Math.Vectors.Vector3;
 
-namespace GraphicsEngineOpenGL;
+namespace GraphicsEngine;
 
 public class RenderableObject
 {

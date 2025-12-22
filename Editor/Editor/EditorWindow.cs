@@ -1,3 +1,4 @@
+using GraphicsEngine;
 using GraphicsEngineOpenGL.Editor.Panels.ViewPortPanel;
 using ImGui_OpenTK.Backends;
 using ImGuiNET;
@@ -11,16 +12,18 @@ namespace GraphicsEngineOpenGL.Editor;
 
 public class EditorWindow : GameWindow
 {
-    private readonly GraphicsRenderer? _graphicsRenderer;
+    public static GraphicsRenderer GraphicsRenderer { get; private set; } = null!;
+    public static string ProjectPath { get; private set; } = null!;
 
-    public EditorWindow(WindowSettings windowSettings) : base(windowSettings.GameWindowSettings,
-        windowSettings.NativeWindowSettings)
+    public EditorWindow(GameWindowSettings gameWindowSettings, NativeWindowSettings nativeWindowSettings, bool vsync, GraphicsRenderer graphicsRenderer, string projectPath) : base(gameWindowSettings,
+        nativeWindowSettings)
     {
-        Title = windowSettings.NativeWindowSettings.Title;
-        VSync = windowSettings.VSync ? VSyncMode.On : VSyncMode.Off;
+        Title = nativeWindowSettings.Title;
+        VSync = vsync ? VSyncMode.On : VSyncMode.Off;
         CursorState = CursorState.Normal;
 
-        _graphicsRenderer = Window.Renderer;
+        GraphicsRenderer = graphicsRenderer;
+        ProjectPath = projectPath;
     }
 
     protected override void OnLoad()
@@ -30,8 +33,8 @@ public class EditorWindow : GameWindow
 
         EditorImGuiHelper.ImGuiInit(this);
 
-        _graphicsRenderer?.Load();
-        _graphicsRenderer?.ResizeViewport(FramebufferSize.X, FramebufferSize.Y);
+        GraphicsRenderer?.Load();
+        GraphicsRenderer?.ResizeViewport(FramebufferSize.X, FramebufferSize.Y);
     }
 
     protected override void OnUpdateFrame(FrameEventArgs args)
@@ -44,7 +47,7 @@ public class EditorWindow : GameWindow
             EditorInputHandler.UpdateMouseInput(MouseState);
         }
 
-        _graphicsRenderer?.Update((float)args.Time, KeyboardState, MouseState);
+        GraphicsRenderer?.Update((float)args.Time, KeyboardState, MouseState);
     }
 
 
@@ -57,7 +60,7 @@ public class EditorWindow : GameWindow
         GL.ClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
-        _graphicsRenderer?.Render();
+        GraphicsRenderer?.Render();
         EditorImGuiHelper.ImGuiRender(this);
         SwapBuffers();
     }
@@ -70,7 +73,7 @@ public class EditorWindow : GameWindow
 
     protected override void OnUnload()
     {
-        _graphicsRenderer?.Dispose();
+        GraphicsRenderer?.Dispose();
 
         ImguiImplOpenGL3.Shutdown();
         ImguiImplOpenTK4.Shutdown();

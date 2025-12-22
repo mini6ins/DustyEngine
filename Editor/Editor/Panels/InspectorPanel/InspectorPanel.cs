@@ -12,7 +12,7 @@ using DeVec3 = DustyEngine.Engine.Math.Vectors.Vector3;
 
 namespace GraphicsEngineOpenGL.Editor.Panels.InspectorPanel;
 
-internal class InspectorPanel : IRenderablePanel
+internal class InspectorPanel : global::Editor.Editor.IRenderablePanel
 {
     private static GameObject? _selectedGameObject;
 

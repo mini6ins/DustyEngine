@@ -4,59 +4,21 @@
         <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-    </PropertyGroup>
-
-    <ItemGroup>
-      <ProjectReference Include="..\Dear ImGui Sample\ImGui_OpenTK.Backends.csproj" />
-      <ProjectReference Include="..\GraphicsEngine\GraphicsEngine.csproj" />
-      <ProjectReference Include="..\InputSystem\InputSystem.csproj" />
-      <ProjectReference Include="..\SceneSystem\SceneSystem.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <PackageReference Include="OpenTK" Version="5.0.0-pre.15" />
-      <PackageReference Include="StbImageSharp" Version="2.30.15" />
-    </ItemGroup>
-    
-    <ItemGroup>
-      <None Update="Editor\Editor\Icons\csharpIcon.png">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="Editor\Editor\Icons\fileIcon.png">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="Editor\Editor\Icons\folderIcon.png">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="Editor\Editor\Icons\imageIcon.png">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="Editor\Editor\Icons\ObjIcon.png">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="Editor\Editor\Icons\sceneIcon.png">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="Editor\Editor\Icons\fileIcon.png">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="Editor\Editor\Icons\csharpIcon.png">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="Editor\Editor\Icons\imageIcon.png">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="Editor\Editor\Icons\ObjIcon.png">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="Editor\Editor\Icons\sceneIcon.png">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-    </ItemGroup>
-
-
-    <PropertyGroup>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
-    
+
+    <ItemGroup>
+      <ProjectReference Include="..\Debug\Debug.csproj" />
+      <ProjectReference Include="..\Editor\Editor.csproj" />
+      <ProjectReference Include="..\GraphicsEngine\GraphicsEngine.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Reference Include="OpenTK.Windowing.Desktop">
+        <HintPath>..\..\.nuget\packages\opentk.windowing.desktop\5.0.0-pre.15\lib\net8.0\OpenTK.Windowing.Desktop.dll</HintPath>
+      </Reference>
+      <Reference Include="StbImageSharp">
+        <HintPath>..\..\.nuget\packages\stbimagesharp\2.30.15\lib\netstandard2.0\StbImageSharp.dll</HintPath>
+      </Reference>
+    </ItemGroup>
 </Project>

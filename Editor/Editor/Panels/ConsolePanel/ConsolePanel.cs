@@ -1,10 +1,9 @@
 using System.Numerics;
 using DustyEngine;
-using GraphicsEngineOpenGL.Editor;
 using GraphicsEngineOpenGL.Editor.Panels.ConsolePanel;
 using ImGuiNET;
 
-namespace DustyEngineEditor.Panels.ConsolePanel;
+namespace Editor.Editor.Panels.ConsolePanel;
 
 public class ConsolePanel : IRenderablePanel
 {
