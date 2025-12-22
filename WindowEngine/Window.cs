@@ -37,7 +37,7 @@ public class Window : IRenderer, IDisposable
         };
 
         Renderer = new GraphicsRenderer(vertShaderPath, fragShaderPath, nativeWindowSettings.ClientSize.X,
-            nativeWindowSettings.ClientSize.Y);
+            nativeWindowSettings.ClientSize.Y, RenderMode == RenderMode.Editor) ;
 
 
         var cursorState = RenderMode == RenderMode.Editor ? CursorState.Normal : CursorState.Hidden;
