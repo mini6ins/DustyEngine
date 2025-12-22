@@ -1,10 +1,7 @@
-using DustyEngine.Components;
-using GraphicsEngineOpenGL;
-using SceneSystem.EngineObject.GameObject;
-using WindowEngine;
+using GraphicsEngine;
 using Vector2i = OpenTK.Mathematics.Vector2i;
 
-namespace GraphicsEngine;
+namespace WindowEngine;
 
 public interface IRenderer
 {

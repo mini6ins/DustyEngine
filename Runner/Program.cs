@@ -1,5 +1,4 @@
-﻿using GraphicsEngineOpenGL;
-using WindowEngine;
+﻿using WindowEngine;
 
 namespace DustyEngine.Runner;
 

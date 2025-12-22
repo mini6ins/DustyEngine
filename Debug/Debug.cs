@@ -1,72 +1,71 @@
 ﻿using System.Runtime.CompilerServices;
 
-namespace DustyEngine
+namespace DustyEngine;
+
+public static class Debug
 {
-    public static class Debug
+    private static readonly List<string> LogMessages = [];
+    private const string LogFilePath = "debug.log";
+
+    private static LogLevel _currentLogLevel = LogLevel.Info;
+    private static bool _writeToConsole = true;
+    private static bool _writeToFile = true;
+    private static bool _isDebugMode;
+
+    public enum LogLevel
     {
-        private static readonly List<string> LogMessages = [];
-        private const string LogFilePath = "debug.log";
+        Info,
+        Warning,
+        Error,
+        FatalError,
+    }
 
-        private static LogLevel _currentLogLevel = LogLevel.Info;
-        private static bool _writeToConsole = true;
-        private static bool _writeToFile = true;
-        private static bool _isDebugMode;
+    public static void Log(
+        object? message,
+        LogLevel level = LogLevel.Info,
+        bool isDebugMessage = false,
+        string? source = null,
+        [CallerMemberName] string caller = "",
+        [CallerFilePath] string file = "",
+        [CallerLineNumber] int line = 0
+    )
+    {
+        if (string.IsNullOrEmpty(source))
+            source = DetermineSource(file);
 
-        public enum LogLevel
-        {
-            Info,
-            Warning,
-            Error,
-            FatalError,
-        }
+        var formattedMessage =
+            $"[{source}] " +
+            $"[{DateTime.Now:HH:mm:ss}] " +
+            $"[{level}] " +
+            $"({Path.GetFileName(file)}:{line} in {caller}) {message}";
 
-        public static void Log(
-            object? message,
-            LogLevel level = LogLevel.Info,
-            bool isDebugMessage = false,
-            string? source = null,
-            [CallerMemberName] string caller = "",
-            [CallerFilePath] string file = "",
-            [CallerLineNumber] int line = 0
-        )
-        {
-            if (string.IsNullOrEmpty(source))
-                source = DetermineSource(file);
+        if (_writeToFile) File.AppendAllText(LogFilePath, formattedMessage + Environment.NewLine);
 
-            var formattedMessage =
-                $"[{source}] " +
-                $"[{DateTime.Now:HH:mm:ss}] " +
-                $"[{level}] " +
-                $"({Path.GetFileName(file)}:{line} in {caller}) {message}";
+        if ((int)level < (int)GetLogLevel()) return;
 
-            if (_writeToFile) File.AppendAllText(LogFilePath, formattedMessage + Environment.NewLine);
+        LogMessages.Add(formattedMessage);
 
-            if ((int)level < (int)GetLogLevel()) return;
+        if (!_isDebugMode && isDebugMessage) return;
+        if (!_writeToConsole) return;
 
-            LogMessages.Add(formattedMessage);
+        Console.WriteLine(formattedMessage);
 
-            if (!_isDebugMode && isDebugMessage) return;
-            if (!_writeToConsole) return;
+        Console.Out.Flush();
+    }
 
-            Console.WriteLine(formattedMessage);
+    private static string DetermineSource(string filePath) =>
+        filePath.Contains("WindowEngine") ? "Editor" : "Engine";
 
-            Console.Out.Flush();
-        }
+    public static void SetLogLevel(LogLevel level) => _currentLogLevel = level;
+    public static LogLevel GetLogLevel() => _currentLogLevel;
+    public static void EnableConsoleLogging(bool enabled) => _writeToConsole = enabled;
+    public static void EnableFileLogging(bool enabled) => _writeToFile = enabled;
+    public static void EnableDebugMode(bool enabled) => _isDebugMode = enabled;
+    public static void ShowLogs() => LogMessages.ForEach(Console.WriteLine);
 
-        private static string DetermineSource(string filePath) =>
-            filePath.Contains("WindowEngine") ? "Editor" : "Engine";
-
-        public static void SetLogLevel(LogLevel level) => _currentLogLevel = level;
-        public static LogLevel GetLogLevel() => _currentLogLevel;
-        public static void EnableConsoleLogging(bool enabled) => _writeToConsole = enabled;
-        public static void EnableFileLogging(bool enabled) => _writeToFile = enabled;
-        public static void EnableDebugMode(bool enabled) => _isDebugMode = enabled;
-        public static void ShowLogs() => LogMessages.ForEach(Console.WriteLine);
-
-        public static void ClearLogs()
-        {
-            LogMessages.Clear();
-            File.WriteAllText(LogFilePath, string.Empty);
-        }
+    public static void ClearLogs()
+    {
+        LogMessages.Clear();
+        File.WriteAllText(LogFilePath, string.Empty);
     }
 }

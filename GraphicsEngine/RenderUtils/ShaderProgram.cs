@@ -3,7 +3,7 @@ using OpenTK.Mathematics;
 using Vector3 = System.Numerics.Vector3;
 using Vector4 = System.Numerics.Vector4;
 
-namespace GraphicsEngineOpenGL.RenderUtils;
+namespace GraphicsEngine.RenderUtils;
 
 public class ShaderProgram
 {

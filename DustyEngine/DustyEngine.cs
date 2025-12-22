@@ -12,13 +12,11 @@ public sealed class DustyEngine : IDisposable
 {
     public static string ProjectFolderPath { get; set; } = null!;
     private static ProjectSettings _settings = new();
-    private static IRenderer GraphicsEngineOpenGl = null!;
 
-    private static readonly Action<MeshRenderer> AddRenderer = meshRenderer =>
-        GraphicsEngineOpenGl.Renderer?.AddRenderer(meshRenderer);
+    private static Window _window = null!;
 
-    private static readonly Action<GameObject> RemoveRenderer =
-        gameObject => GraphicsEngineOpenGl.Renderer?.RemoveRendererByGameObject(gameObject);
+    private static readonly Action<MeshRenderer> AddRenderer = meshRenderer => _window.Renderer?.AddRenderer(meshRenderer);
+    private static readonly Action<GameObject> RemoveRenderer = gameObject => _window.Renderer?.RemoveRendererByGameObject(gameObject);
 
 
     public static void StartEngine(string path, RenderMode renderMode)
@@ -68,12 +66,12 @@ public sealed class DustyEngine : IDisposable
 
         GameLoop.Initialize(loadedScene!);
         Time.Init();
-        GraphicsEngineOpenGl = new Window();
+        _window = new Window();
 
-        SceneManager.AddRenderer2 += AddRenderer;
+        SceneManager.AddRenderer += AddRenderer;
         SceneManager.RemoveRenderer += RemoveRenderer;
 
-        GraphicsEngineOpenGl.RunMainLoop(GameLoopAction,
+        _window.RunMainLoop(GameLoopAction,
             _settings.ScreenSize.ToOpenTK(), _settings.ProjectName, _settings.PathToVertShader,
             _settings.PathToFragShader, _settings.Vsync, renderMode, ProjectFolderPath);
         return;
@@ -88,7 +86,7 @@ public sealed class DustyEngine : IDisposable
 
     public void Dispose()
     {
-        SceneManager.AddRenderer2 -= AddRenderer;
+        SceneManager.AddRenderer -= AddRenderer;
         SceneManager.RemoveRenderer -= RemoveRenderer;
 
         RendererUI.OnProjectSave -= () =>

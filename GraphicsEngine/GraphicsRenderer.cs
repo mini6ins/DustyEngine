@@ -1,7 +1,7 @@
 using DustyEngine;
 using DustyEngine.Components;
 using DustyEngine.Scene;
-using GraphicsEngineOpenGL.RenderUtils;
+using GraphicsEngine.RenderUtils;
 using InputSystem;
 using OpenTK.Graphics.OpenGL.Compatibility;
 using OpenTK.Mathematics;

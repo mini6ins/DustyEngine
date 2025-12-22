@@ -1,6 +1,6 @@
 ﻿using OpenTK.Graphics.OpenGL;
 
-namespace GraphicsEngineOpenGL.RenderUtils;
+namespace GraphicsEngine.RenderUtils;
 
 public sealed class VAOManager(ShaderProgram shaderProgram) : IDisposable
 {

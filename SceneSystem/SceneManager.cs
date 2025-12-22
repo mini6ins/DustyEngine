@@ -7,7 +7,7 @@ public static class SceneManager
 {
     private static readonly List<Scene> sceneList = [];
     private static Scene? currentScene;
-    public static Action<MeshRenderer> AddRenderer2 = _ => { };
+    public static Action<MeshRenderer> AddRenderer = _ => { };
     public static Action<GameObject> RemoveRenderer = _ => { };
 
     private static int _nextGameObjectId = 1;
@@ -65,7 +65,7 @@ public static class SceneManager
         {
             if (component is MeshRenderer meshRenderer)
             {
-                AddRenderer2?.Invoke(meshRenderer);
+                AddRenderer?.Invoke(meshRenderer);
             }
         }
 
