@@ -8,7 +8,7 @@ public static class SceneManager
     private static readonly List<Scene> sceneList = [];
     private static Scene? currentScene;
     public static Action<MeshRenderer> AddRenderer = _ => { };
-    public static Action<GameObject> RemoveRenderer = _ => { };
+    public static Action<MeshRenderer> RemoveRenderer = _ => { };
 
     private static uint _nextGameObjectId = 1;
     private static uint _nextComponentId = 1;
@@ -44,6 +44,8 @@ public static class SceneManager
             if (!CurrentScene.GameObjects.Contains(gameObject))
             {
                 CurrentScene.GameObjects.Add(gameObject);
+                if (gameObject.GetComponent<Transform>() == null)
+                    gameObject.AddComponent(new Transform());
                 Debug.Log($"[Scene: {CurrentScene.Name}] Added GameObject [{gameObject.Name}] to Scene",
                     Debug.LogLevel.Info, true);
             }
@@ -53,6 +55,8 @@ public static class SceneManager
             if (!parent.Children.Contains(gameObject))
             {
                 parent.Children.Add(gameObject);
+                if (gameObject.GetComponent<Transform>() == null)
+                    gameObject.AddComponent(new Transform());
                 gameObject.Parent = parent;
                 Debug.Log(
                     $"[Scene: {CurrentScene.Name}] Added GameObject [{gameObject.Name}] under Parent [{parent.Name}]",
@@ -100,7 +104,7 @@ public static class SceneManager
         {
             if (component is MeshRenderer meshRenderer)
             {
-                RemoveRenderer?.Invoke(gameObject);
+                RemoveRenderer?.Invoke(meshRenderer);
             }
         }
 

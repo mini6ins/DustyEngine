@@ -16,7 +16,7 @@ public sealed class DustyEngine : IDisposable
     private static Window _window = null!;
 
     private static readonly Action<MeshRenderer> AddRenderer = meshRenderer => _window.Renderer?.AddRenderer(meshRenderer);
-    private static readonly Action<GameObject> RemoveRenderer = gameObject => _window.Renderer?.RemoveRendererByGameObject(gameObject);
+    private static readonly Action<MeshRenderer> RemoveRenderer = meshRenderer => _window.Renderer?.RemoveRendererByComponent(meshRenderer);
 
 
     public static void StartEngine(string path, RenderMode renderMode)

@@ -16,6 +16,7 @@ public class RenderableObject
 {
     public int VaoIndex;
     public uint GameObjectId;
+    public uint MeshRendererId;
     public Transform Transform = new();
     public MeshRenderer MeshRenderer = null!;
 }
@@ -312,30 +313,38 @@ public class GraphicsRenderer(string vertShaderPath, string fragShaderPath, int 
         {
             VaoIndex = _vaoList.Count - 1,
             GameObjectId = transform.GameObject!.Id,
+            MeshRendererId = meshRenderer.Id,
             Transform = transform,
             MeshRenderer = meshRenderer,
         };
 
         _sceneObjects.Add(renderableObject);
-        Debug.Log("RenderableObject ID: " + renderableObject.GameObjectId, Debug.LogLevel.Info, true);
+        Debug.Log($"Added RenderableObject - GameObject ID: {renderableObject.GameObjectId}, MeshRenderer ID: {renderableObject.MeshRendererId}", Debug.LogLevel.Info, true);
     }
 
 
-    private int FindRenderableIndexByGameObjectId(int gameObjectId)
+    private int FindRenderableIndexByMeshRendererId(uint meshRendererId)
     {
         for (var i = 0; i < _sceneObjects.Count; i++)
-            if (_sceneObjects[i].GameObjectId == gameObjectId)
+            if (_sceneObjects[i].MeshRendererId == meshRendererId)
                 return i;
 
         return -1;
     }
 
-    public bool RemoveRendererByGameObjectId(int gameObjectId)
+    public bool RemoveRendererByComponent(MeshRenderer? meshRenderer)
     {
-        var index = FindRenderableIndexByGameObjectId(gameObjectId);
-        if (index < 0) return false;
+        if (meshRenderer == null) return false;
 
-        var obj = _sceneObjects[index];
+        var idx = FindRenderableIndexByMeshRendererId(meshRenderer.Id);
+
+        if (idx < 0)
+        {
+            Debug.Log($"[RemoveRendererByComponent] MeshRenderer with ID {meshRenderer.Id} not found in scene.", Debug.LogLevel.Warning);
+            return false;
+        }
+
+        var obj = _sceneObjects[idx];
 
         if ((uint)obj.VaoIndex < (uint)_vaoList.Count)
         {
@@ -346,37 +355,8 @@ public class GraphicsRenderer(string vertShaderPath, string fragShaderPath, int 
                 renderableObject.VaoIndex--;
         }
 
-        _sceneObjects.RemoveAt(index);
-        return true;
-    }
-
-    public bool RemoveRendererByGameObject(GameObject gameObject)
-    {
-        if (gameObject == null) return false;
-
-        var idx = -1;
-        for (var i = 0; i < _sceneObjects.Count; i++)
-        {
-            if (_sceneObjects[i].GameObjectId == gameObject.Id)
-            {
-                idx = i;
-                break;
-            }
-        }
-
-        if (idx < 0) return false;
-
-        var obj = _sceneObjects[idx];
-
-        if ((uint)obj.VaoIndex < (uint)_vaoList.Count)
-        {
-            _vaoList[obj.VaoIndex].Dispose();
-            _vaoList.RemoveAt(obj.VaoIndex);
-
-            foreach (var renderableObject in _sceneObjects.Where(t => t.VaoIndex > obj.VaoIndex)) renderableObject.VaoIndex--;
-        }
-
         _sceneObjects.RemoveAt(idx);
+        Debug.Log($"[RemoveRendererByComponent] Successfully removed MeshRenderer ID: {meshRenderer.Id}", Debug.LogLevel.Info);
         return true;
     }
 

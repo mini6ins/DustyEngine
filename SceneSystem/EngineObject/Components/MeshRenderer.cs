@@ -1,4 +1,5 @@
-﻿using Utils;
+﻿using DustyEngine.Scene;
+using Utils;
 
 namespace DustyEngine.Components;
 
@@ -19,11 +20,11 @@ public class MeshRenderer : MonoBehaviour
 
     private string? _path;
     private Mesh? _mesh;
+    private bool _isRegistered = false;
 
     public MeshRenderer()
     {
     }
-
 
     public MeshRenderer(Mesh? mesh = null, string? path = null)
     {
@@ -64,6 +65,8 @@ public class MeshRenderer : MonoBehaviour
                 Debug.Log(
                     $"MeshRenderer: Successfully loaded mesh from '{Path}' with {vertices.Length} vertices and {indices.Length} indices.",
                     Debug.LogLevel.Info, true);
+
+                RegisterRenderer();
             }
             else
             {
@@ -77,6 +80,22 @@ public class MeshRenderer : MonoBehaviour
         }
     }
 
+    private void RegisterRenderer()
+    {
+        if (!_isRegistered && _mesh != null)
+        {
+            SceneManager.AddRenderer(this);
+            _isRegistered = true;
+        }
+    }
+
+    private void UnregisterRenderer()
+    {
+        if (!_isRegistered) return;
+        SceneManager.RemoveRenderer(this);
+        _isRegistered = false;
+    }
+
     public void SetMesh(Mesh? mesh)
     {
         _mesh = mesh;
@@ -85,10 +104,12 @@ public class MeshRenderer : MonoBehaviour
             Debug.Log(
                 $"MeshRenderer: Mesh set directly with {mesh.Vertices.Length} vertices and {mesh.Indices.Length} indices.",
                 Debug.LogLevel.Info, true);
+            RegisterRenderer();
         }
         else
         {
             Debug.Log("MeshRenderer: Mesh set to null.", Debug.LogLevel.Info, true);
+            UnregisterRenderer();
         }
     }
 
@@ -96,11 +117,17 @@ public class MeshRenderer : MonoBehaviour
     public int GetVertexCount() => _mesh?.Vertices?.Length ?? 0;
     public int GetIndexCount() => _mesh?.Indices?.Length ?? 0;
 
-
     private void OnEnable()
     {
         if (_mesh == null && !string.IsNullOrEmpty(Path))
             LoadMeshFromPath();
+        else if (_mesh != null)
+            RegisterRenderer();
+    }
+
+    private void OnDisable()
+    {
+        UnregisterRenderer();
     }
 
     public override string ToString()
