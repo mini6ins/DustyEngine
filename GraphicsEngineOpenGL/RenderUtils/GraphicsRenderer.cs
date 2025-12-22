@@ -319,7 +319,7 @@ public class GraphicsRenderer(string vertShaderPath, string fragShaderPath, int 
         };
 
         _sceneObjects.Add(renderableObject);
-        Debug.Log("RenderableObject ID: " + renderableObject.GameObjectId, Debug.LogLevel.Error);
+        Debug.Log("RenderableObject ID: " + renderableObject.GameObjectId, Debug.LogLevel.Info, true);
     }
 
 

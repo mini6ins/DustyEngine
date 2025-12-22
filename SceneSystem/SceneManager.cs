@@ -81,7 +81,7 @@ public static class SceneManager
     {
         if (CurrentScene == null)
         {
-            Debug.Log("[SceneManager] No scenes available!", Debug.LogLevel.Error, false);
+            Debug.Log("[SceneManager] No scenes available!", Debug.LogLevel.Error);
             return;
         }
 

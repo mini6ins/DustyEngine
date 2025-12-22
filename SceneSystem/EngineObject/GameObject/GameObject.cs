@@ -24,7 +24,7 @@ public sealed class GameObject : DustyEngine.EngineObject
     public GameObject(string name = "New GameObject")
     {
         Id = SceneManager.GenerateGameObjectId();
-        Debug.Log("Set Id: " + Id);
+        Debug.Log("Set Id: " + Id, Debug.LogLevel.Info, true);
         Name = name;
     }
 
