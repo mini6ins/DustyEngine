@@ -171,7 +171,9 @@ Desktop.ini
 $RECYCLE.BIN/
 
 # OS generated files #
-Icon?
+# macOS custom icon file (Icon\r)
+Icon
+
 
 # Mac desktop service store files
 .DS_Store
@@ -213,3 +215,8 @@ AppPackages/
 #####
 # End of core ignore list, below put you custom 'per project' settings (patterns or path)
 #####
+
+
+# --- allow Editor/Editor assets ---
+!**/Editor/Editor/
+!**/Editor/Editor/**

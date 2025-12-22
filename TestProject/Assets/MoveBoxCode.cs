@@ -24,7 +24,8 @@ public class MoveBoxCode : MonoBehaviour
         _boxTransform.LocalRotation.Y += rotationSpeed * (float)Time.DeltaTime;
 
         _direction = Vector3.Zero;
-        if (Input.IsKeyDown(KeyCode.I)) _direction += _boxTransform.Forward;
+        // if(Input.IsKeyDown(KeyCode.I)) Debug.Log(_direction);
+            if (Input.IsKeyDown(KeyCode.I)) _direction += _boxTransform.Forward;
         MoveBox();
     }
 

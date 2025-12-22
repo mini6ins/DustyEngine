@@ -5,7 +5,7 @@
       "ActiveSelf": true,
       "Children": [
         {
-          "ActiveSelf": false,
+          "ActiveSelf": true,
           "Children": [],
           "Components": [
             {
@@ -172,6 +172,12 @@
             },
             "Name": "\u003CNo GameObject\u003E"
           },
+          "Enabled": true,
+          "Name": "Camera"
+        },
+        {
+          "Type": "Player",
+          "SourcePath": "Assets/Player.cs",
           "Enabled": true,
           "Name": "Camera"
         }
