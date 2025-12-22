@@ -16,8 +16,14 @@ public class ConsolePanel : IRenderablePanel
     private const bool AutoScroll = true;
     private static ConsoleInterceptor? _interceptor;
 
-    public  static void InitializeConsoleInterceptor()
+    public static bool DebugEnabled;
+    private static Action<bool>? _onDebugModeChanged;
+
+    public static void InitializeConsoleInterceptor(Action<bool> onDebugModeChanged, bool currentDebugState)
     {
+        DebugEnabled = currentDebugState;
+        _onDebugModeChanged += onDebugModeChanged;
+
         var originalOutput = Console.Out;
         _interceptor = new ConsoleInterceptor(originalOutput, OnConsoleLineWritten);
         Console.SetOut(_interceptor);
@@ -40,6 +46,14 @@ public class ConsolePanel : IRenderablePanel
 
         if (ImGui.Button("Clear"))
             Lines.Clear();
+
+        ImGui.SameLine();
+
+
+        if (ImGui.Checkbox("Debug", ref DebugEnabled))
+        {
+            _onDebugModeChanged?.Invoke(DebugEnabled);
+        }
 
         ImGui.SameLine();
         ImGui.TextDisabled($"Lines: {Lines.Count}");

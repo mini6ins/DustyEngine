@@ -6,12 +6,11 @@ namespace WindowEngine;
 
 public class StandaloneWindow : GameWindow
 {
-    public StandaloneWindow(WindowSettings windowSettings) : base(windowSettings.GameWindowSettings,
-        windowSettings.NativeWindowSettings)
+    public StandaloneWindow(GameWindowSettings gameWindowSettings, NativeWindowSettings nativeWindowSettings, bool vsync, CursorState cursorState) : base(gameWindowSettings, nativeWindowSettings)
     {
-        Title = windowSettings.NativeWindowSettings.Title;
-        VSync = windowSettings.VSync ? VSyncMode.On : VSyncMode.Off;
-        CursorState = windowSettings.CursorState;
+        Title = nativeWindowSettings.Title;
+        VSync = vsync ? VSyncMode.On : VSyncMode.Off;
+        CursorState = cursorState;
     }
 
     protected override void OnLoad()

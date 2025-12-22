@@ -12,6 +12,7 @@ internal class HierarchyPanel : IRenderablePanel
     private readonly Scene _scene;
 
     private readonly Queue<Action> _deferredActions = new();
+    private bool _anyItemHovered;
 
     public HierarchyPanel() => _scene = SceneManager.CurrentScene;
 
@@ -26,7 +27,34 @@ internal class HierarchyPanel : IRenderablePanel
             ImGui.Separator();
         }
 
+        _anyItemHovered = false;
         DrawSceneHierarchy();
+
+        if (ImGui.IsWindowHovered() && !_anyItemHovered && ImGui.IsMouseClicked(ImGuiMouseButton.Right))
+        {
+            _selected = null;
+            ImGui.OpenPopup("scene_root_menu");
+        }
+
+        if (ImGui.BeginPopup("scene_root_menu"))
+        {
+            if (ImGui.BeginMenu("Create"))
+            {
+                if (ImGui.MenuItem("Empty GameObject"))
+                {
+                    _deferredActions.Enqueue(() =>
+                    {
+                        SceneManager.AddGameObjectRecursively(new GameObject("Empty GameObject"), null);
+                    });
+                    ImGui.CloseCurrentPopup();
+                }
+
+                ImGui.EndMenu();
+            }
+
+            ImGui.EndPopup();
+        }
+
         ImGui.End();
 
         ExecuteDeferredActions();
@@ -78,6 +106,8 @@ internal class HierarchyPanel : IRenderablePanel
 
         var opened = ImGui.TreeNodeEx(label, flags);
 
+        if (ImGui.IsItemHovered()) _anyItemHovered = true;
+
         if (ImGui.IsItemClicked(ImGuiMouseButton.Left))
         {
             _selected = gameObject;
@@ -87,6 +117,7 @@ internal class HierarchyPanel : IRenderablePanel
         if (ImGui.IsItemClicked(ImGuiMouseButton.Right))
         {
             _selected = gameObject;
+            InspectorPanel.InspectorPanel.SetSelectedGameObject(_selected);
             ImGui.OpenPopup("object_menu");
         }
 

@@ -15,8 +15,7 @@ internal class InspectorPanel : IRenderablePanel
 {
     private static GameObject? _selectedGameObject;
 
-    public static void SetSelectedGameObject(GameObject selectedGameObject)
-        => _selectedGameObject = selectedGameObject;
+    public static void SetSelectedGameObject(GameObject selectedGameObject) => _selectedGameObject = selectedGameObject;
 
     public void Render()
     {
@@ -38,11 +37,8 @@ internal class InspectorPanel : IRenderablePanel
 
         DrawGameObjectInfo();
         ImGui.Separator();
-
         DrawObjectComponents(_selectedGameObject);
-
         ImGui.Separator();
-
         DrawAddComponent();
 
         ImGui.End();
@@ -90,6 +86,7 @@ internal class InspectorPanel : IRenderablePanel
                 {
                     Debug.Log($"Can't create component: {item.FullName}", Debug.LogLevel.Error, true);
                 }
+
                 ImGui.CloseCurrentPopup();
             }
 
@@ -155,15 +152,18 @@ internal class InspectorPanel : IRenderablePanel
             ImGui.PopID();
         }
 
-        if (toRemove != null) return;
-            // gameObject.RemoveComponent(toRemove); //TODO добавить удаление компонентов по айди
+        if (toRemove != null)
+            gameObject.RemoveComponent(toRemove.Id);
     }
 
 
+    private static bool IsReadOnly(PropertyInfo prop) =>
+        !prop.CanWrite || HasAttrByFullName(prop, typeof(ReadOnlyInInspectorAttribute));
 
-    private static bool IsReadOnly(PropertyInfo prop) => !prop.CanWrite || HasAttrByFullName(prop, typeof(ReadOnlyInInspectorAttribute));
-
-    private static bool HasAttrByFullName(MemberInfo member, Type attrType) => attrType.FullName != null && member.CustomAttributes.Any(cad => cad.AttributeType.FullName == attrType.FullName);
+    private static bool HasAttrByFullName(MemberInfo member, Type attrType) => attrType.FullName != null &&
+                                                                               member.CustomAttributes.Any(cad =>
+                                                                                   cad.AttributeType.FullName ==
+                                                                                   attrType.FullName);
 
     private static bool ShouldDraw(FieldInfo field)
     {

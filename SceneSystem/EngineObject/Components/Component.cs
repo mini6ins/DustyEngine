@@ -25,10 +25,16 @@ public class Component : EngineObject
 
     [HideInInspector] [JsonIgnore] public Transform? transform => GameObject?.GetComponent<Transform>();
 
+    protected Component()
+    {
+        Id = SceneManager.GenerateComponentId();
+        Debug.Log("Set Id for component: " + Id, Debug.LogLevel.Info, true);
+    }
+
 
     protected T? GetComponent<T>() where T : Component => Parent?.GetComponent<T>();
     protected bool HasComponent<T>() where T : Component => Parent?.GetComponent<T>() != null;
-
+    protected uint GetComponentId() => Id;
 
     protected void Instantiate(GameObject? gameObject)
     {

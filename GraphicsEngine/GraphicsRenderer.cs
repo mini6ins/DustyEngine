@@ -15,7 +15,7 @@ namespace GraphicsEngine;
 public class RenderableObject
 {
     public int VaoIndex;
-    public int GameObjectId;
+    public uint GameObjectId;
     public Transform Transform = new();
     public MeshRenderer MeshRenderer = null!;
 }
@@ -380,6 +380,10 @@ public class GraphicsRenderer(string vertShaderPath, string fragShaderPath, int 
         return true;
     }
 
+    public static void ChangePlayMode(bool isPlayMode)
+    {
+        Debug.Log("Is play mode: " + isPlayMode, Debug.LogLevel.Info, true);
+    }
 
 
 

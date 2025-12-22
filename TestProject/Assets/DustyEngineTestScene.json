@@ -183,6 +183,12 @@
         }
       ],
       "Name": "Camera"
+    },
+    {
+      "ActiveSelf": true,
+      "Children": [],
+      "Components": [],
+      "Name": "Empty GameObject"
     }
   ],
   "Components": []

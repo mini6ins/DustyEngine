@@ -23,13 +23,13 @@ public sealed class DustyEngine : IDisposable
     {
         Debug.ClearLogs();
 
-        if (renderMode == RenderMode.Editor) ConsolePanel.InitializeConsoleInterceptor();
 
         if (path.Length == 0)
         {
             Debug.Log("No project path provided", Debug.LogLevel.FatalError, true);
             return;
         }
+
 
         ProjectFolderPath = path;
         _settings = ProjectSettings.DeserializeProjectSettings(ProjectFolderPath);
@@ -39,6 +39,12 @@ public sealed class DustyEngine : IDisposable
         Debug.SetLogLevel(_settings.LogLevel);
         Debug.EnableConsoleLogging(_settings.LogToConsole);
         Debug.EnableFileLogging(_settings.LogToFile);
+
+        var onDebugEnabled = Debug.EnableDebugMode;
+
+        if (renderMode == RenderMode.Editor) ConsolePanel.InitializeConsoleInterceptor(onDebugEnabled, _settings.Debug);
+
+
 
         Debug.Log("Project settings loaded");
 

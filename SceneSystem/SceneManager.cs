@@ -10,8 +10,10 @@ public static class SceneManager
     public static Action<MeshRenderer> AddRenderer = _ => { };
     public static Action<GameObject> RemoveRenderer = _ => { };
 
-    private static int _nextGameObjectId = 1;
-    public static int GenerateGameObjectId() => _nextGameObjectId++;
+    private static uint _nextGameObjectId = 1;
+    private static uint _nextComponentId = 1;
+    public static uint GenerateGameObjectId() => _nextGameObjectId++;
+    public static uint GenerateComponentId() => _nextComponentId++;
 
 
     public static Scene? CurrentScene

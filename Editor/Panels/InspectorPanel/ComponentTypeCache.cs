@@ -18,8 +18,7 @@ public static class ComponentTypeCache
             .Where(a => !a.IsDynamic)
             .SelectMany(SafeGetTypes)
             .Where(t =>
-                t != null &&
-                t.IsClass &&
+                t is { IsClass: true } &&
                 !t.IsAbstract &&
                 !t.ContainsGenericParameters &&
                 t != baseType &&

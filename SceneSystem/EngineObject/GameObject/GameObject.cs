@@ -9,7 +9,6 @@ namespace SceneSystem.EngineObject.GameObject;
 
 public sealed class GameObject : DustyEngine.EngineObject
 {
-    [HideInInspector] [JsonIgnore]  public int Id { get; }
     public bool ActiveSelf { get; set; } = true;
 
     [JsonIgnore] public bool ActiveInHierarchy => ActiveSelf && (Parent?.ActiveInHierarchy ?? true);
@@ -24,7 +23,7 @@ public sealed class GameObject : DustyEngine.EngineObject
     public GameObject(string name = "New GameObject")
     {
         Id = SceneManager.GenerateGameObjectId();
-        Debug.Log("Set Id: " + Id, Debug.LogLevel.Info, true);
+        Debug.Log("Set Id for GameObject: " + Id, Debug.LogLevel.Info, true);
         Name = name;
     }
 
@@ -59,6 +58,34 @@ public sealed class GameObject : DustyEngine.EngineObject
         Debug.Log($"Added component [{component.GetType().Name}] to GameObject [{Name}]", Debug.LogLevel.Info, true);
     }
 
+    public bool RemoveComponent<T>() where T : Component
+    {
+        var index = Components.FindIndex(c => c is T);
+        if (index < 0) return false;
+
+        var comp = Components[index];
+        TryInvoke(comp, "OnDestroy");
+
+        comp.Parent = null;
+        Components.RemoveAt(index);
+        return true;
+    }
+
+
+    public bool RemoveComponent(uint componentId)
+    {
+        var index = Components.FindIndex(c => c.Id == componentId);
+        if (index < 0) return false;
+
+        var comp = Components[index];
+
+        TryInvoke(comp, "OnDestroy");
+
+        comp.Parent = null;
+        Components.RemoveAt(index);
+        return true;
+    }
+
     public void AddChild(GameObject child)
     {
         child.Parent = this;
@@ -75,6 +102,16 @@ public sealed class GameObject : DustyEngine.EngineObject
     {
         return Components.Count == 0 ? null : Components.OfType<T>().FirstOrDefault();
     }
+
+
+    private static void TryInvoke(Component component, string methodName)
+    {
+        var method = component.GetType().GetMethod(methodName,
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+
+        method?.Invoke(component, null);
+    }
+
 
     public void InvokeMethodInComponents(string methodName)
     {
