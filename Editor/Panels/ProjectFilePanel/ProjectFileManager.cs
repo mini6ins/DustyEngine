@@ -127,7 +127,7 @@ internal class ProjectFileManager
         }
     }
 
-    public void PasteClipboard(string targetFolder)
+    public void PasteClipboard(string targetFolder, ref bool isPasted)
     {
         if (string.IsNullOrEmpty(ClipboardPath))
         {
@@ -135,6 +135,7 @@ internal class ProjectFileManager
             return;
         }
 
+        isPasted =  true;
         try
         {
             if (!File.Exists(ClipboardPath) && !Directory.Exists(ClipboardPath))

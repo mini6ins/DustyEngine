@@ -16,6 +16,7 @@ internal class ProjectFilePanel : IRenderablePanel
     private double _lastClickTime;
     private string? _lastClickedPath;
 
+    private bool _isFileCopied ;
 
     public ProjectFilePanel()
     {
@@ -49,14 +50,16 @@ internal class ProjectFilePanel : IRenderablePanel
 
     private void HandleGlobalHotkeys()
     {
+        if (!ImGui.IsWindowFocused(ImGuiFocusedFlags.RootAndChildWindows)) return;
+
         var io = ImGui.GetIO();
         var ctrlPressed = io.KeyCtrl;
 
         if (!string.IsNullOrEmpty(_renamingPath))
             return;
 
-        if (ctrlPressed && ImGui.IsKeyPressed(ImGuiKey.V) && !string.IsNullOrEmpty(_fileManager.ClipboardPath))
-            _fileManager.PasteClipboard(_fileManager.CurrentPath);
+        if (ctrlPressed && ImGui.IsKeyPressed(ImGuiKey.V) && !string.IsNullOrEmpty(_fileManager.ClipboardPath) && _isFileCopied)
+            _fileManager.PasteClipboard(_fileManager.CurrentPath, ref _isFileCopied);
 
         if (string.IsNullOrEmpty(_fileManager.SelectedPath))
             return;
@@ -64,6 +67,7 @@ internal class ProjectFilePanel : IRenderablePanel
         if (ctrlPressed && ImGui.IsKeyPressed(ImGuiKey.C))
         {
             _fileManager.ClipboardPath = _fileManager.SelectedPath;
+            _isFileCopied = true;
             Console.WriteLine($"Copied: {_fileManager.ClipboardPath}");
         }
 
@@ -233,8 +237,6 @@ internal class ProjectFilePanel : IRenderablePanel
         {
             if (ImGui.MenuItem("Copy absolute path"))
             {
-                _fileManager.ClipboardPath = fullPath;
-
                 try
                 {
                     CopyToClipboard(fullPath);
@@ -242,23 +244,24 @@ internal class ProjectFilePanel : IRenderablePanel
                 }
                 catch (Exception ex)
                 {
-                    Debug.Log($"Failed to copy to system clipboard: {ex.Message}. Saved to internal clipboard.", Debug.LogLevel.Warning);
+                    Debug.Log($"Failed to copy to system clipboard: {ex.Message}", Debug.LogLevel.Warning);
                 }
             }
 
             if (ImGui.MenuItem("Copy", "Ctrl+C"))
             {
                 _fileManager.ClipboardPath = fullPath;
+                _isFileCopied = true;
                 Debug.Log($"Copied: {_fileManager.ClipboardPath}", Debug.LogLevel.Info, true);
             }
 
-            var hasClipboard = !string.IsNullOrEmpty(_fileManager.ClipboardPath);
+            var hasClipboard = !string.IsNullOrEmpty(_fileManager.ClipboardPath) && _isFileCopied;
             if (!hasClipboard) ImGui.BeginDisabled();
 
             if (ImGui.MenuItem("Paste", "Ctrl+V"))
             {
                 var pasteTarget = isFolder ? fullPath : _fileManager.CurrentPath;
-                _fileManager.PasteClipboard(pasteTarget);
+                _fileManager.PasteClipboard(pasteTarget, ref _isFileCopied);
             }
 
             if (!hasClipboard) ImGui.EndDisabled();
@@ -400,11 +403,11 @@ internal class ProjectFilePanel : IRenderablePanel
 
         ImGui.Separator();
 
-        var hasClipboard = !string.IsNullOrEmpty(_fileManager.ClipboardPath);
+        var hasClipboard = !string.IsNullOrEmpty(_fileManager.ClipboardPath) && _isFileCopied;
         if (!hasClipboard) ImGui.BeginDisabled();
 
         if (ImGui.MenuItem("Paste", "Ctrl+V"))
-            _fileManager.PasteClipboard(_fileManager.CurrentPath);
+            _fileManager.PasteClipboard(_fileManager.CurrentPath, ref _isFileCopied);
 
         if (!hasClipboard) ImGui.EndDisabled();
 
