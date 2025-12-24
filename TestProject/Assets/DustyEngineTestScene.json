@@ -1,5 +1,6 @@
 {
   "Name": "DustyEngineTestScene",
+  "Path": "/home/maksym/DustyEngine/TestProject/Assets/DustyEngineTestScene.json",
   "GameObjects": [
     {
       "ActiveSelf": true,

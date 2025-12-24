@@ -8,7 +8,7 @@ public class ProjectSettings
     public string ProjectName { get; set; }
     public float Version { get; set; }
 
-    public List<string> PathToScenes { get; set; } = [];
+    public List<string>? PathToScenes { get; set; } = [];
     public string PathToFragShader { get; set; }
     public string PathToVertShader { get; set; }
 

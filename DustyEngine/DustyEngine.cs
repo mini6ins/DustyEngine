@@ -4,6 +4,7 @@ using Editor;
 using Editor.Panels.ConsolePanel;
 using Editor.Panels.HierarchyPanel;
 using Editor.Panels.ProjectFilePanel;
+using Editor.Panels.ProjectSetiingPanel;
 using WindowEngine;
 
 namespace DustyEngine;
@@ -58,10 +59,23 @@ public sealed class DustyEngine : IDisposable
             return true;
         }
 
-
         ProjectFolderPath = path;
         _settings = ProjectSettings.DeserializeProjectSettings(ProjectFolderPath);
+        ProjectSetiingPanel.ScenePaths = _settings.PathToScenes;
+
         return false;
+    }
+
+    private static void SaveProject()
+    {
+        SceneSerializer.SaveScene(SceneManager.CurrentScene, SceneManager.GetCurrentScenePath());
+        SaveProjectSettings();
+    }
+
+    private static void SaveProjectSettings()
+    {
+        _settings.PathToScenes = ProjectSetiingPanel.ScenePaths;
+        ProjectSettings.SerializeProjectSettings(_settings, ProjectFolderPath);
     }
 
     private static void SetupDebug(RenderMode renderMode)
@@ -76,8 +90,8 @@ public sealed class DustyEngine : IDisposable
         if (renderMode == RenderMode.Editor)
         {
             ConsolePanel.InitializeConsoleInterceptor(onDebugEnabled, _settings.Debug);
-            RendererUI.OnProjectSave += () =>
-                SceneSerializer.SaveScene(SceneManager.CurrentScene, SceneManager.GetCurrentScenePath());
+            RendererUI.OnProjectSave += SaveProject;
+            ProjectSetiingPanel.OnSaveProjectSettings += SaveProjectSettings;
             ProjectFilePanel.OnSceneOpened += OpenScene;
         }
 
@@ -137,8 +151,10 @@ public sealed class DustyEngine : IDisposable
         SceneManager.AddRenderer -= AddRenderer;
         SceneManager.RemoveRenderer -= RemoveRenderer;
 
-        RendererUI.OnProjectSave -= () =>
-            SceneSerializer.SaveScene(SceneManager.CurrentScene, _settings.PathToScenes.FirstOrDefault());
+
+        RendererUI.OnProjectSave -= SaveProject;
+        ProjectSetiingPanel.OnSaveProjectSettings -= SaveProjectSettings;
+
         ProjectFilePanel.OnSceneOpened -= OpenScene;
     }
 }

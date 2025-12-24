@@ -3,6 +3,7 @@ using Editor.Panels.ConsolePanel;
 using Editor.Panels.HierarchyPanel;
 using Editor.Panels.InspectorPanel;
 using Editor.Panels.ProjectFilePanel;
+using Editor.Panels.ProjectSetiingPanel;
 using Editor.Panels.ViewPortPanel;
 using Editor.Panels.ViewPortPanel.Themes;
 using ImGuiNET;
@@ -14,6 +15,8 @@ public class RendererUI
 {
     public static Action? OnProjectSave;
 
+    private readonly ProjectSetiingPanel _projectSettingsPanel;
+
     private readonly List<IRenderablePanel>? _renderablePanels =
     [
         new ViewportPanel(),
@@ -21,7 +24,14 @@ public class RendererUI
         new ConsolePanel(),
         new HierarchyPanel(),
         new InspectorPanel(),
+        new ProjectSetiingPanel(),
     ];
+
+    public RendererUI()
+    {
+        _projectSettingsPanel =  new ProjectSetiingPanel();
+        _renderablePanels?.Add(_projectSettingsPanel);
+    }
 
 
     public void Render(GameWindow window)
@@ -34,7 +44,7 @@ public class RendererUI
             panel.Render();
     }
 
-    private static void RenderTopMenuBar(GameWindow window)
+    private void RenderTopMenuBar(GameWindow window)
     {
         if (!ImGui.BeginMainMenuBar())
             return;
@@ -70,6 +80,12 @@ public class RendererUI
 
                     ImGui.EndMenu();
                 }
+
+                if (ImGui.MenuItem("Project Settings"))
+                {
+                    _projectSettingsPanel.ShowPanel = !_projectSettingsPanel.ShowPanel;
+                }
+
 
                 ImGui.EndMenu();
             }
