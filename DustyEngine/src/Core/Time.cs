@@ -6,21 +6,26 @@ public static class Time
 {
     public static float DeltaTime { get; private set; }
 
-    private static long lastTimestamp;
-    private static double timestampToSeconds;
+    private static long _lastTimestamp;
+    private static double _timestampToSeconds;
 
     public static void Init()
     {
-        timestampToSeconds = 1.0 / Stopwatch.Frequency;
-        lastTimestamp = Stopwatch.GetTimestamp();
-        DeltaTime = 0f;
+        Reset();
+        _timestampToSeconds = 1.0 / Stopwatch.Frequency;
     }
 
     public static void Tick()
     {
         var now = Stopwatch.GetTimestamp();
 
-        DeltaTime = (float)((now - lastTimestamp) * timestampToSeconds);
-        lastTimestamp = now;
+        DeltaTime = (float)((now - _lastTimestamp) * _timestampToSeconds);
+        _lastTimestamp = now;
+    }
+
+    public static void Reset()
+    {
+        _lastTimestamp = Stopwatch.GetTimestamp();
+        DeltaTime = 0f;
     }
 }

@@ -2,8 +2,6 @@
 using DustyEngine.Scene;
 using Editor;
 using Editor.Panels.ConsolePanel;
-using GraphicsEngine;
-using SceneSystem.EngineObject.GameObject;
 using WindowEngine;
 
 namespace DustyEngine;
@@ -15,26 +13,57 @@ public sealed class DustyEngine : IDisposable
 
     private static Window _window = null!;
 
-    private static readonly Action<MeshRenderer> AddRenderer = meshRenderer => _window.Renderer?.AddRenderer(meshRenderer);
-    private static readonly Action<MeshRenderer> RemoveRenderer = meshRenderer => _window.Renderer?.RemoveRendererByComponent(meshRenderer);
+    private static readonly Action<MeshRenderer> AddRenderer = meshRenderer =>
+        _window.Renderer?.AddRenderer(meshRenderer);
+
+    private static readonly Action<MeshRenderer> RemoveRenderer =
+        meshRenderer => _window.Renderer?.RemoveRendererByComponent(meshRenderer);
 
 
     public static void StartEngine(string path, RenderMode renderMode)
     {
         Debug.ClearLogs();
 
+        if (LoadProject(path)) return;
 
+        SetupDebug(renderMode);
+
+        if (!LoadScene()) return;
+
+        if (renderMode == RenderMode.Standalone)
+            StartLifeCycle();
+
+        CreateWindow(renderMode);
+    }
+
+    private static void CreateWindow(RenderMode renderMode)
+    {
+        _window = new Window();
+
+        SceneManager.AddRenderer += AddRenderer;
+        SceneManager.RemoveRenderer += RemoveRenderer;
+
+        _window.RunMainLoop(ExecuteLifeCycle,
+            _settings.ScreenSize.ToOpenTK(), _settings.ProjectName, _settings.PathToVertShader,
+            _settings.PathToFragShader, _settings.Vsync, renderMode, ProjectFolderPath);
+    }
+
+    private static bool LoadProject(string path)
+    {
         if (path.Length == 0)
         {
             Debug.Log("No project path provided", Debug.LogLevel.FatalError, true);
-            return;
+            return true;
         }
 
 
         ProjectFolderPath = path;
         _settings = ProjectSettings.DeserializeProjectSettings(ProjectFolderPath);
+        return false;
+    }
 
-
+    private static void SetupDebug(RenderMode renderMode)
+    {
         Debug.EnableDebugMode(_settings.Debug);
         Debug.SetLogLevel(_settings.LogLevel);
         Debug.EnableConsoleLogging(_settings.LogToConsole);
@@ -42,9 +71,12 @@ public sealed class DustyEngine : IDisposable
 
         var onDebugEnabled = Debug.EnableDebugMode;
 
-        if (renderMode == RenderMode.Editor) ConsolePanel.InitializeConsoleInterceptor(onDebugEnabled, _settings.Debug);
-
-
+        if (renderMode == RenderMode.Editor)
+        {
+            ConsolePanel.InitializeConsoleInterceptor(onDebugEnabled, _settings.Debug);
+            RendererUI.OnProjectSave += () =>
+                SceneSerializer.SaveScene(SceneManager.CurrentScene, _settings.PathToScenes.FirstOrDefault());
+        }
 
         Debug.Log("Project settings loaded");
 
@@ -53,41 +85,41 @@ public sealed class DustyEngine : IDisposable
         Debug.Log("Test WARNING", Debug.LogLevel.Warning, true);
         Debug.Log("Test ERROR", Debug.LogLevel.Error, true);
         Debug.Log("Test FATAL", Debug.LogLevel.FatalError, true);
+    }
 
-        if (SceneSerializer.LoadScene(out var loadedScene, _settings.PathToScenes.FirstOrDefault())) return;
-
-        if (renderMode == RenderMode.Standalone)
+    private static void StartLifeCycle()
+    {
+        foreach (var method in new[] { "OnEnable", "Start" })
         {
-            foreach (var method in new[] { "OnEnable", "Start" })
+            foreach (var gameObject in SceneManager.CurrentScene!.GameObjects)
             {
-                foreach (var gameObject in loadedScene!.GameObjects)
-                {
-                    SceneManager.InvokeRecursive(gameObject, method);
-                }
+                SceneManager.InvokeRecursive(gameObject, method);
             }
         }
-        else
-            RendererUI.OnProjectSave += () =>
-                SceneSerializer.SaveScene(SceneManager.CurrentScene, _settings.PathToScenes.FirstOrDefault());
 
-        GameLoop.Initialize(loadedScene!);
+        GameLoop.Initialize(SceneManager.CurrentScene!);
         Time.Init();
-        _window = new Window();
+    }
 
-        SceneManager.AddRenderer += AddRenderer;
-        SceneManager.RemoveRenderer += RemoveRenderer;
+    private static void ExecuteLifeCycle()
+    {
+        GameLoop.ExecuteFrame(SceneManager.CurrentScene!);
+        Time.Tick();
+    }
 
-        _window.RunMainLoop(GameLoopAction,
-            _settings.ScreenSize.ToOpenTK(), _settings.ProjectName, _settings.PathToVertShader,
-            _settings.PathToFragShader, _settings.Vsync, renderMode, ProjectFolderPath);
-        return;
-
-        void GameLoopAction()
+    private static bool LoadScene()
+    {
+        var scenePath = _settings.PathToScenes.FirstOrDefault();
+        var loadedScene = new Scene.Scene();
+        if (SceneSerializer.LoadScene(out loadedScene, scenePath) == null)
         {
-            if (renderMode == RenderMode.Editor) return;
-            GameLoop.ExecuteFrame(loadedScene!);
-            Time.Tick();
+            Debug.Log("Scene deserialize error", Debug.LogLevel.Error);
+            return false;
         }
+
+        var loadScene = SceneSerializer.LoadScene(out loadedScene, scenePath);
+        SceneManager.CurrentScene = loadScene;
+        return true;
     }
 
     public void Dispose()
@@ -95,7 +127,6 @@ public sealed class DustyEngine : IDisposable
         SceneManager.AddRenderer -= AddRenderer;
         SceneManager.RemoveRenderer -= RemoveRenderer;
 
-        RendererUI.OnProjectSave -= () =>
-            SceneSerializer.SaveScene(SceneManager.CurrentScene, _settings.PathToScenes.FirstOrDefault());
+        RendererUI.OnProjectSave -= () => SceneSerializer.SaveScene(SceneManager.CurrentScene, _settings.PathToScenes.FirstOrDefault());
     }
 }

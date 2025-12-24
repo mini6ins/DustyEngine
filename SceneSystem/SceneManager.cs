@@ -23,12 +23,12 @@ public static class SceneManager
             if (currentScene == null && sceneList.Count > 0)
             {
                 currentScene = sceneList[0];
-                Debug.Log($"[SceneManager] Auto-set current scene to: {currentScene.Name}", Debug.LogLevel.Info, true);
+                Debug.Log($"[SceneManager] Auto-set current scene to: {currentScene.Name}", Debug.LogLevel.FatalError, true);
             }
 
             return currentScene;
         }
-        private set => currentScene = value;
+        set => currentScene = value;
     }
 
 
@@ -85,7 +85,6 @@ public static class SceneManager
     
         gameObject.InvokeMethodInComponents("Start");
     }
-
     public static void RemoveGameObjectRecursively(GameObject gameObject)
     {
         if (CurrentScene == null)
@@ -161,7 +160,6 @@ public static class SceneManager
 
         return cameras;
     }
-
     private static Camera? FindCameraRecursive(GameObject obj)
     {
         foreach (var component in obj.Components)
@@ -235,6 +233,12 @@ public static class SceneManager
         Debug.Log($"[SceneManager] Current scene set to: {CurrentScene.Name}", Debug.LogLevel.Info, true);
     }
 
+    public static void LoadScene(uint  index)
+    {
+        CurrentScene = FindScene(index);
+        Debug.Log($"[SceneManager] Current scene set to: {CurrentScene.Name}", Debug.LogLevel.Info, true);
+    }
+
     public static string? GetCurrentScene() => CurrentScene.Name;
 
     public static void AddScene(Scene scene)
@@ -276,6 +280,10 @@ public static class SceneManager
     public static Scene? FindScene(string name)
     {
         return sceneList.FirstOrDefault(s => s.Name == name);
+    }
+    public static Scene? FindScene(uint index)
+    {
+        return sceneList[(int)index];
     }
 
     public static IReadOnlyList<Scene> GetAllScenes() => sceneList.AsReadOnly();

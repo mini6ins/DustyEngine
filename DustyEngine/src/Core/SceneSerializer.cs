@@ -6,7 +6,7 @@ namespace DustyEngine;
 
 public static class SceneSerializer
 {
-        public static bool LoadScene(out Scene.Scene? loadedScene, string scenePath)
+        public static Scene.Scene? LoadScene(out Scene.Scene? loadedScene, string scenePath)
         {
             loadedScene = new Scene.Scene();
             try
@@ -15,8 +15,8 @@ public static class SceneSerializer
 
                 if (!File.Exists(scenePath))
                 {
-                    Debug.Log($"Scene file not found: {scenePath}", Debug.LogLevel.FatalError, false);
-                    return true;
+                    Debug.Log($"Scene file not found: {scenePath}", Debug.LogLevel.FatalError);
+                    return null;
                 }
 
                 loadedScene = JsonSerializer.Deserialize<Scene.Scene>(
@@ -39,8 +39,7 @@ public static class SceneSerializer
                 Debug.Log($"Error loading scene: {ex.Message}", Debug.LogLevel.FatalError, false);
             }
 
-            SceneManager.AddScene(loadedScene);
-            return false;
+            return loadedScene;
         }
 
         public static bool SaveScene(Scene.Scene sceneToSave, string scenePath)

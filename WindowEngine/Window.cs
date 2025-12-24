@@ -43,7 +43,8 @@ public class Window
             ? new EditorWindow(GameWindowSettings.Default, nativeWindowSettings, vsync, _renderer, projectPath)
             : new StandaloneWindow(GameWindowSettings.Default, nativeWindowSettings, vsync, cursorState);
 
-        _window.UpdateFrame += _ => updateCallback.Invoke();
+        if (renderMode == RenderMode.Standalone)
+            _window.UpdateFrame += _ => updateCallback.Invoke();
         _window.Run();
     }
 }
