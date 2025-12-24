@@ -240,6 +240,7 @@ public static class SceneManager
     }
 
     public static string? GetCurrentScene() => CurrentScene.Name;
+    public static string? GetCurrentScenePath() => CurrentScene.Path;
 
     public static void AddScene(Scene scene)
     {

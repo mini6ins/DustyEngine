@@ -1,11 +1,13 @@
+using System.Diagnostics;
 using System.Numerics;
 using System.Text;
-using DustyEngine;
 using ImGuiNET;
+using TextCopy;
+using Debug = DustyEngine.Debug;
 
 namespace Editor.Panels.ProjectFilePanel;
 
-internal class ProjectFilePanel : IRenderablePanel
+public class ProjectFilePanel : IRenderablePanel
 {
     private readonly ProjectFileManager _fileManager;
 
@@ -16,7 +18,9 @@ internal class ProjectFilePanel : IRenderablePanel
     private double _lastClickTime;
     private string? _lastClickedPath;
 
-    private bool _isFileCopied ;
+    private bool _isFileCopied;
+
+    public static Action<string>? OnSceneOpened;
 
     public ProjectFilePanel()
     {
@@ -58,7 +62,8 @@ internal class ProjectFilePanel : IRenderablePanel
         if (!string.IsNullOrEmpty(_renamingPath))
             return;
 
-        if (ctrlPressed && ImGui.IsKeyPressed(ImGuiKey.V) && !string.IsNullOrEmpty(_fileManager.ClipboardPath) && _isFileCopied)
+        if (ctrlPressed && ImGui.IsKeyPressed(ImGuiKey.V) && !string.IsNullOrEmpty(_fileManager.ClipboardPath) &&
+            _isFileCopied)
             _fileManager.PasteClipboard(_fileManager.CurrentPath, ref _isFileCopied);
 
         if (string.IsNullOrEmpty(_fileManager.SelectedPath))
@@ -180,12 +185,31 @@ internal class ProjectFilePanel : IRenderablePanel
         _lastClickedPath = fullPath;
         _lastClickTime = currentTime;
 
-        if (!isDoubleClick || !isFolder) return;
+        if (!isDoubleClick) return;
 
-        if (label == "..")
-            _fileManager.NavigateUp();
+        if (isFolder)
+        {
+            if (label == "..")
+                _fileManager.NavigateUp();
+            else
+                _fileManager.NavigateToFolder(fullPath);
+
+            return;
+        }
+
+        if (label == "..") return;
+
+
+        if (Path.GetExtension(fullPath).Equals(".json", StringComparison.OrdinalIgnoreCase))
+        {
+            OnSceneOpened?.Invoke(fullPath);
+            return;
+        }
         else
-            _fileManager.NavigateToFolder(fullPath);
+        {
+            Debug.Log($"Can't now open this type file: {fullPath}", Debug.LogLevel.Warning, true);
+            return;
+        }
     }
 
     private void DrawDragDrop(bool isFolder, string label, string fullPath)
@@ -310,7 +334,7 @@ internal class ProjectFilePanel : IRenderablePanel
 
             try
             {
-                TextCopy.ClipboardService.SetText(text);
+                ClipboardService.SetText(text);
             }
             catch
             {
@@ -328,9 +352,9 @@ internal class ProjectFilePanel : IRenderablePanel
     {
         try
         {
-            var process = new System.Diagnostics.Process
+            var process = new Process
             {
-                StartInfo = new System.Diagnostics.ProcessStartInfo
+                StartInfo = new ProcessStartInfo
                 {
                     FileName = command,
                     Arguments = args,

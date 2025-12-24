@@ -1,1 +1,119 @@
-{}
+{
+  "Name": "test2",
+  "Path": "/home/maksym/DustyEngine/TestProject/Assets/test2.json",
+  "GameObjects": [
+    {
+      "ActiveSelf": true,
+      "Children": [],
+      "Components": [
+        {
+          "Type": "Transform",
+          "LocalPosition": {
+            "X": 0,
+            "Y": 0,
+            "Z": 0,
+            "Length": 0,
+            "LengthSquared": 0
+          },
+          "LocalRotation": {
+            "X": 0,
+            "Y": 0,
+            "Z": 0,
+            "Length": 0,
+            "LengthSquared": 0
+          },
+          "LocalScale": {
+            "X": 1,
+            "Y": 1,
+            "Z": 1,
+            "Length": 1.7320508,
+            "LengthSquared": 3
+          },
+          "Name": "TestGameObject0"
+        },
+        {
+          "Type": "MoveBoxCode",
+          "SourcePath": "Assets/MoveBoxCode.cs",
+          "Enabled": true,
+          "Name": "TestGameObject0"
+        },
+        {
+          "Type": "MeshRenderer",
+          "Path": "Assets/cube.obj",
+          "Enabled": true,
+          "Name": "TestGameObject0"
+        }
+      ],
+      "Name": "TestGameObject0"
+    },
+    {
+      "ActiveSelf": true,
+      "Children": [],
+      "Components": [
+        {
+          "Type": "Transform",
+          "LocalPosition": {
+            "X": 0,
+            "Y": 0,
+            "Z": 10,
+            "Length": 10,
+            "LengthSquared": 100
+          },
+          "LocalRotation": {
+            "X": 0,
+            "Y": 0,
+            "Z": 0,
+            "Length": 0,
+            "LengthSquared": 0
+          },
+          "LocalScale": {
+            "X": 1,
+            "Y": 1,
+            "Z": 1,
+            "Length": 1.7320508,
+            "LengthSquared": 3
+          },
+          "Name": "Camera"
+        },
+        {
+          "Type": "Camera",
+          "AspectRatio": 1.3333334,
+          "InternalTransform": {
+            "LocalPosition": {
+              "X": 0,
+              "Y": 2.5,
+              "Z": 5,
+              "Length": 5.59017,
+              "LengthSquared": 31.25
+            },
+            "LocalRotation": {
+              "X": 0,
+              "Y": 0,
+              "Z": 0,
+              "Length": 0,
+              "LengthSquared": 0
+            },
+            "LocalScale": {
+              "X": 1,
+              "Y": 1,
+              "Z": 1,
+              "Length": 1.7320508,
+              "LengthSquared": 3
+            },
+            "Name": "\u003CNo GameObject\u003E"
+          },
+          "Enabled": true,
+          "Name": "Camera"
+        },
+        {
+          "Type": "Player",
+          "SourcePath": "Assets/Player.cs",
+          "Enabled": true,
+          "Name": "Camera"
+        }
+      ],
+      "Name": "Camera"
+    }
+  ],
+  "Components": []
+}

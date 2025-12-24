@@ -1,34 +1,55 @@
 using System.Numerics;
+using DustyEngine;
 using DustyEngine.Scene;
 using ImGuiNET;
 using SceneSystem.EngineObject.GameObject;
 
 namespace Editor.Panels.HierarchyPanel;
 
-internal class HierarchyPanel : IRenderablePanel
+public class HierarchyPanel : IRenderablePanel, IDisposable
 {
     private GameObject? _selected;
     private GameObject? _copiedGameObject;
-    private readonly Scene _scene;
 
     private readonly Queue<Action> _deferredActions = new();
     private bool _anyItemHovered;
 
-    public HierarchyPanel() => _scene = SceneManager.CurrentScene;
+    public static Action? OnChangeScene;
+
+    public HierarchyPanel()
+    {
+        OnChangeScene += HandleSceneChange;
+    }
+
+    public void Dispose()
+    {
+        OnChangeScene -= HandleSceneChange;
+    }
+
+    private void HandleSceneChange()
+    {
+        _selected = null;
+        InspectorPanel.InspectorPanel.SetSelectedGameObject(null);
+        Debug.Log("[HierarchyPanel] Scene changed, selection cleared", Debug.LogLevel.Info, true);
+    }
+
 
     public void Render()
     {
         ImGui.SetNextWindowSize(new Vector2(360, 150), ImGuiCond.FirstUseEver);
         ImGui.SetNextWindowPos(new Vector2(10, 10), ImGuiCond.FirstUseEver);
 
+        var scene = SceneManager.CurrentScene;
+        if(scene == null) return;
+
         if (ImGui.Begin("Hierarchy Panel"))
         {
-            ImGui.Text("Scene: " + _scene.Name);
+            ImGui.Text("Scene: " + scene.Name);
             ImGui.Separator();
         }
 
         _anyItemHovered = false;
-        DrawSceneHierarchy();
+        DrawSceneHierarchy(scene);
 
         if (ImGui.IsWindowHovered() && !_anyItemHovered && ImGui.IsMouseClicked(ImGuiMouseButton.Right))
         {
@@ -60,9 +81,9 @@ internal class HierarchyPanel : IRenderablePanel
         ExecuteDeferredActions();
     }
 
-    private void DrawSceneHierarchy()
+    private void DrawSceneHierarchy(Scene scene)
     {
-        foreach (var gameObject in _scene.GameObjects.ToList())
+        foreach (var gameObject in scene.GameObjects.ToList())
             DrawGameObjectNode(gameObject, true);
     }
 

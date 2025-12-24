@@ -2,6 +2,8 @@
 using DustyEngine.Scene;
 using Editor;
 using Editor.Panels.ConsolePanel;
+using Editor.Panels.HierarchyPanel;
+using Editor.Panels.ProjectFilePanel;
 using WindowEngine;
 
 namespace DustyEngine;
@@ -28,7 +30,7 @@ public sealed class DustyEngine : IDisposable
 
         SetupDebug(renderMode);
 
-        if (!LoadScene()) return;
+        if (!LoadScene(_settings.PathToScenes.FirstOrDefault())) return;
 
         if (renderMode == RenderMode.Standalone)
             StartLifeCycle();
@@ -75,7 +77,8 @@ public sealed class DustyEngine : IDisposable
         {
             ConsolePanel.InitializeConsoleInterceptor(onDebugEnabled, _settings.Debug);
             RendererUI.OnProjectSave += () =>
-                SceneSerializer.SaveScene(SceneManager.CurrentScene, _settings.PathToScenes.FirstOrDefault());
+                SceneSerializer.SaveScene(SceneManager.CurrentScene, SceneManager.GetCurrentScenePath());
+            ProjectFilePanel.OnSceneOpened += OpenScene;
         }
 
         Debug.Log("Project settings loaded");
@@ -107,9 +110,8 @@ public sealed class DustyEngine : IDisposable
         Time.Tick();
     }
 
-    private static bool LoadScene()
+    private static bool LoadScene(string? scenePath)
     {
-        var scenePath = _settings.PathToScenes.FirstOrDefault();
         var loadedScene = new Scene.Scene();
         if (SceneSerializer.LoadScene(out loadedScene, scenePath) == null)
         {
@@ -122,11 +124,21 @@ public sealed class DustyEngine : IDisposable
         return true;
     }
 
+    private static void OpenScene(string scenePath)
+    {
+        LoadScene(scenePath);
+        _window.LoadScene?.Invoke();
+        HierarchyPanel.OnChangeScene?.Invoke();
+        Debug.Log($"Open scene: {scenePath}", Debug.LogLevel.Info, true);
+    }
+
     public void Dispose()
     {
         SceneManager.AddRenderer -= AddRenderer;
         SceneManager.RemoveRenderer -= RemoveRenderer;
 
-        RendererUI.OnProjectSave -= () => SceneSerializer.SaveScene(SceneManager.CurrentScene, _settings.PathToScenes.FirstOrDefault());
+        RendererUI.OnProjectSave -= () =>
+            SceneSerializer.SaveScene(SceneManager.CurrentScene, _settings.PathToScenes.FirstOrDefault());
+        ProjectFilePanel.OnSceneOpened -= OpenScene;
     }
 }

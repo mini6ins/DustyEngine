@@ -6,7 +6,8 @@ namespace WindowEngine;
 
 public class StandaloneWindow : GameWindow
 {
-    public StandaloneWindow(GameWindowSettings gameWindowSettings, NativeWindowSettings nativeWindowSettings, bool vsync, CursorState cursorState) : base(gameWindowSettings, nativeWindowSettings)
+    public StandaloneWindow(GameWindowSettings gameWindowSettings, NativeWindowSettings nativeWindowSettings,
+        bool vsync, CursorState cursorState) : base(gameWindowSettings, nativeWindowSettings)
     {
         Title = nativeWindowSettings.Title;
         VSync = vsync ? VSyncMode.On : VSyncMode.Off;
@@ -27,8 +28,8 @@ public class StandaloneWindow : GameWindow
         base.OnResize(e);
         GL.Viewport(0, 0, e.Width, e.Height);
 
-        if (Window.RenderMode == RenderMode.Standalone)
-            Window._renderer?.ResizeViewport(e.Width, e.Height);
+
+        Window._renderer?.ResizeViewport(e.Width, e.Height);
     }
 
     protected override void OnUpdateFrame(FrameEventArgs args)
@@ -48,12 +49,9 @@ public class StandaloneWindow : GameWindow
         base.OnRenderFrame(args);
         Window._renderer?.Render();
 
-        if (Window.RenderMode == RenderMode.Standalone)
-        {
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-            GL.Viewport(0, 0, FramebufferSize.X, FramebufferSize.Y);
-            Window._renderer?.PresentToScreen(FramebufferSize.X, FramebufferSize.Y);
-        }
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+        GL.Viewport(0, 0, FramebufferSize.X, FramebufferSize.Y);
+        Window._renderer?.PresentToScreen(FramebufferSize.X, FramebufferSize.Y);
 
         SwapBuffers();
     }

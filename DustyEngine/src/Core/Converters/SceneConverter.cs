@@ -17,6 +17,11 @@ public class SceneConverter : JsonConverter<Scene.Scene>
             scene.Name = nameElement.GetString();
         }
 
+        if (doc.RootElement.TryGetProperty("Path", out var pathElement))
+        {
+            scene.Path = pathElement.GetString() ?? string.Empty;
+        }
+
         if (doc.RootElement.TryGetProperty("GameObjects", out var gameObjectsElement))
         {
             scene.GameObjects = DeserializeGameObjects(gameObjectsElement, null, options);
@@ -77,6 +82,7 @@ public class SceneConverter : JsonConverter<Scene.Scene>
         writer.WriteStartObject();
 
         writer.WriteString("Name", value.Name);
+        writer.WriteString("Path", value.Path);
 
         writer.WritePropertyName("GameObjects");
         JsonSerializer.Serialize(writer, value.GameObjects, options);

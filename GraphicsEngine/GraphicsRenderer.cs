@@ -39,50 +39,69 @@ public class GraphicsRenderer(string vertShaderPath, string fragShaderPath, int 
     private int _currentViewportHeight;
 
 
-    public void Load()
+  public void Load()
+{
+    GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
+    GL.Enable(EnableCap.CullFace);
+    GL.CullFace(TriangleFace.Back);
+    GL.FrontFace(FrontFaceDirection.Ccw);
+    GL.Enable(EnableCap.DepthTest);
+    GL.DepthFunc(DepthFunction.Less);
+
+    // ВАЖНО: Инициализируем шейдер ДО вызова LoadScene()
+    _shaderProgram = new ShaderProgram(vertShaderPath, fragShaderPath);
+
+    if (isEditorMode)
     {
-        GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
-        GL.Enable(EnableCap.CullFace);
-        GL.CullFace(TriangleFace.Back);
-        GL.FrontFace(FrontFaceDirection.Ccw);
-        GL.Enable(EnableCap.DepthTest);
-        GL.DepthFunc(DepthFunction.Less);
-
-        _shaderProgram = new ShaderProgram(vertShaderPath, fragShaderPath);
-
-        _sceneCameras = SceneManager.FindCameras();
-
-        if (isEditorMode)
+        _editorCamera = new EditorCamera
         {
-            _editorCamera = new EditorCamera
+            AspectRatio = viewportWidth / (float)viewportHeight,
+            InternalTransform =
             {
-                AspectRatio = viewportWidth / (float)viewportHeight,
-                InternalTransform =
-                {
-                    LocalPosition = new Vector3(0f, 2.5f, 5f),
-                    LocalRotation = new Vector3(0f, 0f, 0f)
-                }
-            };
+                LocalPosition = new Vector3(0f, 2.5f, 5f),
+                LocalRotation = new Vector3(0f, 0f, 0f)
+            }
+        };
 
-            _editorCamera?.InitializeController();
-            Input.EnableRpcInput();
-            Debug.Log("RPC input mode enabled for Editor", Debug.LogLevel.Info, true);
-        }
-
-        CreateViewportFramebuffer();
-
-        if (isEditorMode && _editorCamera != null || _sceneCameras is { Count: > 0 })
-        {
-            ActiveCamera.AspectRatio = viewportWidth / (float)viewportHeight;
-            _projection = ActiveCamera.GetProjectionMatrix();
-        }
-        else
-        {
-            Debug.Log("No cameras found in scene!", Debug.LogLevel.Warning, true);
-        }
-
-        LoadSceneRenderers();
+        _editorCamera?.InitializeController();
+        Input.EnableRpcInput();
+        Debug.Log("RPC input mode enabled for Editor", Debug.LogLevel.Info, true);
     }
+
+    CreateViewportFramebuffer();
+
+    LoadScene();
+}
+
+
+public void LoadScene()
+{
+    Debug.Log("[LoadScene] Loading scene", Debug.LogLevel.Info, true);
+
+    foreach (var vao in _vaoList)
+    {
+        vao.Dispose();
+    }
+    _vaoList.Clear();
+
+    _sceneObjects.Clear();
+
+    _sceneCameras = SceneManager.FindCameras();
+
+    if (isEditorMode && _editorCamera != null || _sceneCameras is { Count: > 0 })
+    {
+        ActiveCamera.AspectRatio = _currentViewportWidth / (float)_currentViewportHeight;
+        _projection = ActiveCamera.GetProjectionMatrix();
+    }
+    else
+    {
+        Debug.Log("No cameras found in scene!", Debug.LogLevel.Warning, true);
+    }
+
+    LoadSceneRenderers();
+
+    Debug.Log($"[LoadScene] Scene loaded successfully. Total renderers: {_sceneObjects.Count}", Debug.LogLevel.Info, true);
+}
 
     private void CreateViewportFramebuffer()
     {
