@@ -19,10 +19,10 @@ public sealed class DustyEngine : IDisposable
     private static Window _window = null!;
 
     private static readonly Action<MeshRenderer> AddRenderer = meshRenderer =>
-        Window.Renderer?.AddRenderer(meshRenderer);
+        _window.Renderer?.AddRenderer(meshRenderer);
 
     private static readonly Action<MeshRenderer> RemoveRenderer =
-        meshRenderer => Window.Renderer?.RemoveRendererByComponent(meshRenderer);
+        meshRenderer => _window.Renderer?.RemoveRendererByComponent(meshRenderer);
 
 
     public static void StartEngine(string path, RenderMode renderMode)
@@ -115,6 +115,17 @@ public sealed class DustyEngine : IDisposable
         {
             _sceneSnapshot = CloneScene(SceneManager.CurrentScene!);
             _window.ChangePlayMode(RenderMode.EditorRun);
+
+            if (_window.Renderer._sceneCameras != null && _window.Renderer._sceneCameras.Count > 0)
+            {
+                _window.Renderer.ActiveCamera = _window.Renderer._sceneCameras.First();
+                Debug.Log("Switched to scene camera", Debug.LogLevel.Info, true);
+            }
+            else
+            {
+                Debug.Log("No scene cameras found!", Debug.LogLevel.Warning, true);
+            }
+
             StartLifeCycle();
         }
         else
@@ -125,6 +136,12 @@ public sealed class DustyEngine : IDisposable
             {
                 RestoreScene(_sceneSnapshot);
                 _sceneSnapshot = null;
+            }
+
+            if (_window.Renderer.EditorCamera != null)
+            {
+                _window.Renderer.ActiveCamera = _window.Renderer.EditorCamera;
+                Debug.Log("Switched to editor camera", Debug.LogLevel.Info, true);
             }
 
             _window.LoadScene?.Invoke();

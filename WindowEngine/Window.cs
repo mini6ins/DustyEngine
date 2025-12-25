@@ -7,18 +7,13 @@ using Vector2i = OpenTK.Mathematics.Vector2i;
 
 namespace WindowEngine;
 
-public enum RenderMode
-{
-    Standalone,
-    EditorStop,
-    EditorRun
-}
+
 
 public class Window : IDisposable
 {
     private GameWindow? _window;
 
-    public static GraphicsRenderer? Renderer => _renderer;
+    public GraphicsRenderer? Renderer => _renderer;
     public static GraphicsRenderer? _renderer;
 
     public  RenderMode RenderMode { get; private set; }
@@ -38,7 +33,7 @@ public class Window : IDisposable
         };
 
         _renderer = new GraphicsRenderer(vertShaderPath, fragShaderPath, nativeWindowSettings.ClientSize.X,
-            nativeWindowSettings.ClientSize.Y, RenderMode == RenderMode.EditorStop);
+            nativeWindowSettings.ClientSize.Y, RenderMode);
         LoadScene += _renderer.LoadScene;
         var cursorState = RenderMode == RenderMode.EditorStop ? CursorState.Normal : CursorState.Hidden;
 
@@ -54,6 +49,7 @@ public class Window : IDisposable
     public void ChangePlayMode(RenderMode  renderMode)
     {
         RenderMode = renderMode;
+        _renderer?.SetRenderMode(renderMode);
         Debug.Log("Is play mode: " + RenderMode, Debug.LogLevel.Info, true);
     }
 

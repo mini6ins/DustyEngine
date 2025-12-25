@@ -11,6 +11,13 @@ using Vector3 = DustyEngine.Engine.Math.Vectors.Vector3;
 
 namespace GraphicsEngine;
 
+public enum RenderMode
+{
+    Standalone,
+    EditorStop,
+    EditorRun
+}
+
 public class RenderableObject
 {
     public int VaoIndex;
@@ -25,15 +32,36 @@ public class GraphicsRenderer(
     string fragShaderPath,
     int viewportWidth,
     int viewportHeight,
-    bool isEditorMode)
+    RenderMode initialRenderMode)
 {
     private ShaderProgram _shaderProgram = null!;
     private readonly List<VAOManager> _vaoList = [];
     private readonly List<RenderableObject> _sceneObjects = [];
 
-    private List<Camera> _sceneCameras = null!;
-    private CameraBase ActiveCamera => isEditorMode && _editorCamera != null ? _editorCamera : _sceneCameras.First();
-    private EditorCamera? _editorCamera;
+    public List<Camera> _sceneCameras = null!;
+
+    private CameraBase? _activeCamera;
+    private RenderMode _currentRenderMode = initialRenderMode;
+
+    public CameraBase ActiveCamera
+    {
+        get
+        {
+            if (_activeCamera != null)
+                return _activeCamera;
+
+            if (_currentRenderMode == RenderMode.EditorStop && EditorCamera != null)
+                return EditorCamera;
+
+            if (_sceneCameras.Count > 0)
+                return _sceneCameras.First();
+
+            return EditorCamera!;
+        }
+        set => _activeCamera = value;
+    }
+
+    public EditorCamera? EditorCamera;
     private Matrix4 _projection;
 
     public int ViewportTexture { get; private set; }
@@ -42,6 +70,11 @@ public class GraphicsRenderer(
     private int _currentViewportWidth;
     private int _currentViewportHeight;
 
+    public void SetRenderMode(RenderMode mode)
+    {
+        _currentRenderMode = mode;
+        Debug.Log($"[GraphicsRenderer] Render mode set to: {mode}", Debug.LogLevel.Info, true);
+    }
 
     public void Load()
     {
@@ -54,9 +87,9 @@ public class GraphicsRenderer(
 
         _shaderProgram = new ShaderProgram(vertShaderPath, fragShaderPath);
 
-        if (isEditorMode)
+        if (_currentRenderMode == RenderMode.EditorStop)
         {
-            _editorCamera = new EditorCamera
+            EditorCamera = new EditorCamera
             {
                 AspectRatio = viewportWidth / (float)viewportHeight,
                 InternalTransform =
@@ -66,16 +99,14 @@ public class GraphicsRenderer(
                 }
             };
 
-            _editorCamera?.InitializeController();
+            EditorCamera.InitializeController();
             Input.EnableRpcInput();
             Debug.Log("RPC input mode enabled for Editor", Debug.LogLevel.Info, true);
         }
 
         CreateViewportFramebuffer();
-
         LoadScene();
     }
-
 
     public void LoadScene()
     {
@@ -87,12 +118,12 @@ public class GraphicsRenderer(
         }
 
         _vaoList.Clear();
-
         _sceneObjects.Clear();
 
         _sceneCameras = SceneManager.FindCameras();
+        Debug.Log($"[LoadScene] Found {_sceneCameras?.Count ?? 0} cameras in scene", Debug.LogLevel.Info, true);
 
-        if (isEditorMode && _editorCamera != null || _sceneCameras is { Count: > 0 })
+        if (EditorCamera != null || _sceneCameras is { Count: > 0 })
         {
             ActiveCamera.AspectRatio = _currentViewportWidth / (float)_currentViewportHeight;
             _projection = ActiveCamera.GetProjectionMatrix();
@@ -104,8 +135,7 @@ public class GraphicsRenderer(
 
         LoadSceneRenderers();
 
-        Debug.Log($"[LoadScene] Scene loaded successfully. Total renderers: {_sceneObjects.Count}", Debug.LogLevel.Info,
-            true);
+        Debug.Log($"[LoadScene] Scene loaded successfully. Total renderers: {_sceneObjects.Count}", Debug.LogLevel.Info, true);
     }
 
     private void CreateViewportFramebuffer()
@@ -156,16 +186,8 @@ public class GraphicsRenderer(
         GL.BindRenderbuffer(RenderbufferTarget.Renderbuffer, _viewportDepthBuffer);
         GL.RenderbufferStorage(RenderbufferTarget.Renderbuffer, InternalFormat.Depth24Stencil8, width, height);
 
-        if (_editorCamera != null)
-        {
-            _editorCamera.AspectRatio = width / (float)height;
-            _projection = _editorCamera.GetProjectionMatrix();
-        }
-        else if (_sceneCameras.Count > 0)
-        {
-            ActiveCamera.AspectRatio = width / (float)height;
-            _projection = ActiveCamera.GetProjectionMatrix();
-        }
+        ActiveCamera.AspectRatio = width / (float)height;
+        _projection = ActiveCamera.GetProjectionMatrix();
 
         Debug.Log($"Viewport resized to: {width}x{height}", Debug.LogLevel.Info, true);
     }
@@ -187,25 +209,34 @@ public class GraphicsRenderer(
 
     public void Update(float deltaTime, KeyboardState keyboardState, MouseState mouseState)
     {
-        if (!isEditorMode)
+        switch (_currentRenderMode)
         {
-            Input.Update(keyboardState);
-            Input.UpdateMouseState(mouseState);
+            case RenderMode.EditorRun:
+            case RenderMode.Standalone:
+                Input.Update(keyboardState);
+                Input.UpdateMouseState(mouseState);
+                break;
+
+            case RenderMode.EditorStop:
+                UpdateEditorCamera(deltaTime);
+                break;
+
+            default:
+                throw new ArgumentOutOfRangeException();
         }
-        else
-            UpdateEditorCamera(deltaTime);
 
         HandleDebugInput();
     }
 
     public void OnMouseMove(float x, float y)
     {
-        if (!isEditorMode) Input.UpdateMouse(x, y);
+        if (_currentRenderMode is RenderMode.EditorRun or RenderMode.Standalone)
+            Input.UpdateMouse(x, y);
     }
 
     private void UpdateEditorCamera(float deltaTime)
     {
-        if (_editorCamera == null) return;
+        if (EditorCamera == null) return;
 
         var isMiddleMouseDown = Input.IsMouseButtonDown(MouseButton.Middle);
         var mouseDelta = Input.Delta;
@@ -220,7 +251,7 @@ public class GraphicsRenderer(
             Down = Input.IsKeyDown(KeyCode.LeftShift)
         };
 
-        _editorCamera.UpdateMovement(deltaTime, isMiddleMouseDown, mouseDelta, movementInput);
+        EditorCamera.UpdateMovement(deltaTime, isMiddleMouseDown, mouseDelta, movementInput);
 
         if (Input.IsRpcInputActive)
             Input.RpcResetMouseDelta();
@@ -277,7 +308,6 @@ public class GraphicsRenderer(
         GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, 0);
         GL.BindFramebuffer(FramebufferTarget.DrawFramebuffer, 0);
     }
-
 
     private void RenderObject(RenderableObject obj)
     {
@@ -348,7 +378,6 @@ public class GraphicsRenderer(
             Debug.LogLevel.Info, true);
     }
 
-
     private int FindRenderableIndexByMeshRendererId(uint meshRendererId)
     {
         for (var i = 0; i < _sceneObjects.Count; i++)
@@ -383,15 +412,13 @@ public class GraphicsRenderer(
         }
 
         _sceneObjects.RemoveAt(idx);
-        Debug.Log($"[RemoveRendererByComponent] Successfully removed MeshRenderer ID: {meshRenderer.Id}",
-            Debug.LogLevel.Info);
+        Debug.Log($"[RemoveRendererByComponent] Successfully removed MeshRenderer ID: {meshRenderer.Id}");
         return true;
     }
 
-
     public void Dispose()
     {
-        if (isEditorMode)
+        if (_currentRenderMode == RenderMode.EditorStop)
             Input.DisableRpcInput();
 
         if (_viewportFramebuffer != 0)
