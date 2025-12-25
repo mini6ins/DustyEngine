@@ -5,6 +5,8 @@ using Editor.Panels.ConsolePanel;
 using Editor.Panels.HierarchyPanel;
 using Editor.Panels.ProjectFilePanel;
 using Editor.Panels.ProjectSetiingPanel;
+using Editor.Panels.ViewPortPanel;
+using GraphicsEngine;
 using WindowEngine;
 
 namespace DustyEngine;
@@ -17,10 +19,10 @@ public sealed class DustyEngine : IDisposable
     private static Window _window = null!;
 
     private static readonly Action<MeshRenderer> AddRenderer = meshRenderer =>
-        _window.Renderer?.AddRenderer(meshRenderer);
+        Window.Renderer?.AddRenderer(meshRenderer);
 
     private static readonly Action<MeshRenderer> RemoveRenderer =
-        meshRenderer => _window.Renderer?.RemoveRendererByComponent(meshRenderer);
+        meshRenderer => Window.Renderer?.RemoveRendererByComponent(meshRenderer);
 
 
     public static void StartEngine(string path, RenderMode renderMode)
@@ -87,12 +89,13 @@ public sealed class DustyEngine : IDisposable
 
         var onDebugEnabled = Debug.EnableDebugMode;
 
-        if (renderMode == RenderMode.Editor)
+        if (renderMode == RenderMode.EditorStop)
         {
             ConsolePanel.InitializeConsoleInterceptor(onDebugEnabled, _settings.Debug);
             RendererUI.OnProjectSave += SaveProject;
             ProjectSetiingPanel.OnSaveProjectSettings += SaveProjectSettings;
             ProjectFilePanel.OnSceneOpened += OpenScene;
+            ViewportPanel.OnPlayModeChanged += ChangePlayMode;
         }
 
         Debug.Log("Project settings loaded");
@@ -104,22 +107,84 @@ public sealed class DustyEngine : IDisposable
         Debug.Log("Test FATAL", Debug.LogLevel.FatalError, true);
     }
 
-    private static void StartLifeCycle()
-    {
-        foreach (var method in new[] { "OnEnable", "Start" })
-        {
-            foreach (var gameObject in SceneManager.CurrentScene!.GameObjects)
-            {
-                SceneManager.InvokeRecursive(gameObject, method);
-            }
-        }
+    private static Scene.Scene? _sceneSnapshot;
 
-        GameLoop.Initialize(SceneManager.CurrentScene!);
-        Time.Init();
+    private static void ChangePlayMode(bool state)
+    {
+        if (state)
+        {
+            _sceneSnapshot = CloneScene(SceneManager.CurrentScene!);
+            _window.ChangePlayMode(RenderMode.EditorRun);
+            StartLifeCycle();
+        }
+        else
+        {
+            _window.ChangePlayMode(RenderMode.EditorStop);
+
+            if (_sceneSnapshot != null)
+            {
+                RestoreScene(_sceneSnapshot);
+                _sceneSnapshot = null;
+            }
+
+            _window.LoadScene?.Invoke();
+            HierarchyPanel.OnChangeScene?.Invoke();
+        }
     }
 
-    private static void ExecuteLifeCycle()
+    private static Scene.Scene? CloneScene(Scene.Scene original)
     {
+        var json = SceneSerializer.SerializeSceneToJson(original);
+        if (string.IsNullOrEmpty(json))
+        {
+            Debug.Log("Failed to serialize scene for snapshot", Debug.LogLevel.Error);
+            return null;
+        }
+
+        var clonedScene = SceneSerializer.DeserializeSceneFromJson(json);
+        if (clonedScene != null)
+        {
+            clonedScene.Path = original.Path;
+        }
+
+        return clonedScene;
+    }
+
+    private static void RestoreScene(Scene.Scene snapshot)
+    {
+        var currentObjects = SceneManager.CurrentScene!.GameObjects.ToList();
+        foreach (var obj in currentObjects)
+        {
+            SceneManager.RemoveGameObjectRecursively(obj);
+        }
+
+        SceneManager.CurrentScene!.GameObjects.Clear();
+
+        foreach (var obj in snapshot.GameObjects)
+        {
+            SceneManager.AddGameObjectRecursively(obj, null);
+        }
+    }
+    private static void StartLifeCycle()
+    {
+        GameLoop.Initialize(SceneManager.CurrentScene!);
+        Time.Init();
+
+        foreach (var gameObject in SceneManager.CurrentScene!.GameObjects)
+        {
+            SceneManager.InvokeRecursive(gameObject, "OnEnable");
+        }
+
+        foreach (var gameObject in SceneManager.CurrentScene!.GameObjects)
+        {
+            SceneManager.InvokeRecursive(gameObject, "Start");
+        }
+    }
+
+    private static void ExecuteLifeCycle(RenderMode renderMode)
+    {
+        if (renderMode is not (RenderMode.Standalone or RenderMode.EditorRun)) return;
+
         GameLoop.ExecuteFrame(SceneManager.CurrentScene!);
         Time.Tick();
     }
@@ -156,5 +221,7 @@ public sealed class DustyEngine : IDisposable
         ProjectSetiingPanel.OnSaveProjectSettings -= SaveProjectSettings;
 
         ProjectFilePanel.OnSceneOpened -= OpenScene;
+
+        ViewportPanel.OnPlayModeChanged -= ChangePlayMode;
     }
 }

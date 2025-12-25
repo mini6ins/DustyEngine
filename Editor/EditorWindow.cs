@@ -36,7 +36,6 @@ public class EditorWindow : GameWindow
         GraphicsRenderer?.Load();
         GraphicsRenderer?.ResizeViewport(FramebufferSize.X, FramebufferSize.Y);
 
-        ViewportPanel.OnPlayModeChanged += GraphicsRenderer.ChangePlayMode;
     }
 
     protected override void OnUpdateFrame(FrameEventArgs args)
@@ -80,7 +79,6 @@ public class EditorWindow : GameWindow
         ImguiImplOpenGL3.Shutdown();
         ImguiImplOpenTK4.Shutdown();
         ImGui.DestroyContext();
-        ViewportPanel.OnPlayModeChanged -= GraphicsRenderer.ChangePlayMode;
         base.OnUnload();
     }
 }

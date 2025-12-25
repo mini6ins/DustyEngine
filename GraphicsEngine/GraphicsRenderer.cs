@@ -6,7 +6,6 @@ using InputSystem;
 using OpenTK.Graphics.OpenGL.Compatibility;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.GraphicsLibraryFramework;
-using SceneSystem.EngineObject.GameObject;
 using MouseButton = InputSystem.MouseButton;
 using Vector3 = DustyEngine.Engine.Math.Vectors.Vector3;
 
@@ -21,7 +20,12 @@ public class RenderableObject
     public MeshRenderer MeshRenderer = null!;
 }
 
-public class GraphicsRenderer(string vertShaderPath, string fragShaderPath, int viewportWidth, int viewportHeight, bool isEditorMode)
+public class GraphicsRenderer(
+    string vertShaderPath,
+    string fragShaderPath,
+    int viewportWidth,
+    int viewportHeight,
+    bool isEditorMode)
 {
     private ShaderProgram _shaderProgram = null!;
     private readonly List<VAOManager> _vaoList = [];
@@ -39,69 +43,70 @@ public class GraphicsRenderer(string vertShaderPath, string fragShaderPath, int 
     private int _currentViewportHeight;
 
 
-  public void Load()
-{
-    GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
-    GL.Enable(EnableCap.CullFace);
-    GL.CullFace(TriangleFace.Back);
-    GL.FrontFace(FrontFaceDirection.Ccw);
-    GL.Enable(EnableCap.DepthTest);
-    GL.DepthFunc(DepthFunction.Less);
-
-    // ВАЖНО: Инициализируем шейдер ДО вызова LoadScene()
-    _shaderProgram = new ShaderProgram(vertShaderPath, fragShaderPath);
-
-    if (isEditorMode)
+    public void Load()
     {
-        _editorCamera = new EditorCamera
+        GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
+        GL.Enable(EnableCap.CullFace);
+        GL.CullFace(TriangleFace.Back);
+        GL.FrontFace(FrontFaceDirection.Ccw);
+        GL.Enable(EnableCap.DepthTest);
+        GL.DepthFunc(DepthFunction.Less);
+
+        _shaderProgram = new ShaderProgram(vertShaderPath, fragShaderPath);
+
+        if (isEditorMode)
         {
-            AspectRatio = viewportWidth / (float)viewportHeight,
-            InternalTransform =
+            _editorCamera = new EditorCamera
             {
-                LocalPosition = new Vector3(0f, 2.5f, 5f),
-                LocalRotation = new Vector3(0f, 0f, 0f)
-            }
-        };
+                AspectRatio = viewportWidth / (float)viewportHeight,
+                InternalTransform =
+                {
+                    LocalPosition = new Vector3(0f, 2.5f, 5f),
+                    LocalRotation = new Vector3(0f, 0f, 0f)
+                }
+            };
 
-        _editorCamera?.InitializeController();
-        Input.EnableRpcInput();
-        Debug.Log("RPC input mode enabled for Editor", Debug.LogLevel.Info, true);
+            _editorCamera?.InitializeController();
+            Input.EnableRpcInput();
+            Debug.Log("RPC input mode enabled for Editor", Debug.LogLevel.Info, true);
+        }
+
+        CreateViewportFramebuffer();
+
+        LoadScene();
     }
 
-    CreateViewportFramebuffer();
 
-    LoadScene();
-}
-
-
-public void LoadScene()
-{
-    Debug.Log("[LoadScene] Loading scene", Debug.LogLevel.Info, true);
-
-    foreach (var vao in _vaoList)
+    public void LoadScene()
     {
-        vao.Dispose();
+        Debug.Log("[LoadScene] Loading scene", Debug.LogLevel.Info, true);
+
+        foreach (var vao in _vaoList)
+        {
+            vao.Dispose();
+        }
+
+        _vaoList.Clear();
+
+        _sceneObjects.Clear();
+
+        _sceneCameras = SceneManager.FindCameras();
+
+        if (isEditorMode && _editorCamera != null || _sceneCameras is { Count: > 0 })
+        {
+            ActiveCamera.AspectRatio = _currentViewportWidth / (float)_currentViewportHeight;
+            _projection = ActiveCamera.GetProjectionMatrix();
+        }
+        else
+        {
+            Debug.Log("No cameras found in scene!", Debug.LogLevel.Warning, true);
+        }
+
+        LoadSceneRenderers();
+
+        Debug.Log($"[LoadScene] Scene loaded successfully. Total renderers: {_sceneObjects.Count}", Debug.LogLevel.Info,
+            true);
     }
-    _vaoList.Clear();
-
-    _sceneObjects.Clear();
-
-    _sceneCameras = SceneManager.FindCameras();
-
-    if (isEditorMode && _editorCamera != null || _sceneCameras is { Count: > 0 })
-    {
-        ActiveCamera.AspectRatio = _currentViewportWidth / (float)_currentViewportHeight;
-        _projection = ActiveCamera.GetProjectionMatrix();
-    }
-    else
-    {
-        Debug.Log("No cameras found in scene!", Debug.LogLevel.Warning, true);
-    }
-
-    LoadSceneRenderers();
-
-    Debug.Log($"[LoadScene] Scene loaded successfully. Total renderers: {_sceneObjects.Count}", Debug.LogLevel.Info, true);
-}
 
     private void CreateViewportFramebuffer()
     {
@@ -338,7 +343,9 @@ public void LoadScene()
         };
 
         _sceneObjects.Add(renderableObject);
-        Debug.Log($"Added RenderableObject - GameObject ID: {renderableObject.GameObjectId}, MeshRenderer ID: {renderableObject.MeshRendererId}", Debug.LogLevel.Info, true);
+        Debug.Log(
+            $"Added RenderableObject - GameObject ID: {renderableObject.GameObjectId}, MeshRenderer ID: {renderableObject.MeshRendererId}",
+            Debug.LogLevel.Info, true);
     }
 
 
@@ -359,7 +366,8 @@ public void LoadScene()
 
         if (idx < 0)
         {
-            Debug.Log($"[RemoveRendererByComponent] MeshRenderer with ID {meshRenderer.Id} not found in scene.", Debug.LogLevel.Warning);
+            Debug.Log($"[RemoveRendererByComponent] MeshRenderer with ID {meshRenderer.Id} not found in scene.",
+                Debug.LogLevel.Warning);
             return false;
         }
 
@@ -375,15 +383,10 @@ public void LoadScene()
         }
 
         _sceneObjects.RemoveAt(idx);
-        Debug.Log($"[RemoveRendererByComponent] Successfully removed MeshRenderer ID: {meshRenderer.Id}", Debug.LogLevel.Info);
+        Debug.Log($"[RemoveRendererByComponent] Successfully removed MeshRenderer ID: {meshRenderer.Id}",
+            Debug.LogLevel.Info);
         return true;
     }
-
-    public static void ChangePlayMode(bool isPlayMode)
-    {
-        Debug.Log("Is play mode: " + isPlayMode, Debug.LogLevel.Info, true);
-    }
-
 
 
     public void Dispose()

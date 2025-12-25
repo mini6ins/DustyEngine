@@ -10,22 +10,22 @@ namespace WindowEngine;
 public enum RenderMode
 {
     Standalone,
-    Editor
+    EditorStop,
+    EditorRun
 }
-
 
 public class Window : IDisposable
 {
     private GameWindow? _window;
 
-    public GraphicsRenderer? Renderer => _renderer;
+    public static GraphicsRenderer? Renderer => _renderer;
     public static GraphicsRenderer? _renderer;
 
-    private static RenderMode RenderMode;
+    public  RenderMode RenderMode { get; private set; }
 
     public Action? LoadScene;
 
-    public void RunMainLoop(Action updateCallback, Vector2i resolution, string programTitle, string vertShaderPath,
+    public void RunMainLoop(Action<RenderMode> updateCallback, Vector2i resolution, string programTitle, string vertShaderPath,
         string fragShaderPath, bool vsync, RenderMode renderMode, string projectPath)
     {
         Debug.Log("WindowEngine  is working", Debug.LogLevel.Info, true);
@@ -37,17 +37,24 @@ public class Window : IDisposable
             Title = programTitle
         };
 
-        _renderer = new GraphicsRenderer(vertShaderPath, fragShaderPath, nativeWindowSettings.ClientSize.X, nativeWindowSettings.ClientSize.Y, RenderMode == RenderMode.Editor);
+        _renderer = new GraphicsRenderer(vertShaderPath, fragShaderPath, nativeWindowSettings.ClientSize.X,
+            nativeWindowSettings.ClientSize.Y, RenderMode == RenderMode.EditorStop);
         LoadScene += _renderer.LoadScene;
-        var cursorState = RenderMode == RenderMode.Editor ? CursorState.Normal : CursorState.Hidden;
+        var cursorState = RenderMode == RenderMode.EditorStop ? CursorState.Normal : CursorState.Hidden;
 
-        _window = RenderMode == RenderMode.Editor
+        _window = RenderMode == RenderMode.EditorStop
             ? new EditorWindow(GameWindowSettings.Default, nativeWindowSettings, vsync, _renderer, projectPath)
             : new StandaloneWindow(GameWindowSettings.Default, nativeWindowSettings, vsync, cursorState);
 
-        if (renderMode == RenderMode.Standalone)
-            _window.UpdateFrame += _ => updateCallback.Invoke();
+
+        _window.UpdateFrame += _ => updateCallback.Invoke(RenderMode);
         _window.Run();
+    }
+
+    public void ChangePlayMode(RenderMode  renderMode)
+    {
+        RenderMode = renderMode;
+        Debug.Log("Is play mode: " + RenderMode, Debug.LogLevel.Info, true);
     }
 
     public void Dispose()

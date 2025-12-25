@@ -76,4 +76,56 @@ public static class SceneSerializer
             return false;
         }
     }
+
+
+    public static string SerializeSceneToJson(Scene.Scene scene)
+    {
+        try
+        {
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                IncludeFields = true,
+                Converters =
+                {
+                    new ComponentConverter(),
+                    new SceneConverter()
+                }
+            };
+
+            return JsonSerializer.Serialize(scene, options);
+        }
+        catch (Exception ex)
+        {
+            Debug.Log($"Error serializing scene: {ex.Message}", Debug.LogLevel.FatalError);
+            return string.Empty;
+        }
+    }
+
+    public static Scene.Scene? DeserializeSceneFromJson(string json)
+    {
+        try
+        {
+            var loadedScene = JsonSerializer.Deserialize<Scene.Scene>(
+                json,
+                new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    IncludeFields = true,
+                    Converters =
+                    {
+                        new ComponentConverter(),
+                        new SceneConverter()
+                    }
+                });
+
+            return loadedScene;
+        }
+        catch (Exception ex)
+        {
+            Debug.Log($"Error deserializing scene: {ex.Message}", Debug.LogLevel.FatalError);
+            return null;
+        }
+    }
+
 }
