@@ -17,11 +17,8 @@ public sealed class DustyEngine : IDisposable
     private static ProjectSettings? _settings;
     private static Window _window = null!;
 
-    private static readonly Action<MeshRenderer> AddRenderer = meshRenderer =>
-        _window.Renderer?.AddRenderer(meshRenderer);
-
-    private static readonly Action<MeshRenderer> RemoveRenderer =
-        meshRenderer => _window.Renderer?.RemoveRendererByComponent(meshRenderer);
+    private static readonly Action<MeshRenderer> AddRenderer = meshRenderer => _window.Renderer?.AddRenderer(meshRenderer);
+    private static readonly Action<MeshRenderer> RemoveRenderer = meshRenderer => _window.Renderer?.RemoveRendererByComponent(meshRenderer);
 
     public static void StartEngine(string path, RenderMode renderMode)
     {
@@ -38,7 +35,7 @@ public sealed class DustyEngine : IDisposable
         SceneManager.ProjectPath = ProjectFolderPath;
         SetupDebug(renderMode);
 
-        if (!LoadScene(_settings.PathToScenes.FirstOrDefault())) return;
+        if (!SceneManager.LoadSceneByPath(_settings.PathToScenes.FirstOrDefault())) return;
 
         if (renderMode == RenderMode.Standalone)
             GameLoop.StartLifeCycle();
@@ -52,7 +49,7 @@ public sealed class DustyEngine : IDisposable
         SceneManager.RemoveRenderer += RemoveRenderer;
 
         _window = new Window(
-           GameLoop. ExecuteLifeCycle,
+            GameLoop.ExecuteLifeCycle,
             _settings.ScreenSize.ToOpenTK(),
             _settings.ProjectName,
             _settings.PathToVertShader,
@@ -90,6 +87,7 @@ public sealed class DustyEngine : IDisposable
         Debug.Log("Test FATAL", Debug.LogLevel.FatalError, true);
     }
 
+
     private static Scene.Scene? _sceneSnapshot;
 
     private static void ChangePlayMode(RenderMode renderMode)
@@ -99,7 +97,7 @@ public sealed class DustyEngine : IDisposable
             _sceneSnapshot = SceneManager.CloneScene(SceneManager.CurrentScene!);
             _window.ChangePlayMode(RenderMode.EditorRun);
 
-            if (_window.Renderer._sceneCameras != null && _window.Renderer._sceneCameras.Count > 0)
+            if (_window.Renderer?._sceneCameras is { Count: > 0 })
             {
                 _window.Renderer.ActiveCamera = _window.Renderer._sceneCameras.First();
                 Debug.Log("Switched to scene camera", Debug.LogLevel.Info, true);
@@ -121,7 +119,7 @@ public sealed class DustyEngine : IDisposable
                 _sceneSnapshot = null;
             }
 
-            if (_window.Renderer.EditorCamera != null)
+            if (_window.Renderer?.EditorCamera != null)
             {
                 _window.Renderer.ActiveCamera = _window.Renderer.EditorCamera;
                 Debug.Log("Switched to editor camera", Debug.LogLevel.Info, true);
@@ -133,21 +131,9 @@ public sealed class DustyEngine : IDisposable
     }
 
 
-    private static bool LoadScene(string? scenePath)
-    {
-        if (SceneSerializer.LoadScene(out var loadedScene, scenePath) == null)
-        {
-            Debug.Log("Scene deserialize error", Debug.LogLevel.Error);
-            return false;
-        }
-
-        SceneManager.LoadScene(loadedScene!);
-        return true;
-    }
-
     private static void OpenScene(string scenePath)
     {
-        LoadScene(scenePath);
+        SceneManager.LoadSceneByPath(scenePath);
         _window.LoadScene?.Invoke();
         HierarchyPanel.OnChangeScene?.Invoke();
         Debug.Log($"Open scene: {scenePath}", Debug.LogLevel.Info, true);

@@ -261,26 +261,32 @@ public abstract class SceneManager
         return count;
     }
 
-    public static void LoadScene(string sceneName)
+    public static void LoadSceneByName(string sceneName)
     {
         ArgumentNullException.ThrowIfNull(sceneName);
         CurrentScene = FindScene(sceneName);
         Debug.Log($"[SceneManager] Current scene set to: {CurrentScene.Name}", Debug.LogLevel.Info, true);
     }
 
-    public static void LoadScene(uint index)
+    public static void LoadSceneByIndex(uint index)
     {
         CurrentScene = FindScene(index);
         Debug.Log($"[SceneManager] Current scene set to: {CurrentScene.Name}", Debug.LogLevel.Info, true);
     }
 
-    public static void LoadScene(Scene scene)
+    public static bool LoadSceneByPath(string? scenePath)
     {
-        CurrentScene = scene;
-        if (FindScene(scene.Name) == null) AddScene(scene);
-        Debug.Log($"[SceneManager] Current scene set to: {CurrentScene.Name}", Debug.LogLevel.Info, true);
-    }
+        if (SceneSerializer.LoadScene(out var loadedScene, scenePath) == null)
+        {
+            Debug.Log("Scene deserialize error", Debug.LogLevel.Error);
+            return false;
+        }
 
+        CurrentScene = loadedScene;
+        if (FindScene(loadedScene.Name) == null) AddScene(loadedScene);
+        Debug.Log($"[SceneManager] Current scene set to: {CurrentScene.Name}", Debug.LogLevel.Info, true);
+        return true;
+    }
 
     public static string? GetCurrentScene() => CurrentScene.Name;
     public static string? GetCurrentScenePath() => CurrentScene.Path;
