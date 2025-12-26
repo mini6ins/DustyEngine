@@ -49,16 +49,13 @@ public class RendererUI
         if (!ImGui.BeginMainMenuBar())
             return;
 
-        // ===== File =====
         if (ImGui.BeginMenu("File"))
         {
             if (ImGui.MenuItem("Save"))
                 OnProjectSave?.Invoke();
 
-            // ----- Settings -----
             if (ImGui.BeginMenu("Settings"))
             {
-                // ----- Themes -----
                 if (ImGui.BeginMenu("Themes"))
                 {
                     var isDark = ThemeSelector.CurrentTheme == EditorTheme.Dark;
@@ -98,7 +95,6 @@ public class RendererUI
             ImGui.EndMenu();
         }
 
-        // ===== Help =====
         if (ImGui.BeginMenu("Help"))
         {
             ImGui.MenuItem("About");

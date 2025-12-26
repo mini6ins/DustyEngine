@@ -11,14 +11,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="ImGui.NET" Version="1.91.6.1" />
-      <PackageReference Include="ImGuiNet.OpenTK" Version="0.1.6.123-beta" />
-      <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.13.0" />
-      <PackageReference Include="OpenTK" Version="5.0.0-pre.15" />
-      <PackageReference Include="Veldrid" Version="4.9.0" />
-    </ItemGroup>
-
-    <ItemGroup>
       <ProjectReference Include="..\Debug\Debug.csproj" />
       <ProjectReference Include="..\WindowEngine\WindowEngine.csproj" />
     </ItemGroup>

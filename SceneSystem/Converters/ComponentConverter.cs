@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using DustyEngine.Components;
+using DustyEngine.Scene;
 using InputSystem;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -129,10 +130,10 @@ namespace DustyEngine.Core.Converters
 
         private static string CompileSourceToDll(string sourcePath)
         {
-            if (!string.IsNullOrEmpty(DustyEngine.ProjectFolderPath))
-                DustyEngine.ProjectFolderPath = Path.GetFullPath(DustyEngine.ProjectFolderPath);
+            if (!string.IsNullOrEmpty(SceneManager.ProjectPath))
+                SceneManager.ProjectPath= Path.GetFullPath(SceneManager.ProjectPath);
 
-            var outputDirectory = Path.Combine(DustyEngine.ProjectFolderPath, "Settings", "Dlls");
+            var outputDirectory = Path.Combine(SceneManager.ProjectPath, "Settings", "Dlls");
 
             if (!Directory.Exists(outputDirectory))
                 Directory.CreateDirectory(outputDirectory);
@@ -236,9 +237,9 @@ namespace DustyEngine.Core.Converters
 
             if (ComponentSourcePaths.TryGetValue(value.GetType(), out string absSourcePath))
             {
-                var projectRoot = string.IsNullOrEmpty(DustyEngine.ProjectFolderPath)
+                var projectRoot = string.IsNullOrEmpty(SceneManager.ProjectPath)
                     ? Directory.GetCurrentDirectory()
-                    : Path.GetFullPath(DustyEngine.ProjectFolderPath);
+                    : Path.GetFullPath(SceneManager.ProjectPath);
 
                 var toWrite = absSourcePath;
                 try
@@ -393,9 +394,9 @@ namespace DustyEngine.Core.Converters
         {
             var absPath = ResolvePath(absPathOrRaw);
 
-            var projectRoot = string.IsNullOrEmpty(DustyEngine.ProjectFolderPath)
+            var projectRoot = string.IsNullOrEmpty(SceneManager.ProjectPath)
                 ? Directory.GetCurrentDirectory()
-                : Path.GetFullPath(DustyEngine.ProjectFolderPath);
+                : Path.GetFullPath(SceneManager.ProjectPath);
 
             try
             {
@@ -424,8 +425,8 @@ namespace DustyEngine.Core.Converters
             if (Path.IsPathRooted(rawPath))
                 return Path.GetFullPath(rawPath);
 
-            var baseDir = !string.IsNullOrEmpty(DustyEngine.ProjectFolderPath)
-                ? Path.GetFullPath(DustyEngine.ProjectFolderPath)
+            var baseDir = !string.IsNullOrEmpty(SceneManager.ProjectPath)
+                ? Path.GetFullPath(SceneManager.ProjectPath)
                 : Directory.GetCurrentDirectory();
 
             var combined = Path.Combine(baseDir, rawPath);

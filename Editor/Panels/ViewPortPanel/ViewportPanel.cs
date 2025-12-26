@@ -1,4 +1,5 @@
 using System.Numerics;
+using GraphicsEngine;
 using ImGuiNET;
 
 namespace Editor.Panels.ViewPortPanel;
@@ -7,7 +8,7 @@ public class ViewportPanel : IRenderablePanel
 {
     public static bool IsScenePanelActive;
     private static bool _isPlayMode;
-    public static Action<bool>? OnPlayModeChanged;
+    public static Action<RenderMode>? OnPlayModeChanged;
 
     public void Render()
     {
@@ -27,7 +28,7 @@ public class ViewportPanel : IRenderablePanel
         if (ImGui.Button("Play"))
         {
             _isPlayMode = true;
-            OnPlayModeChanged?.Invoke(_isPlayMode);
+            OnPlayModeChanged?.Invoke(RenderMode.EditorRun);
         }
 
 
@@ -39,7 +40,7 @@ public class ViewportPanel : IRenderablePanel
         if (ImGui.Button("Stop"))
         {
             _isPlayMode = false;
-            OnPlayModeChanged?.Invoke(_isPlayMode);
+            OnPlayModeChanged?.Invoke(RenderMode.EditorStop);
         }
 
         ImGui.EndDisabled();

@@ -1,9 +1,11 @@
 ﻿using System.Text.Json;
 using DustyEngine.Engine.Math.Vectors;
+using DustyEngine.Scene;
+using Editor.Panels.ProjectSetiingPanel;
 
 namespace DustyEngine;
 
-public class ProjectSettings
+internal class ProjectSettings
 {
     public string ProjectName { get; set; }
     public float Version { get; set; }
@@ -19,6 +21,28 @@ public class ProjectSettings
 
     public Vector2i ScreenSize { get; set; }
     public bool Vsync { get; set; }
+
+
+    public static ProjectSettings? LoadProject(string path)
+    {
+        DustyEngine.ProjectFolderPath = path;
+        var _settings = DeserializeProjectSettings(DustyEngine.ProjectFolderPath);
+        ProjectSetiingPanel.ScenePaths = _settings.PathToScenes;
+
+        return _settings;
+    }
+
+    public static void SaveProject(ProjectSettings settings)
+    {
+        SceneSerializer.SaveScene(SceneManager.CurrentScene, SceneManager.GetCurrentScenePath());
+        SaveProjectSettings(settings);
+    }
+
+    public static void SaveProjectSettings(ProjectSettings settings)
+    {
+        settings.PathToScenes = ProjectSetiingPanel.ScenePaths;
+        SerializeProjectSettings(settings, DustyEngine.ProjectFolderPath);
+    }
 
 
     public static void SerializeProjectSettings(ProjectSettings projectSettings, string projectFolderPath)

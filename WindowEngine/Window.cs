@@ -7,55 +7,70 @@ using Vector2i = OpenTK.Mathematics.Vector2i;
 
 namespace WindowEngine;
 
-
-
 public class Window : IDisposable
 {
     private GameWindow? _window;
+    private GraphicsRenderer? _renderer;
 
     public GraphicsRenderer? Renderer => _renderer;
-    public static GraphicsRenderer? _renderer;
-
-    public  RenderMode RenderMode { get; private set; }
-
+    public RenderMode RenderMode { get; private set; }
     public Action? LoadScene;
 
-    public void RunMainLoop(Action<RenderMode> updateCallback, Vector2i resolution, string programTitle, string vertShaderPath,
-        string fragShaderPath, bool vsync, RenderMode renderMode, string projectPath)
+    public Window(
+        Action<RenderMode> updateCallback,
+        Vector2i resolution,
+        string programTitle,
+        string vertShaderPath,
+        string fragShaderPath,
+        bool vsync,
+        RenderMode renderMode,
+        string projectPath)
     {
-        Debug.Log("WindowEngine  is working", Debug.LogLevel.Info, true);
+        Debug.Log("WindowEngine is working", Debug.LogLevel.Info, true);
 
         RenderMode = renderMode;
+
         var nativeWindowSettings = new NativeWindowSettings
         {
-            ClientSize = new Vector2i(resolution.X, resolution.Y),
+            ClientSize = resolution,
             Title = programTitle
         };
 
-        _renderer = new GraphicsRenderer(vertShaderPath, fragShaderPath, nativeWindowSettings.ClientSize.X,
-            nativeWindowSettings.ClientSize.Y, RenderMode);
+        _renderer = new GraphicsRenderer(
+            vertShaderPath,
+            fragShaderPath,
+            nativeWindowSettings.ClientSize.X,
+            nativeWindowSettings.ClientSize.Y,
+            renderMode);
+
         LoadScene += _renderer.LoadScene;
-        var cursorState = RenderMode == RenderMode.EditorStop ? CursorState.Normal : CursorState.Hidden;
 
-        _window = RenderMode == RenderMode.EditorStop
+        var cursorState = renderMode == RenderMode.EditorStop
+            ? CursorState.Normal
+            : CursorState.Hidden;
+
+        _window = renderMode == RenderMode.EditorStop
             ? new EditorWindow(GameWindowSettings.Default, nativeWindowSettings, vsync, _renderer, projectPath)
-            : new StandaloneWindow(GameWindowSettings.Default, nativeWindowSettings, vsync, cursorState);
-
+            : new StandaloneWindow(GameWindowSettings.Default, nativeWindowSettings, vsync, cursorState, _renderer);
 
         _window.UpdateFrame += _ => updateCallback.Invoke(RenderMode);
-        _window.Run();
     }
 
-    public void ChangePlayMode(RenderMode  renderMode)
+    public void Run() => _window?.Run();
+
+    public void ChangePlayMode(RenderMode renderMode)
     {
         RenderMode = renderMode;
         _renderer?.SetRenderMode(renderMode);
-        Debug.Log("Is play mode: " + RenderMode, Debug.LogLevel.Info, true);
+        Debug.Log($"Play mode changed to: {RenderMode}", Debug.LogLevel.Info, true);
     }
 
     public void Dispose()
     {
+        if (_renderer != null)
+        {
+            LoadScene -= _renderer.LoadScene;
+        }
         _window?.Dispose();
-        LoadScene -= _renderer!.LoadScene;
     }
 }

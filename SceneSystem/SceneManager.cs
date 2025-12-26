@@ -3,7 +3,7 @@ using SceneSystem.EngineObject.GameObject;
 
 namespace DustyEngine.Scene;
 
-public static class SceneManager
+public abstract class SceneManager
 {
     private static readonly List<Scene> sceneList = [];
     private static Scene? currentScene;
@@ -15,6 +15,42 @@ public static class SceneManager
     public static uint GenerateGameObjectId() => _nextGameObjectId++;
     public static uint GenerateComponentId() => _nextComponentId++;
 
+    public static string? ProjectPath;
+
+    public static Scene? CloneScene(Scene original)
+    {
+        var json = SceneSerializer.SerializeSceneToJson(original);
+        if (string.IsNullOrEmpty(json))
+        {
+            Debug.Log("Failed to serialize scene for snapshot", Debug.LogLevel.Error);
+            return null;
+        }
+
+        var clonedScene = SceneSerializer.DeserializeSceneFromJson(json);
+        if (clonedScene != null)
+        {
+            clonedScene.Path = original.Path;
+        }
+
+        return clonedScene;
+    }
+
+
+    public static void RestoreScene(Scene snapshot)
+    {
+        var currentObjects = CurrentScene!.GameObjects.ToList();
+        foreach (var obj in currentObjects)
+        {
+            RemoveGameObjectRecursively(obj);
+        }
+
+        CurrentScene!.GameObjects.Clear();
+
+        foreach (var obj in snapshot.GameObjects)
+        {
+            AddGameObjectRecursively(obj, null);
+        }
+    }
 
     public static Scene? CurrentScene
     {
@@ -237,6 +273,14 @@ public static class SceneManager
         CurrentScene = FindScene(index);
         Debug.Log($"[SceneManager] Current scene set to: {CurrentScene.Name}", Debug.LogLevel.Info, true);
     }
+
+    public static void LoadScene(Scene scene)
+    {
+        CurrentScene = scene;
+        if (FindScene(scene.Name) == null) AddScene(scene);
+        Debug.Log($"[SceneManager] Current scene set to: {CurrentScene.Name}", Debug.LogLevel.Info, true);
+    }
+
 
     public static string? GetCurrentScene() => CurrentScene.Name;
     public static string? GetCurrentScenePath() => CurrentScene.Path;

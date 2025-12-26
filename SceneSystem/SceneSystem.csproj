@@ -8,8 +8,13 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Debug\Debug.csproj" />
+      <ProjectReference Include="..\InputSystem\InputSystem.csproj" />
       <ProjectReference Include="..\Math\Math.csproj" />
       <ProjectReference Include="..\Utils\Utils.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
     </ItemGroup>
 
 </Project>
