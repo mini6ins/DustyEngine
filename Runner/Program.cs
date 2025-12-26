@@ -7,7 +7,7 @@ internal static class Program
 
     private static string _projectPath = null!;
 
-    private static RenderMode _renderMode = RenderMode.Standalone;
+    private static RenderMode _renderMode = RenderMode.EditorStop;
 
     private static int Main(string[] args)
     {
@@ -26,6 +26,10 @@ internal static class Program
                 Console.Error.WriteLine();
                 Debug.Log($"Invalid RenderMode '{args[1]}'. Using default: {_renderMode}", Debug.LogLevel.FatalError);
             }
+        }
+        else
+        {
+            _renderMode = RenderMode.EditorStop;
         }
         
         Console.CancelKeyPress += (_, e) => e.Cancel = true;
