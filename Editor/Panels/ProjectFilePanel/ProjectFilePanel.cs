@@ -114,9 +114,19 @@ public class ProjectFilePanel : IRenderablePanel
 
         foreach (var entry in Directory.GetFileSystemEntries(path))
         {
-            var attr = File.GetAttributes(entry);
-            var isDir = attr.HasFlag(FileAttributes.Directory);
-            DrawItem(isDir, Path.GetFileName(entry), entry);
+            if (!File.Exists(entry) && !Directory.Exists(entry))
+                continue;
+
+            try
+            {
+                var attr = File.GetAttributes(entry);
+                var isDir = attr.HasFlag(FileAttributes.Directory);
+                DrawItem(isDir, Path.GetFileName(entry), entry);
+            }
+            catch (FileNotFoundException)
+            {
+                continue;
+            }
         }
 
         ImGui.Columns(1);

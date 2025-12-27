@@ -2,8 +2,8 @@
   "ProjectName": "My Game",
   "Version": 1,
   "PathToScenes": [
-    "Assets/test2.json",
-    "Assets/DustyEngineTestScene.json"
+    "Assets/Scene/test2.json",
+    "Assets/Scene/DustyEngineTestScene.json"
   ],
   "PathToFragShader": "Assets/shaders/shader.frag",
   "PathToVertShader": "Assets/shaders/shader.vert",

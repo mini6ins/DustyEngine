@@ -1,12 +1,17 @@
+using DustyEngine;
+using DustyEngine.Scene;
+
 namespace Editor.Panels.ProjectFilePanel;
 
-internal class ProjectFileManager
+public class ProjectFileManager
 {
     private readonly string _rootAssets;
 
     public string CurrentPath { get; private set; }
     public string? ClipboardPath { get; set; }
     public string? SelectedPath { get; set; }
+
+    public static event Action<string, string>? OnSceneMoved;
 
     public ProjectFileManager(string? projectPath)
     {
@@ -135,7 +140,7 @@ internal class ProjectFileManager
             return;
         }
 
-        isPasted =  true;
+        isPasted = true;
         try
         {
             if (!File.Exists(ClipboardPath) && !Directory.Exists(ClipboardPath))
@@ -189,53 +194,132 @@ internal class ProjectFileManager
     {
         try
         {
+            var cmp = OperatingSystem.IsWindows()
+                ? StringComparison.OrdinalIgnoreCase
+                : StringComparison.Ordinal;
+
             var targetFullPath = Path.GetFullPath(targetFolder).TrimEnd(Path.DirectorySeparatorChar) +
                                  Path.DirectorySeparatorChar;
             var rootFullPath = Path.GetFullPath(_rootAssets).TrimEnd(Path.DirectorySeparatorChar) +
                                Path.DirectorySeparatorChar;
 
-            if (!targetFullPath.StartsWith(rootFullPath, StringComparison.Ordinal))
+            if (!targetFullPath.StartsWith(rootFullPath, cmp))
             {
                 Console.WriteLine("Cannot move outside Assets folder");
                 return;
             }
 
-            var fileName = Path.GetFileName(sourcePath);
-            var destPath = Path.Combine(targetFolder, fileName);
+            var sourceFull = Path.GetFullPath(sourcePath).TrimEnd(Path.DirectorySeparatorChar);
+            var fileName = Path.GetFileName(sourceFull);
+            var destPath = Path.Combine(targetFullPath, fileName);
 
-            if (Directory.Exists(sourcePath))
+            if (Directory.Exists(sourceFull))
             {
-                var sourceFullPath = Path.GetFullPath(sourcePath).TrimEnd(Path.DirectorySeparatorChar) +
-                                     Path.DirectorySeparatorChar;
-
-                if (targetFullPath.StartsWith(sourceFullPath, StringComparison.Ordinal))
+                var sourceFolderFull = sourceFull + Path.DirectorySeparatorChar;
+                if (targetFullPath.StartsWith(sourceFolderFull, cmp))
                 {
                     Console.WriteLine("Cannot move folder into itself");
                     return;
                 }
             }
 
-            if (Path.GetDirectoryName(sourcePath) == targetFolder)
+            var sourceDir = Path.GetDirectoryName(sourceFull);
+            if (sourceDir != null)
             {
-                Console.WriteLine("Already in target folder");
-                return;
+                var sourceDirFull = Path.GetFullPath(sourceDir).TrimEnd(Path.DirectorySeparatorChar) +
+                                    Path.DirectorySeparatorChar;
+
+                if (sourceDirFull.Equals(targetFullPath, cmp))
+                {
+                    Console.WriteLine("Already in target folder");
+                    return;
+                }
             }
 
             if (File.Exists(destPath) || Directory.Exists(destPath))
-                destPath = GenerateUniquePath(targetFolder, fileName);
+                destPath = GenerateUniquePath(targetFullPath, fileName);
 
-            if (Directory.Exists(sourcePath))
-                Directory.Move(sourcePath, destPath);
+            bool movedCurrentScene =
+                SceneManager.CurrentScene != null &&
+                !string.IsNullOrWhiteSpace(SceneManager.CurrentScene.Path) &&
+                PathEquals(SceneManager.CurrentScene.Path, sourceFull);
+
+            if (Directory.Exists(sourceFull))
+                Directory.Move(sourceFull, destPath);
             else
-                File.Move(sourcePath, destPath);
+                File.Move(sourceFull, destPath);
 
-            Console.WriteLine($"Moved: {sourcePath} -> {destPath}");
+            if (!string.IsNullOrEmpty(SelectedPath) && PathEquals(SelectedPath, sourceFull))
+                SelectedPath = destPath;
+
+            if (!string.IsNullOrEmpty(ClipboardPath) && PathEquals(ClipboardPath, sourceFull))
+                ClipboardPath = destPath;
+
+            if (movedCurrentScene)
+                SceneManager.CurrentScene!.Path = destPath;
+
+            if (destPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            {
+                OnSceneMoved?.Invoke(sourceFull, destPath);
+            }
+
+            Console.WriteLine($"Moved: {sourceFull} -> {destPath}");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error moving item: {ex.Message}");
         }
     }
+
+    private static bool PathEquals(string a, string b)
+    {
+        var cmp = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+
+        a = Path.GetFullPath(a).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        b = Path.GetFullPath(b).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        return string.Equals(a, b, cmp);
+    }
+
+
+    private static bool IsSceneFile(string path)
+    {
+        var full = Path.GetFullPath(path);
+        var cmp = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
+        var marker = $"{Path.DirectorySeparatorChar}Scenes{Path.DirectorySeparatorChar}";
+        return full.Contains(marker, cmp);
+    }
+
+    private static bool TryPatchScenePath(string scenePath)
+    {
+        try
+        {
+            var text = File.ReadAllText(scenePath);
+            var node = System.Text.Json.Nodes.JsonNode.Parse(text) as System.Text.Json.Nodes.JsonObject;
+            if (node == null) return false;
+
+            if (!node.ContainsKey("GameObjects") && !node.ContainsKey("Objects"))
+                return false;
+
+            node["Path"] = scenePath;
+
+            var tmp = scenePath + ".tmp";
+            File.WriteAllText(tmp,
+                node.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+            File.Copy(tmp, scenePath, true);
+            File.Delete(tmp);
+
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
 
     public string CreateNewFolder()
     {

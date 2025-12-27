@@ -276,6 +276,41 @@ public abstract class SceneManager
 
     public static bool LoadSceneByPath(string? scenePath)
     {
+        if (string.IsNullOrWhiteSpace(scenePath))
+        {
+            Debug.Log("Scene path is null or empty", Debug.LogLevel.Error);
+            return false;
+        }
+
+        if (!File.Exists(scenePath))
+        {
+            Debug.Log($"Scene file not found: {scenePath}", Debug.LogLevel.Error, true);
+
+            if (!string.IsNullOrWhiteSpace(ProjectPath))
+            {
+                var fileName = Path.GetFileName(scenePath);
+                var assetsFolder = Path.Combine(ProjectPath, "Assets");
+
+                Debug.Log($"Searching for scene file: {fileName} in Assets folder...", Debug.LogLevel.Info, true);
+
+                var foundPath = FindSceneInAssets(assetsFolder, fileName);
+                if (foundPath != null)
+                {
+                    Debug.Log($"Found scene at new location: {foundPath}", Debug.LogLevel.Info, true);
+                    scenePath = foundPath;
+                }
+                else
+                {
+                    Debug.Log($"Scene file '{fileName}' not found anywhere in Assets", Debug.LogLevel.Error, true);
+                    return false;
+                }
+            }
+            else
+            {
+                return false;
+            }
+        }
+
         if (SceneSerializer.LoadScene(out var loadedScene, scenePath) == null)
         {
             Debug.Log("Scene deserialize error", Debug.LogLevel.Error);
@@ -283,9 +318,25 @@ public abstract class SceneManager
         }
 
         CurrentScene = loadedScene;
-        if (FindScene(loadedScene.Name) == null) AddScene(loadedScene);
+        if (FindScene(loadedScene.Name) == null)
+            AddScene(loadedScene);
+
         Debug.Log($"[SceneManager] Current scene set to: {CurrentScene.Name}", Debug.LogLevel.Info, true);
         return true;
+    }
+
+    private static string? FindSceneInAssets(string directory, string fileName)
+    {
+        try
+        {
+            var files = Directory.GetFiles(directory, fileName, SearchOption.AllDirectories);
+            return files.Length > 0 ? files[0] : null;
+        }
+        catch (Exception ex)
+        {
+            Debug.Log($"Error searching for scene: {ex.Message}", Debug.LogLevel.Warning, false);
+            return null;
+        }
     }
 
     public static string? GetCurrentScene() => CurrentScene.Name;

@@ -77,6 +77,8 @@ public sealed class DustyEngine : IDisposable
             ProjectSetiingPanel.OnSaveProjectSettings += () => ProjectSettings.SaveProjectSettings(_settings);
             ProjectFilePanel.OnSceneOpened += OpenScene;
             ViewportPanel.OnPlayModeChanged += ChangePlayMode;
+
+            ProjectFileManager.OnSceneMoved += (oldPath, newPath) => ProjectSettings.UpdateScenePath(_settings, oldPath, newPath);
         }
 
         Debug.Log("Project settings loaded");
@@ -149,5 +151,8 @@ public sealed class DustyEngine : IDisposable
 
         ProjectFilePanel.OnSceneOpened -= OpenScene;
         ViewportPanel.OnPlayModeChanged -= ChangePlayMode;
+
+        // ДОБАВЬТЕ:
+        ProjectFileManager.OnSceneMoved -= (oldPath, newPath) => ProjectSettings.UpdateScenePath(_settings, oldPath, newPath);
     }
 }
