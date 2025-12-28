@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using DustyEngine.Components;
+using DustyEngine.Core;
 using SceneSystem.EngineObject.GameObject;
 
 namespace DustyEngine.Core.Converters;
@@ -19,7 +20,8 @@ public class SceneConverter : JsonConverter<Scene.Scene>
 
         if (doc.RootElement.TryGetProperty("Path", out var pathElement))
         {
-            scene.Path = pathElement.GetString() ?? string.Empty;
+            var pathValue = pathElement.GetString() ?? string.Empty;
+            scene.Path = pathValue;
         }
 
         if (doc.RootElement.TryGetProperty("GameObjects", out var gameObjectsElement))
@@ -35,7 +37,7 @@ public class SceneConverter : JsonConverter<Scene.Scene>
         return scene;
     }
 
-    private static List<GameObject> DeserializeGameObjects(JsonElement element, GameObject parent,
+    private static List<GameObject> DeserializeGameObjects(JsonElement element, GameObject? parent,
         JsonSerializerOptions options)
     {
         var gameObjects = new List<GameObject>();
@@ -82,7 +84,9 @@ public class SceneConverter : JsonConverter<Scene.Scene>
         writer.WriteStartObject();
 
         writer.WriteString("Name", value.Name);
-        writer.WriteString("Path", value.Path);
+
+        var relativePath = PathUtility.GetRelativePath(value.Path);
+        writer.WriteString("Path", relativePath);
 
         writer.WritePropertyName("GameObjects");
         JsonSerializer.Serialize(writer, value.GameObjects, options);

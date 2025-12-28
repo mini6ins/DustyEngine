@@ -1,0 +1,39 @@
+{
+  "Name": null,
+  "Path": "Assets/Scene/scene.json",
+  "GameObjects": [
+    {
+      "ActiveSelf": true,
+      "Children": [],
+      "Components": [
+        {
+          "Type": "Transform",
+          "LocalPosition": {
+            "X": 0,
+            "Y": 0,
+            "Z": 0,
+            "Length": 0,
+            "LengthSquared": 0
+          },
+          "LocalRotation": {
+            "X": 0,
+            "Y": 0,
+            "Z": 0,
+            "Length": 0,
+            "LengthSquared": 0
+          },
+          "LocalScale": {
+            "X": 1,
+            "Y": 1,
+            "Z": 1,
+            "Length": 1.7320508,
+            "LengthSquared": 3
+          },
+          "Name": "Empty GameObject"
+        }
+      ],
+      "Name": "Empty GameObject"
+    }
+  ],
+  "Components": []
+}

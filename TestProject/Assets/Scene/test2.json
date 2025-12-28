@@ -1,6 +1,6 @@
 {
   "Name": "test2",
-  "Path": "/home/maksym/DustyEngine/TestProject/Assets/test2.json",
+  "Path": "Assets/Scene/test2.json",
   "GameObjects": [
     {
       "ActiveSelf": true,

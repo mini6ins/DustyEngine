@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using DustyEngine.Core;
 using DustyEngine.Engine.Math.Vectors;
 using DustyEngine.Scene;
 using Editor.Panels.ProjectSetiingPanel;
@@ -22,8 +23,6 @@ internal class ProjectSettings
     public Vector2i ScreenSize { get; set; }
     public bool Vsync { get; set; }
 
-
-
     public static void SaveProject(ProjectSettings settings)
     {
         SceneSerializer.SaveScene(SceneManager.CurrentScene, SceneManager.GetCurrentScenePath());
@@ -32,10 +31,23 @@ internal class ProjectSettings
 
     public static void SaveProjectSettings(ProjectSettings settings)
     {
-        settings.PathToScenes = ProjectSetiingPanel.ScenePaths;
+        settings.PathToScenes = new List<string>(ProjectSetiingPanel.ScenePaths ?? []);
+
+        global::DustyEngine.Debug.Log(
+            $"[SaveProjectSettings] Saving {settings.PathToScenes.Count} scene paths",
+            global::DustyEngine.Debug.LogLevel.Info,
+            true);
+
+        foreach (var p in settings.PathToScenes)
+        {
+            global::DustyEngine.Debug.Log(
+                $"  - Scene path before save: {p}",
+                global::DustyEngine.Debug.LogLevel.Info,
+                true);
+        }
+
         SerializeProjectSettings(settings, DustyEngine.ProjectFolderPath);
     }
-
 
     public static void SerializeProjectSettings(ProjectSettings projectSettings, string projectFolderPath)
     {
@@ -52,23 +64,39 @@ internal class ProjectSettings
             ScreenSize = projectSettings.ScreenSize,
             Vsync = projectSettings.Vsync,
 
-            PathToScenes = projectSettings.PathToScenes
-                .Select(p => MakeRelative(projectRoot, p))
-                .ToList(),
+            PathToScenes = projectSettings.PathToScenes?
+                .Select(p => EnsureRelativePath(p, projectRoot))
+                .ToList() ?? [],
 
-            PathToFragShader = MakeRelative(projectRoot, projectSettings.PathToFragShader),
-            PathToVertShader = MakeRelative(projectRoot, projectSettings.PathToVertShader)
+            PathToFragShader = EnsureRelativePath(projectSettings.PathToFragShader, projectRoot),
+            PathToVertShader = EnsureRelativePath(projectSettings.PathToVertShader, projectRoot)
         };
+
+        global::DustyEngine.Debug.Log(
+            $"[SerializeProjectSettings] After conversion:",
+            global::DustyEngine.Debug.LogLevel.Info,
+            true);
+
+        foreach (var p in copy.PathToScenes)
+        {
+            global::DustyEngine.Debug.Log(
+                $"  - Will save: {p}",
+                global::DustyEngine.Debug.LogLevel.Info,
+                true);
+        }
 
         string json = JsonSerializer.Serialize(
             copy,
             new JsonSerializerOptions { WriteIndented = true }
         );
 
-        File.WriteAllText(
-            Path.Combine(projectRoot, "Settings/project_settings.json"),
-            json
-        );
+        string settingsPath = Path.Combine(projectRoot, "Settings/project_settings.json");
+        File.WriteAllText(settingsPath, json);
+
+        global::DustyEngine.Debug.Log(
+            $"[SerializeProjectSettings] Saved to: {settingsPath}",
+            global::DustyEngine.Debug.LogLevel.Info,
+            true);
     }
 
     public static ProjectSettings DeserializeProjectSettings(string projectFolderPath)
@@ -99,16 +127,79 @@ internal class ProjectSettings
             return null!;
         }
 
-        settings.PathToScenes = settings.PathToScenes
-            .Select(p => ResolvePath(projectRoot, p))
-            .ToList();
+        global::DustyEngine.Debug.Log(
+            $"[DeserializeProjectSettings] Loaded {settings.PathToScenes?.Count ?? 0} scene paths from JSON",
+            global::DustyEngine.Debug.LogLevel.Info,
+            true);
 
-        settings.PathToFragShader = ResolvePath(projectRoot, settings.PathToFragShader);
-        settings.PathToVertShader = ResolvePath(projectRoot, settings.PathToVertShader);
+        settings.PathToScenes = settings.PathToScenes?
+            .Select(p =>
+            {
+                var relative = EnsureRelativePath(p, projectRoot);
+                global::DustyEngine.Debug.Log(
+                    $"  - Loaded from JSON: {p} -> Converted to: {relative}",
+                    global::DustyEngine.Debug.LogLevel.Info,
+                    true);
+                return relative;
+            })
+            .ToList() ?? [];
+
+        settings.PathToFragShader = PathUtility.GetAbsolutePath(settings.PathToFragShader);
+        settings.PathToVertShader = PathUtility.GetAbsolutePath(settings.PathToVertShader);
 
         return settings;
     }
 
+    private static string EnsureRelativePath(string path, string projectRoot)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return path;
+
+        path = path.Replace('\\', '/');
+        projectRoot = projectRoot.Replace('\\', '/').TrimEnd('/');
+
+        if (path.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase))
+        {
+            return path;
+        }
+
+        if (Path.IsPathRooted(path))
+        {
+            string normalizedPath = Path.GetFullPath(path).Replace('\\', '/');
+
+            int assetsIndex = normalizedPath.IndexOf("/Assets/", StringComparison.OrdinalIgnoreCase);
+            if (assetsIndex >= 0)
+            {
+                return normalizedPath.Substring(assetsIndex + 1);
+            }
+
+            if (normalizedPath.StartsWith(projectRoot + "/", StringComparison.OrdinalIgnoreCase))
+            {
+                string relativePath = normalizedPath.Substring(projectRoot.Length + 1);
+
+                if (!relativePath.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase))
+                {
+                    relativePath = "Assets/" + relativePath;
+                }
+
+                return relativePath;
+            }
+
+            string fileName = Path.GetFileName(normalizedPath);
+            global::DustyEngine.Debug.Log(
+                $"[EnsureRelativePath] WARNING: Could not convert absolute path to relative: {path}. Using filename only: Assets/{fileName}",
+                global::DustyEngine.Debug.LogLevel.Warning,
+                true);
+            return "Assets/" + fileName;
+        }
+
+        if (!path.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Assets/" + path;
+        }
+
+        return path;
+    }
 
     public static void ValidateAndFixScenePaths(ProjectSettings settings)
     {
@@ -121,6 +212,11 @@ internal class ProjectSettings
         bool pathsChanged = false;
         var validPaths = new List<string>();
         var movedScenes = new Dictionary<string, string>();
+
+        global::DustyEngine.Debug.Log(
+            $"[ValidateAndFixScenePaths] Validating {settings.PathToScenes.Count} scene paths",
+            global::DustyEngine.Debug.LogLevel.Info,
+            true);
 
         for (int i = 0; i < settings.PathToScenes.Count; i++)
         {
@@ -136,13 +232,17 @@ internal class ProjectSettings
                 continue;
             }
 
-
-            var absolutePath = ResolvePath(projectRoot, scenePath);
-
+            var absolutePath = PathUtility.GetAbsolutePath(scenePath);
 
             if (File.Exists(absolutePath))
             {
-                validPaths.Add(scenePath);
+                var ensuredRelative = EnsureRelativePath(scenePath, projectRoot);
+                validPaths.Add(ensuredRelative);
+
+                global::DustyEngine.Debug.Log(
+                    $"  ✓ Scene exists: {scenePath} (as relative: {ensuredRelative})",
+                    global::DustyEngine.Debug.LogLevel.Info,
+                    true);
                 continue;
             }
 
@@ -161,9 +261,15 @@ internal class ProjectSettings
                     global::DustyEngine.Debug.LogLevel.Info,
                     true);
 
+                var relativeFoundPath = EnsureRelativePath(foundPath, projectRoot);
                 movedScenes[absolutePath] = foundPath;
-                validPaths.Add(foundPath);
+                validPaths.Add(relativeFoundPath);
                 pathsChanged = true;
+
+                global::DustyEngine.Debug.Log(
+                    $"  → Added as relative: {relativeFoundPath}",
+                    global::DustyEngine.Debug.LogLevel.Info,
+                    true);
             }
             else
             {
@@ -179,6 +285,12 @@ internal class ProjectSettings
         {
             settings.PathToScenes = validPaths;
             ProjectSetiingPanel.ScenePaths = new List<string>(validPaths);
+
+            global::DustyEngine.Debug.Log(
+                $"[ValidateAndFixScenePaths] Paths changed, saving...",
+                global::DustyEngine.Debug.LogLevel.Info,
+                true);
+
             SaveProjectSettings(settings);
 
             global::DustyEngine.Debug.Log(
@@ -186,16 +298,23 @@ internal class ProjectSettings
                 global::DustyEngine.Debug.LogLevel.Info,
                 true);
         }
+        else
+        {
+            global::DustyEngine.Debug.Log(
+                $"[ValidateAndFixScenePaths] No changes needed",
+                global::DustyEngine.Debug.LogLevel.Info,
+                true);
+        }
 
         if (SceneManager.CurrentScene != null && !string.IsNullOrWhiteSpace(SceneManager.CurrentScene.Path))
         {
-            var currentScenePath = Path.GetFullPath(SceneManager.CurrentScene.Path);
+            var currentScenePath = PathUtility.GetAbsolutePath(SceneManager.CurrentScene.Path);
 
             if (movedScenes.TryGetValue(currentScenePath, out var newPath))
             {
-                SceneManager.CurrentScene.Path = newPath;
+                SceneManager.CurrentScene.Path = EnsureRelativePath(newPath, projectRoot);
                 global::DustyEngine.Debug.Log(
-                    $"Updated CurrentScene path to: {newPath}",
+                    $"Updated CurrentScene path to: {SceneManager.CurrentScene.Path}",
                     global::DustyEngine.Debug.LogLevel.Info,
                     true);
             }
@@ -231,27 +350,38 @@ internal class ProjectSettings
         return null;
     }
 
-
     public static ProjectSettings? LoadProject(string path)
     {
         DustyEngine.ProjectFolderPath = path;
+
+        global::DustyEngine.Debug.Log(
+            $"[LoadProject] Loading project from: {path}",
+            global::DustyEngine.Debug.LogLevel.Info,
+            true);
+
         var _settings = DeserializeProjectSettings(DustyEngine.ProjectFolderPath);
 
         if (_settings == null)
             return null;
 
-        ProjectSetiingPanel.ScenePaths = _settings.PathToScenes;
+        ProjectSetiingPanel.ScenePaths = new List<string>(_settings.PathToScenes ?? []);
+
+        global::DustyEngine.Debug.Log(
+            $"[LoadProject] Loaded {ProjectSetiingPanel.ScenePaths.Count} scene paths into UI panel",
+            global::DustyEngine.Debug.LogLevel.Info,
+            true);
 
         ValidateAndFixScenePaths(_settings);
 
         return _settings;
     }
 
-
     public static void UpdateScenePath(ProjectSettings settings, string oldPath, string newPath)
     {
         if (settings?.PathToScenes == null)
             return;
+
+        string projectRoot = Path.GetFullPath(DustyEngine.ProjectFolderPath);
 
         var cmp = OperatingSystem.IsWindows()
             ? StringComparison.OrdinalIgnoreCase
@@ -270,14 +400,14 @@ internal class ProjectSettings
             if (string.IsNullOrWhiteSpace(scenePath))
                 continue;
 
-            var sceneFull = Path.GetFullPath(scenePath)
+            var sceneFull = Path.GetFullPath(PathUtility.GetAbsolutePath(scenePath))
                 .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
             if (string.Equals(sceneFull, oldFull, cmp))
             {
-                settings.PathToScenes[i] = newFull;
+                settings.PathToScenes[i] = EnsureRelativePath(newFull, projectRoot);
                 global::DustyEngine.Debug.Log(
-                    $"Updated scene path in project settings: {oldPath} -> {newPath}",
+                    $"Updated scene path in project settings: {oldPath} -> {settings.PathToScenes[i]}",
                     global::DustyEngine.Debug.LogLevel.Info,
                     true);
             }
@@ -286,40 +416,5 @@ internal class ProjectSettings
         ProjectSetiingPanel.ScenePaths = settings.PathToScenes;
 
         SaveProjectSettings(settings);
-    }
-
-    private static string MakeRelative(string projectRoot, string path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-            return path;
-
-        try
-        {
-            string abs = ResolvePath(projectRoot, path);
-            return Path.GetRelativePath(projectRoot, abs);
-        }
-        catch
-        {
-            return path;
-        }
-    }
-
-    private static string ResolvePath(string projectRoot, string rawPath)
-    {
-        if (string.IsNullOrWhiteSpace(rawPath))
-            return rawPath;
-
-        if (rawPath.StartsWith("~"))
-        {
-            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            rawPath = Path.Combine(home, rawPath.TrimStart('~', '/', '\\'));
-        }
-
-        rawPath = Environment.ExpandEnvironmentVariables(rawPath);
-
-        if (Path.IsPathRooted(rawPath))
-            return Path.GetFullPath(rawPath);
-
-        return Path.GetFullPath(Path.Combine(projectRoot, rawPath));
     }
 }

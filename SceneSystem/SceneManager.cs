@@ -1,4 +1,5 @@
 ﻿using DustyEngine.Components;
+using DustyEngine.Core;
 using SceneSystem.EngineObject.GameObject;
 
 namespace DustyEngine.Scene;
@@ -35,7 +36,6 @@ public abstract class SceneManager
         return clonedScene;
     }
 
-
     public static void RestoreScene(Scene snapshot)
     {
         var currentObjects = CurrentScene!.GameObjects.ToList();
@@ -67,7 +67,6 @@ public abstract class SceneManager
         }
         set => currentScene = value;
     }
-
 
     public static void AddGameObjectRecursively(GameObject gameObject, GameObject? parent)
     {
@@ -134,7 +133,6 @@ public abstract class SceneManager
         }
 
         gameObject.InvokeMethodInComponents("OnDisable");
-
 
         foreach (var component in gameObject.Components)
         {
@@ -282,9 +280,11 @@ public abstract class SceneManager
             return false;
         }
 
-        if (!File.Exists(scenePath))
+        string absolutePath = PathUtility.GetAbsolutePath(scenePath);
+
+        if (!File.Exists(absolutePath))
         {
-            Debug.Log($"Scene file not found: {scenePath}", Debug.LogLevel.Error, true);
+            Debug.Log($"Scene file not found: {absolutePath}", Debug.LogLevel.Error, true);
 
             if (!string.IsNullOrWhiteSpace(ProjectPath))
             {
@@ -297,7 +297,8 @@ public abstract class SceneManager
                 if (foundPath != null)
                 {
                     Debug.Log($"Found scene at new location: {foundPath}", Debug.LogLevel.Info, true);
-                    scenePath = foundPath;
+                    scenePath = PathUtility.GetRelativePath(foundPath);
+                    absolutePath = foundPath;
                 }
                 else
                 {
@@ -321,7 +322,8 @@ public abstract class SceneManager
         if (FindScene(loadedScene.Name) == null)
             AddScene(loadedScene);
 
-        Debug.Log($"[SceneManager] Current scene set to: {CurrentScene.Name}", Debug.LogLevel.Info, true);
+        Debug.Log($"[SceneManager] Current scene set to: {CurrentScene.Name} (Path: {CurrentScene.Path})",
+            Debug.LogLevel.Info, true);
         return true;
     }
 
@@ -339,8 +341,8 @@ public abstract class SceneManager
         }
     }
 
-    public static string? GetCurrentScene() => CurrentScene.Name;
-    public static string? GetCurrentScenePath() => CurrentScene.Path;
+    public static string? GetCurrentScene() => CurrentScene?.Name;
+    public static string? GetCurrentScenePath() => CurrentScene?.Path;
 
     public static void AddScene(Scene scene)
     {
@@ -349,7 +351,6 @@ public abstract class SceneManager
         {
             sceneList.Add(scene);
             Debug.Log($"[SceneManager] Added scene: {scene.Name}", Debug.LogLevel.Info, true);
-
 
             if (sceneList.Count == 1 && currentScene == null)
             {

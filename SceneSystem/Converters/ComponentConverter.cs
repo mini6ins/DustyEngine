@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using DustyEngine.Components;
+using DustyEngine.Core;
 using DustyEngine.Scene;
 using InputSystem;
 using Microsoft.CodeAnalysis;
@@ -38,7 +39,7 @@ namespace DustyEngine.Core.Converters
             if (doc.RootElement.TryGetProperty("SourcePath", out var externalSourcePathEl))
             {
                 var raw = externalSourcePathEl.GetString() ?? string.Empty;
-                var sourcePath = ResolvePath(raw);
+                var sourcePath = PathUtility.GetAbsolutePath(raw);
                 Debug.Log($"Source Path: {sourcePath}", Debug.LogLevel.Info, true);
 
                 var externalComponent = LoadOrCompileComponent(sourcePath);
@@ -70,7 +71,7 @@ namespace DustyEngine.Core.Converters
 
         private static Component? LoadOrCompileComponent(string path)
         {
-            var absPath = ResolvePath(path);
+            var absPath = PathUtility.GetAbsolutePath(path);
             var typeName = Path.GetFileNameWithoutExtension(absPath);
             Component? component = null;
 
@@ -131,7 +132,7 @@ namespace DustyEngine.Core.Converters
         private static string CompileSourceToDll(string sourcePath)
         {
             if (!string.IsNullOrEmpty(SceneManager.ProjectPath))
-                SceneManager.ProjectPath= Path.GetFullPath(SceneManager.ProjectPath);
+                SceneManager.ProjectPath = Path.GetFullPath(SceneManager.ProjectPath);
 
             var outputDirectory = Path.Combine(SceneManager.ProjectPath, "Settings", "Dlls");
 
@@ -171,10 +172,9 @@ namespace DustyEngine.Core.Converters
                 MetadataReference.CreateFromFile(Assembly.Load("System.Runtime").Location),
                 MetadataReference.CreateFromFile(Assembly.Load("System.Console").Location),
                 MetadataReference.CreateFromFile(Assembly.Load("Microsoft.CSharp").Location),
-                MetadataReference.CreateFromFile(Assembly.GetExecutingAssembly().Location), // DustyEngine.dll
+                MetadataReference.CreateFromFile(Assembly.GetExecutingAssembly().Location),
                 MetadataReference.CreateFromFile(typeof(Input).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(KeyCode).Assembly.Location), // если KeyCode там
-
+                MetadataReference.CreateFromFile(typeof(KeyCode).Assembly.Location),
             };
 
             foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
@@ -237,22 +237,8 @@ namespace DustyEngine.Core.Converters
 
             if (ComponentSourcePaths.TryGetValue(value.GetType(), out string absSourcePath))
             {
-                var projectRoot = string.IsNullOrEmpty(SceneManager.ProjectPath)
-                    ? Directory.GetCurrentDirectory()
-                    : Path.GetFullPath(SceneManager.ProjectPath);
-
-                var toWrite = absSourcePath;
-                try
-                {
-                    if (Path.IsPathRooted(absSourcePath))
-                        toWrite = Path.GetRelativePath(projectRoot, absSourcePath);
-                }
-                catch
-                {
-                    // ignored
-                }
-
-                writer.WriteString("SourcePath", toWrite);
+                var relativePath = PathUtility.GetRelativePath(absSourcePath);
+                writer.WriteString("SourcePath", relativePath);
             }
 
             var type = value.GetType();
@@ -313,7 +299,7 @@ namespace DustyEngine.Core.Converters
                         var toSerialize = valueToWrite;
 
                         if (valueToWrite is string s && ShouldRelativizeObjPath(member, s))
-                            toSerialize = MakeRelativeToProjectRoot(s);
+                            toSerialize = PathUtility.GetRelativePath(s);
 
                         JsonSerializer.Serialize(writer, toSerialize, options);
                     }
@@ -358,7 +344,6 @@ namespace DustyEngine.Core.Converters
             return false;
         }
 
-
         private static void ResolveObjPathInComponent(Component component)
         {
             var type = component.GetType();
@@ -368,7 +353,7 @@ namespace DustyEngine.Core.Converters
             {
                 var s = (string?)prop.GetValue(component);
                 if (!string.IsNullOrWhiteSpace(s) && s.EndsWith(".obj", StringComparison.OrdinalIgnoreCase))
-                    prop.SetValue(component, ResolvePath(s));
+                    prop.SetValue(component, PathUtility.GetAbsolutePath(s));
             }
 
             var field = type.GetField("Path", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
@@ -376,7 +361,7 @@ namespace DustyEngine.Core.Converters
             {
                 var s = (string?)field.GetValue(component);
                 if (!string.IsNullOrWhiteSpace(s) && s.EndsWith(".obj", StringComparison.OrdinalIgnoreCase))
-                    field.SetValue(component, ResolvePath(s));
+                    field.SetValue(component, PathUtility.GetAbsolutePath(s));
             }
         }
 
@@ -388,49 +373,6 @@ namespace DustyEngine.Core.Converters
                 return false;
 
             return value.EndsWith(".obj", StringComparison.OrdinalIgnoreCase) && Path.IsPathRooted(value);
-        }
-
-        private static string MakeRelativeToProjectRoot(string absPathOrRaw)
-        {
-            var absPath = ResolvePath(absPathOrRaw);
-
-            var projectRoot = string.IsNullOrEmpty(SceneManager.ProjectPath)
-                ? Directory.GetCurrentDirectory()
-                : Path.GetFullPath(SceneManager.ProjectPath);
-
-            try
-            {
-                return Path.GetRelativePath(projectRoot, absPath);
-            }
-            catch
-            {
-                return absPathOrRaw;
-            }
-        }
-
-
-        private static string ResolvePath(string rawPath)
-        {
-            if (string.IsNullOrWhiteSpace(rawPath))
-                return rawPath;
-
-            if (rawPath.StartsWith("~"))
-            {
-                var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-                rawPath = Path.Combine(home, rawPath.TrimStart('~').TrimStart('/', '\\'));
-            }
-
-            rawPath = Environment.ExpandEnvironmentVariables(rawPath);
-
-            if (Path.IsPathRooted(rawPath))
-                return Path.GetFullPath(rawPath);
-
-            var baseDir = !string.IsNullOrEmpty(SceneManager.ProjectPath)
-                ? Path.GetFullPath(SceneManager.ProjectPath)
-                : Directory.GetCurrentDirectory();
-
-            var combined = Path.Combine(baseDir, rawPath);
-            return Path.GetFullPath(combined);
         }
 
         private static IEnumerable<Type> SafeGetTypes(Assembly asm)

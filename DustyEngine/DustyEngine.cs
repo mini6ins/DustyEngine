@@ -152,7 +152,6 @@ public sealed class DustyEngine : IDisposable
         ProjectFilePanel.OnSceneOpened -= OpenScene;
         ViewportPanel.OnPlayModeChanged -= ChangePlayMode;
 
-        // ДОБАВЬТЕ:
         ProjectFileManager.OnSceneMoved -= (oldPath, newPath) => ProjectSettings.UpdateScenePath(_settings, oldPath, newPath);
     }
 }

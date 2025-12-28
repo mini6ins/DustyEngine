@@ -1,4 +1,5 @@
-﻿using OpenTK.Graphics.OpenGL;
+﻿using DustyEngine.Core;
+using OpenTK.Graphics.OpenGL;
 using OpenTK.Mathematics;
 using Vector3 = System.Numerics.Vector3;
 using Vector4 = System.Numerics.Vector4;
@@ -11,15 +12,17 @@ public class ShaderProgram
 
     public ShaderProgram(string vertexFile, string fragmentFile)
     {
-        var vertexShader = CreateShader(ShaderType.VertexShader, vertexFile);
-        var fragmentShader = CreateShader(ShaderType.FragmentShader, fragmentFile);
+        var vertexPath = PathUtility.GetAbsolutePath(vertexFile);
+        var fragmentPath = PathUtility.GetAbsolutePath(fragmentFile);
+
+        var vertexShader = CreateShader(ShaderType.VertexShader, vertexPath);
+        var fragmentShader = CreateShader(ShaderType.FragmentShader, fragmentPath);
 
         Program = GL.CreateProgram();
         GL.AttachShader(Program, vertexShader);
         GL.AttachShader(Program, fragmentShader);
 
         GL.LinkProgram(Program);
-
 
         DeleteShader(vertexShader);
         DeleteShader(fragmentShader);

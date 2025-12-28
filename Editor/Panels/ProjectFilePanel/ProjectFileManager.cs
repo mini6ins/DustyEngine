@@ -1,4 +1,5 @@
 using DustyEngine;
+using DustyEngine.Core;
 using DustyEngine.Scene;
 
 namespace Editor.Panels.ProjectFilePanel;
@@ -98,6 +99,17 @@ public class ProjectFileManager
 
             if (SelectedPath == oldPath)
                 SelectedPath = newPath;
+
+            if (!isFolder && newPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            {
+                if (SceneManager.CurrentScene != null &&
+                    PathEquals(PathUtility.GetAbsolutePath(SceneManager.CurrentScene.Path), oldPath))
+                {
+                    SceneManager.CurrentScene.Path = PathUtility.GetRelativePath(newPath);
+                }
+
+                OnSceneMoved?.Invoke(oldPath, newPath);
+            }
         }
         catch (Exception ex)
         {
@@ -242,7 +254,7 @@ public class ProjectFileManager
             bool movedCurrentScene =
                 SceneManager.CurrentScene != null &&
                 !string.IsNullOrWhiteSpace(SceneManager.CurrentScene.Path) &&
-                PathEquals(SceneManager.CurrentScene.Path, sourceFull);
+                PathEquals(PathUtility.GetAbsolutePath(SceneManager.CurrentScene.Path), sourceFull);
 
             if (Directory.Exists(sourceFull))
                 Directory.Move(sourceFull, destPath);
@@ -256,7 +268,9 @@ public class ProjectFileManager
                 ClipboardPath = destPath;
 
             if (movedCurrentScene)
-                SceneManager.CurrentScene!.Path = destPath;
+            {
+                SceneManager.CurrentScene!.Path = PathUtility.GetRelativePath(destPath);
+            }
 
             if (destPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
             {
@@ -282,44 +296,6 @@ public class ProjectFileManager
 
         return string.Equals(a, b, cmp);
     }
-
-
-    private static bool IsSceneFile(string path)
-    {
-        var full = Path.GetFullPath(path);
-        var cmp = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-
-        var marker = $"{Path.DirectorySeparatorChar}Scenes{Path.DirectorySeparatorChar}";
-        return full.Contains(marker, cmp);
-    }
-
-    private static bool TryPatchScenePath(string scenePath)
-    {
-        try
-        {
-            var text = File.ReadAllText(scenePath);
-            var node = System.Text.Json.Nodes.JsonNode.Parse(text) as System.Text.Json.Nodes.JsonObject;
-            if (node == null) return false;
-
-            if (!node.ContainsKey("GameObjects") && !node.ContainsKey("Objects"))
-                return false;
-
-            node["Path"] = scenePath;
-
-            var tmp = scenePath + ".tmp";
-            File.WriteAllText(tmp,
-                node.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
-            File.Copy(tmp, scenePath, true);
-            File.Delete(tmp);
-
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
 
     public string CreateNewFolder()
     {

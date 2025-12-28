@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using DustyEngine.Core;
 using DustyEngine.Core.Converters;
 
 namespace DustyEngine;
@@ -12,14 +13,16 @@ public static class SceneSerializer
         {
             Debug.Log($"Starting scene loading from: {scenePath}", Debug.LogLevel.Info, true);
 
-            if (!File.Exists(scenePath))
+            string absolutePath = PathUtility.GetAbsolutePath(scenePath);
+
+            if (!File.Exists(absolutePath))
             {
-                Debug.Log($"Scene file not found: {scenePath}", Debug.LogLevel.FatalError);
+                Debug.Log($"Scene file not found: {absolutePath}", Debug.LogLevel.FatalError);
                 return null;
             }
 
             loadedScene = JsonSerializer.Deserialize<Scene.Scene>(
-                File.ReadAllText(scenePath),
+                File.ReadAllText(absolutePath),
                 new JsonSerializerOptions
                 {
                     WriteIndented = true,
@@ -33,8 +36,8 @@ public static class SceneSerializer
 
             if (loadedScene != null)
             {
-                loadedScene.Path = scenePath;
-                Debug.Log($"Scene successfully loaded! Path: {scenePath}");
+                loadedScene.Path = PathUtility.GetRelativePath(absolutePath);
+                Debug.Log($"Scene successfully loaded! Path: {loadedScene.Path}");
             }
         }
         catch (Exception ex)
@@ -51,7 +54,9 @@ public static class SceneSerializer
         {
             Debug.Log($"Saving scene to: {scenePath}", Debug.LogLevel.Info, true);
 
-            sceneToSave.Path = scenePath;
+            string absolutePath = PathUtility.GetAbsolutePath(scenePath);
+
+            sceneToSave.Path = PathUtility.GetRelativePath(scenePath);
 
             var options = new JsonSerializerOptions
             {
@@ -65,9 +70,16 @@ public static class SceneSerializer
             };
 
             var json = JsonSerializer.Serialize(sceneToSave, options);
-            File.WriteAllText(scenePath, json);
 
-            Debug.Log($"Scene successfully saved to: {scenePath}");
+            string? directory = Path.GetDirectoryName(absolutePath);
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            File.WriteAllText(absolutePath, json);
+
+            Debug.Log($"Scene successfully saved to: {sceneToSave.Path}");
             return true;
         }
         catch (Exception ex)
@@ -76,7 +88,6 @@ public static class SceneSerializer
             return false;
         }
     }
-
 
     public static string SerializeSceneToJson(Scene.Scene scene)
     {
@@ -127,5 +138,4 @@ public static class SceneSerializer
             return null;
         }
     }
-
 }
