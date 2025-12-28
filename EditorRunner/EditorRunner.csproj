@@ -20,10 +20,8 @@
 
     <Target Name="CopyPlayerRunnerDir" AfterTargets="Build">
         <PropertyGroup>
-            <!-- Источник -->
             <SrcDir>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..\PlayerRunner\bin\Debug\net9.0'))</SrcDir>
 
-            <!-- Назначение: рядом с EditorRunner.dll -->
             <DstDir>$([System.IO.Path]::Combine('$(TargetDir)', 'PlayerTemplates', 'linux-x64'))</DstDir>
         </PropertyGroup>
 
@@ -33,13 +31,10 @@
 
         <Error Condition="!Exists('$(SrcDir)')" Text="Папка не найдена: $(SrcDir)" />
 
-        <!-- Удаляем старую папку -->
         <RemoveDir Directories="$(DstDir)" Condition="Exists('$(DstDir)')" />
 
-        <!-- Создаём новую -->
         <MakeDir Directories="$(DstDir)" />
 
-        <!-- Копируем через системную команду -->
         <Exec Command="cp -r &quot;$(SrcDir)/.&quot; &quot;$(DstDir)/&quot;" Condition="!$([MSBuild]::IsOSPlatform('Windows'))" />
         <Exec Command="xcopy &quot;$(SrcDir)&quot; &quot;$(DstDir)\&quot; /E /I /Y /Q" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
 

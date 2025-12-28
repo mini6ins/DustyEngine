@@ -74,28 +74,6 @@ namespace B
         string engineDirectory = Directory.GetParent(workingDirectory).Parent.FullName;
         Debug.Log(workingDirectory + " , " + engineDirectory);
 
-
-
-        // 2
-        SyntaxTree tree = CSharpSyntaxTree.ParseText(firstClass);
-
-        // 3
-        MetadataReference mscorlib =
-            MetadataReference.CreateFromFile(typeof(object).Assembly.Location);
-        MetadataReference codeAnalysis =
-            MetadataReference.CreateFromFile(typeof(SyntaxTree).Assembly.Location);
-        MetadataReference csharpCodeAnalysis =
-            MetadataReference.CreateFromFile(typeof(CSharpSyntaxTree).Assembly.Location);
-
-        MetadataReference[] references = [mscorlib, codeAnalysis, csharpCodeAnalysis];
-
-        // 4
-        // var compilation = CSharpCompilation.Create("qwerty.dll", tree, references, new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
-        var compilation = CSharpCompilation.Create("qwerty", [tree], references, new CSharpCompilationOptions(OutputKind.ConsoleApplication));
-
-        var result = compilation.Emit(Path.Combine(outDir, "qwerty"));
-
-
         return true;
     }
 
@@ -149,5 +127,3 @@ namespace B
             subDir.Attributes &= ~FileAttributes.ReadOnly;
     }
 }
-
-// /home/maksym/DustyEngine/TestProject/Build
