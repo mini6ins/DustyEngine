@@ -1,5 +1,6 @@
 using Editor.Panels;
 using Editor.Panels.ConsolePanel;
+using Editor.Panels.ExportProjectPanel;
 using Editor.Panels.HierarchyPanel;
 using Editor.Panels.InspectorPanel;
 using Editor.Panels.ProjectFilePanel;
@@ -16,6 +17,7 @@ public class RendererUI
     public static Action? OnProjectSave;
 
     private readonly ProjectSetiingPanel _projectSettingsPanel;
+    private readonly ExportProjectPanel _exportProjectPanel;
 
     private readonly List<IRenderablePanel>? _renderablePanels =
     [
@@ -30,7 +32,9 @@ public class RendererUI
     public RendererUI()
     {
         _projectSettingsPanel =  new ProjectSetiingPanel();
+        _exportProjectPanel =  new ExportProjectPanel();
         _renderablePanels?.Add(_projectSettingsPanel);
+        _renderablePanels?.Add(_exportProjectPanel);
     }
 
 
@@ -53,6 +57,10 @@ public class RendererUI
         {
             if (ImGui.MenuItem("Save"))
                 OnProjectSave?.Invoke();
+
+            if (ImGui.MenuItem("Export project"))
+                _exportProjectPanel.ShowPanel = !_exportProjectPanel.ShowPanel;
+
 
             if (ImGui.BeginMenu("Settings"))
             {

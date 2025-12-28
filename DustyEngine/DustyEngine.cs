@@ -2,6 +2,7 @@
 using DustyEngine.Scene;
 using Editor;
 using Editor.Panels.ConsolePanel;
+using Editor.Panels.ExportProjectPanel;
 using Editor.Panels.HierarchyPanel;
 using Editor.Panels.ProjectFilePanel;
 using Editor.Panels.ProjectSetiingPanel;
@@ -79,6 +80,8 @@ public sealed class DustyEngine : IDisposable
             ViewportPanel.OnPlayModeChanged += ChangePlayMode;
 
             ProjectFileManager.OnSceneMoved += (oldPath, newPath) => ProjectSettings.UpdateScenePath(_settings, oldPath, newPath);
+
+            ExportProjectPanel.OnExportProject += outPath =>  ProjectCompiler.ProjectCompiler.Compile(ProjectFolderPath, outPath, _settings);
         }
 
         Debug.Log("Project settings loaded");

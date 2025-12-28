@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v9.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v9.0": {
+      "PlayerRunner/1.0.0": {
+        "runtime": {
+          "PlayerRunner.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "PlayerRunner/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

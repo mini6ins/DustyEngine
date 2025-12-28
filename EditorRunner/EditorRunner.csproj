@@ -1,0 +1,49 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\DustyEngine\DustyEngine.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Avalonia" Version="11.3.10" />
+        <PackageReference Include="Avalonia.Desktop" Version="11.3.10" />
+        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.10" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.10" />
+    </ItemGroup>
+
+    <Target Name="CopyPlayerRunnerDir" AfterTargets="Build">
+        <PropertyGroup>
+            <!-- Источник -->
+            <SrcDir>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..\PlayerRunner\bin\Debug\net9.0'))</SrcDir>
+
+            <!-- Назначение: рядом с EditorRunner.dll -->
+            <DstDir>$([System.IO.Path]::Combine('$(TargetDir)', 'PlayerTemplates', 'linux-x64'))</DstDir>
+        </PropertyGroup>
+
+        <Message Importance="high" Text="=== Копирование PlayerRunner ===" />
+        <Message Importance="high" Text="Источник: $(SrcDir)" />
+        <Message Importance="high" Text="Назначение: $(DstDir)" />
+
+        <Error Condition="!Exists('$(SrcDir)')" Text="Папка не найдена: $(SrcDir)" />
+
+        <!-- Удаляем старую папку -->
+        <RemoveDir Directories="$(DstDir)" Condition="Exists('$(DstDir)')" />
+
+        <!-- Создаём новую -->
+        <MakeDir Directories="$(DstDir)" />
+
+        <!-- Копируем через системную команду -->
+        <Exec Command="cp -r &quot;$(SrcDir)/.&quot; &quot;$(DstDir)/&quot;" Condition="!$([MSBuild]::IsOSPlatform('Windows'))" />
+        <Exec Command="xcopy &quot;$(SrcDir)&quot; &quot;$(DstDir)\&quot; /E /I /Y /Q" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
+
+        <Message Importance="high" Text="=== Файлы скопированы ===" />
+    </Target>
+
+</Project>

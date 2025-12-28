@@ -1,8 +1,9 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
+using DustyEngine;
 using GraphicsEngine;
 
-namespace DustyEngine.Runner;
+namespace EditorRunner;
 
 internal static class Program
 {
@@ -45,9 +46,9 @@ internal static class Program
 
         try
         {
-            var engine = new DustyEngine();
+            var engine = new DustyEngine.DustyEngine();
 
-            DustyEngine.StartEngine(_projectPath, _renderMode);
+            DustyEngine.DustyEngine.StartEngine(_projectPath, _renderMode);
             return 0;
         }
         catch (Exception ex)

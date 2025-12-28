@@ -6,7 +6,7 @@ using Editor.Panels.ProjectSetiingPanel;
 
 namespace DustyEngine;
 
-internal class ProjectSettings
+public class ProjectSettings
 {
     public string ProjectName { get; set; }
     public float Version { get; set; }
