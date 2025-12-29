@@ -1,9 +1,21 @@
-﻿namespace PlayerRunner;
+﻿using System.Diagnostics;
+using GraphicsEngine;
+using Debug = DustyEngine.Debug;
 
-class Program
+namespace PlayerRunner;
+
+internal static class Program
 {
-    static void Main(string[] args)
+    private static void Main(string[] args)
     {
-        Console.WriteLine("test2");
+        var projectDir = Path.Combine(Directory.GetCurrentDirectory(), "Data");
+
+        Debug.Log("--------------------------------------------------");
+        Debug.Log("Game runner starting...");
+
+        Debug.Log(Directory.GetCurrentDirectory());
+        Debug.Log(projectDir);
+
+        DustyEngine.DustyEngine.StartEngine(projectDir, RenderMode.Standalone);
     }
 }

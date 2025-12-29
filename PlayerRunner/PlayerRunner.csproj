@@ -8,4 +8,9 @@
         <LangVersion>13</LangVersion>
     </PropertyGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\Debug\Debug.csproj" />
+      <ProjectReference Include="..\DustyEngine\DustyEngine.csproj" />
+    </ItemGroup>
+
 </Project>

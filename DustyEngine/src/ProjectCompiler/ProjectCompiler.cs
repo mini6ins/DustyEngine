@@ -1,34 +1,9 @@
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
+using System.Diagnostics;
 
 namespace DustyEngine.ProjectCompiler;
 
-public class ProjectCompiler
+public static class ProjectCompiler
 {
-    private const string firstClass =
-        @"
-namespace A
-{
-    public class Foo
-    {
-        public int Bar() => 21;
-    }
-}";
-
-    private const string secondClass =
-        @"using A;
-
-namespace B
-{
-    public class Test
-    {
-        public int GetValue() => new Foo().Bar();
-    }
-}
-";
-
-
-
     public static bool Compile(string projectPath, string outPath, ProjectSettings settings)
     {
         var outDir = Path.Combine(outPath, settings.ProjectName);
@@ -70,14 +45,46 @@ namespace B
         }
 
         Debug.Log($"Project files copied successfully", Debug.LogLevel.Info, true);
-        string workingDirectory = Directory.GetCurrentDirectory();
-        string engineDirectory = Directory.GetParent(workingDirectory).Parent.FullName;
-        Debug.Log(workingDirectory + " , " + engineDirectory);
+
+        var templateDir = Path.Combine( Directory.GetCurrentDirectory(), "PlayerTemplates", "linux-x64");
+
+        CopyDirectory(templateDir, outDir);
+
+        var oldExe = Path.Combine(outDir, "PlayerRunner");
+        var newExe = Path.Combine(outDir, settings.ProjectName);
+
+        if (File.Exists(newExe))
+            File.Delete(newExe);
+
+        File.Move(oldExe, newExe);
+
+
+        RunGame(outDir, settings.ProjectName);
 
         return true;
     }
 
+    private static void RunGame(string playerDir, string exeName)
+    {
+        var playerExe = Path.Combine(playerDir, exeName);
 
+        var psi = new ProcessStartInfo
+        {
+            FileName = playerExe,
+            WorkingDirectory = playerDir,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+
+        using var p = Process.Start(psi);
+
+        string output = p.StandardOutput.ReadToEnd();
+        string error = p.StandardError.ReadToEnd();
+
+        Console.WriteLine(output);
+        Console.WriteLine(error);
+    }
 
 
     private static void CopyDirectory(string sourceDir, string destDir, string? excludeRoot = null)

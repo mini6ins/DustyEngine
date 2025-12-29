@@ -25,20 +25,12 @@
             <DstDir>$([System.IO.Path]::Combine('$(TargetDir)', 'PlayerTemplates', 'linux-x64'))</DstDir>
         </PropertyGroup>
 
-        <Message Importance="high" Text="=== Копирование PlayerRunner ===" />
-        <Message Importance="high" Text="Источник: $(SrcDir)" />
-        <Message Importance="high" Text="Назначение: $(DstDir)" />
-
-        <Error Condition="!Exists('$(SrcDir)')" Text="Папка не найдена: $(SrcDir)" />
-
         <RemoveDir Directories="$(DstDir)" Condition="Exists('$(DstDir)')" />
 
         <MakeDir Directories="$(DstDir)" />
 
         <Exec Command="cp -r &quot;$(SrcDir)/.&quot; &quot;$(DstDir)/&quot;" Condition="!$([MSBuild]::IsOSPlatform('Windows'))" />
         <Exec Command="xcopy &quot;$(SrcDir)&quot; &quot;$(DstDir)\&quot; /E /I /Y /Q" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
-
-        <Message Importance="high" Text="=== Файлы скопированы ===" />
     </Target>
 
 </Project>
