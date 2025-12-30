@@ -8,7 +8,7 @@ public class ExportProjectPanel : IRenderablePanel
     public bool ShowPanel;
     public static Action<string>? OnExportProject;
 
-    private string outPath = "/home/maksym/BuildDustyEngineProject";
+    private string outPath = "";
 
     public void Render()
     {
