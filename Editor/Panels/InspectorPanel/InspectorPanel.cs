@@ -154,24 +154,38 @@ internal class InspectorPanel : IRenderablePanel
     }
 
 
-    private static void DrawValue(
-        string label,
-        Type valueType,
-        Func<object?> get,
-        Action<object?> set,
-        bool canWrite,
+    private static void DrawValue(string label, Type valueType, Func<object?> get, Action<object?> set, bool canWrite,
         bool readOnlyUi = false)
     {
         if (readOnlyUi) ImGui.BeginDisabled();
 
         var value = get();
 
-        if (value == null && valueType != typeof(string))
+        if (value == null)
         {
-            ImGui.TextDisabled($"{label} (null)");
+            ImGui.Text(label);
+            ImGui.SameLine(120);
+            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+
+            if (valueType == typeof(string))
+            {
+                var str = "";
+                if (ImGui.InputText($"##{label}", ref str, 256) && canWrite)
+                    set(str);
+            }
+            else if (valueType == typeof(Mesh))
+            {
+                ImGui.TextDisabled("(None)");
+            }
+            else
+            {
+                ImGui.TextDisabled("(null)");
+            }
+
             if (readOnlyUi) ImGui.EndDisabled();
             return;
         }
+
 
         ImGui.Text(label);
         ImGui.SameLine(120);
@@ -212,6 +226,12 @@ internal class InspectorPanel : IRenderablePanel
                     set(str);
                 break;
             }
+            case Mesh mesh:
+            {
+                ImGui.TextDisabled($"Mesh: {mesh}");
+                break;
+            }
+
 
             case null when valueType == typeof(string):
             {
@@ -256,10 +276,14 @@ internal class InspectorPanel : IRenderablePanel
 
         if (ImGui.BeginChild("##list", new Vector2(0, 0)))
         {
-            foreach (var item in Types)
-            {
-                if (!ImGui.Selectable(item.Name, false)) continue;
+            var result = Types
+                .Where(t => t.Name.Contains(_addCompSearch, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(t => GetScore(t.Name, _addCompSearch))
+                .ThenBy(t => t.Name)
+                .ToList();
 
+            foreach (var item in result.Where(item => ImGui.Selectable(item.Name, false)))
+            {
                 if (Activator.CreateInstance(item) is Component comp)
                 {
                     _selectedGameObject?.AddComponent(comp);
@@ -276,6 +300,23 @@ internal class InspectorPanel : IRenderablePanel
         }
 
         ImGui.EndPopup();
+    }
+
+
+    private static int GetScore(string text, string query)
+    {
+        text = text.ToLower();
+        query = query.ToLower();
+
+        var score = 0;
+
+        if (text == query) score -= 100;
+        if (text.StartsWith(query)) score -= 50;
+        if (text.Contains(query)) score -= 20;
+
+        foreach (var c in query.Where(c => text.Contains(c))) score--;
+
+        return score;
     }
 
 

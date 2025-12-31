@@ -20,13 +20,11 @@
 
     <Target Name="CopyPlayerRunnerDir" AfterTargets="Build">
         <PropertyGroup>
-            <SrcDir>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..\PlayerRunner\bin\Debug\net9.0'))</SrcDir>
-
+            <SrcDir>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..\PlayerRunner\bin\Release\net9.0'))</SrcDir>
             <DstDir>$([System.IO.Path]::Combine('$(TargetDir)', 'PlayerTemplates', 'linux-x64'))</DstDir>
         </PropertyGroup>
 
         <RemoveDir Directories="$(DstDir)" Condition="Exists('$(DstDir)')" />
-
         <MakeDir Directories="$(DstDir)" />
 
         <Exec Command="cp -r &quot;$(SrcDir)/.&quot; &quot;$(DstDir)/&quot;" Condition="!$([MSBuild]::IsOSPlatform('Windows'))" />

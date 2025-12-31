@@ -1,10 +1,14 @@
-﻿using DustyEngine.Scene;
+﻿using System.Text.Json.Serialization;
+using DustyEngine.Scene;
+using SceneSystem.Attributes;
 using Utils;
 
 namespace DustyEngine.Components;
 
 public class MeshRenderer : MonoBehaviour
 {
+    public int a = 123;
+
     public string? Path
     {
         get => _path;
@@ -12,15 +16,15 @@ public class MeshRenderer : MonoBehaviour
         {
             if (_path == value) return;
             _path = value;
-            _mesh = null;
+            Mesh = null;
             if (!string.IsNullOrEmpty(_path))
                 LoadMeshFromPath();
         }
     }
 
     private string? _path;
-    private Mesh? _mesh;
-    private bool _isRegistered = false;
+    public Mesh Mesh;
+    private bool _isRegistered;
 
     public MeshRenderer()
     {
@@ -30,7 +34,7 @@ public class MeshRenderer : MonoBehaviour
     {
         if (mesh != null)
         {
-            _mesh = mesh;
+            Mesh = mesh;
             Debug.Log(
                 $"MeshRenderer: Mesh provided directly with {mesh.Vertices.Length} vertices and {mesh.Indices.Length} indices.",
                 Debug.LogLevel.Info, true);
@@ -45,7 +49,7 @@ public class MeshRenderer : MonoBehaviour
 
     public void EnsureLoaded()
     {
-        if (_mesh == null && !string.IsNullOrEmpty(Path))
+        if (Mesh == null && !string.IsNullOrEmpty(Path))
             LoadMeshFromPath();
     }
 
@@ -61,7 +65,7 @@ public class MeshRenderer : MonoBehaviour
         {
             if (OBJModelLoader.LoadModel(Path, out var vertices, out var indices))
             {
-                _mesh = new Mesh(vertices, indices);
+                Mesh = new Mesh(vertices, indices);
                 Debug.Log(
                     $"MeshRenderer: Successfully loaded mesh from '{Path}' with {vertices.Length} vertices and {indices.Length} indices.",
                     Debug.LogLevel.Info, true);
@@ -82,7 +86,7 @@ public class MeshRenderer : MonoBehaviour
 
     private void RegisterRenderer()
     {
-        if (!_isRegistered && _mesh != null)
+        if (!_isRegistered && Mesh != null)
         {
             SceneManager.AddRenderer(this);
             _isRegistered = true;
@@ -98,7 +102,7 @@ public class MeshRenderer : MonoBehaviour
 
     public void SetMesh(Mesh? mesh)
     {
-        _mesh = mesh;
+        Mesh = mesh;
         if (mesh != null)
         {
             Debug.Log(
@@ -113,38 +117,31 @@ public class MeshRenderer : MonoBehaviour
         }
     }
 
-    public Mesh? GetMesh() => _mesh;
-    public int GetVertexCount() => _mesh?.Vertices?.Length ?? 0;
-    public int GetIndexCount() => _mesh?.Indices?.Length ?? 0;
 
     private void OnEnable()
     {
-        if (_mesh == null && !string.IsNullOrEmpty(Path))
-            LoadMeshFromPath();
-        else if (_mesh != null)
-            RegisterRenderer();
+        if (Mesh == null && !string.IsNullOrEmpty(Path)) LoadMeshFromPath();
+
+        else if (Mesh != null) RegisterRenderer();
     }
 
-    private void OnDisable()
-    {
-        UnregisterRenderer();
-    }
+    private void OnDisable() => UnregisterRenderer();
+    public int GetVertexCount() => Mesh?.Vertices?.Length ?? 0;
+    public int GetIndexCount() => Mesh?.Indices?.Length ?? 0;
 
-    public override string ToString()
-    {
-        if (_mesh == null)
-        {
-            return $"MeshRenderer [No Mesh] (Path: {Path ?? "None"})";
-        }
-
-        return $"MeshRenderer [Vertices: {GetVertexCount()}, Indices: {GetIndexCount()}] (Path: {Path ?? "Direct"})";
-    }
+    public override string ToString() =>
+        $"MeshRenderer [Vertices: {GetVertexCount()}, Indices: {GetIndexCount()}] (Path: {Path ?? "Direct"})";
 }
 
-public class Mesh
+public class Mesh : Component
 {
-    public float[] Vertices { get; }
-    public uint[] Indices { get; }
+    [JsonIgnore] public float[] Vertices { get; }
+    [JsonIgnore] public uint[] Indices { get; }
+
+    [JsonIgnore] public int TriangleCount => Indices.Length / 3;
+
+   public bool IsValid() => Vertices.Length > 0 && Indices.Length > 0;
+
 
     public Mesh(float[] vertices, uint[] indices)
     {
@@ -152,9 +149,6 @@ public class Mesh
         Indices = indices ?? throw new ArgumentNullException(nameof(indices));
     }
 
-    public bool IsValid() => Vertices.Length > 0 && Indices.Length > 0;
-
-    public int TriangleCount => Indices.Length / 3;
 
     public override string ToString()
     {
