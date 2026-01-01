@@ -1,96 +1,93 @@
 ﻿using System.Text.Json.Serialization;
+using DustyEngine.Core;
 using DustyEngine.Scene;
-using SceneSystem.Attributes;
 using Utils;
 
 namespace DustyEngine.Components;
 
 public class MeshRenderer : MonoBehaviour
 {
-    public int a = 123;
-
-    public string? Path
+    public string? ObjPath
     {
-        get => _path;
         set
         {
-            if (_path == value) return;
-            _path = value;
-            Mesh = null;
-            if (!string.IsNullOrEmpty(_path))
+            var normalized = string.IsNullOrWhiteSpace(value) ? null : PathUtility.GetRelativePath(value);
+
+            if (_objPath == normalized) return;
+
+            _objPath = normalized;
+            _mesh = null;
+
+            if (!string.IsNullOrEmpty(_objPath))
                 LoadMeshFromPath();
         }
     }
 
-    private string? _path;
-    public Mesh Mesh;
-    private bool _isRegistered;
+    private string? _objPath;
+
+    [JsonIgnore] private Mesh? _mesh;
+    [JsonIgnore] private bool _isRegistered;
 
     public MeshRenderer()
     {
     }
 
-    public MeshRenderer(Mesh? mesh = null, string? path = null)
+    public MeshRenderer(Mesh? mesh = null, string? objPath = null)
     {
         if (mesh != null)
         {
-            Mesh = mesh;
-            Debug.Log(
-                $"MeshRenderer: Mesh provided directly with {mesh.Vertices.Length} vertices and {mesh.Indices.Length} indices.",
-                Debug.LogLevel.Info, true);
+            _mesh = mesh;
+            RegisterRenderer();
             return;
         }
 
-        Path = path;
-
-        if (!string.IsNullOrEmpty(Path)) return;
-        Debug.Log("MeshRenderer: No mesh or path provided. MeshRenderer will be empty.", Debug.LogLevel.Warning);
+        ObjPath = objPath;
     }
 
     public void EnsureLoaded()
     {
-        if (Mesh == null && !string.IsNullOrEmpty(Path))
+        if (_mesh == null && !string.IsNullOrEmpty(_objPath))
             LoadMeshFromPath();
     }
 
     private void LoadMeshFromPath()
     {
-        if (string.IsNullOrEmpty(Path))
+        if (string.IsNullOrEmpty(_objPath))
         {
-            Debug.Log("MeshRenderer: Path is null or empty. Cannot load mesh.", Debug.LogLevel.Warning, false);
+            Debug.Log("MeshRenderer: ObjPath is null or empty. Cannot load mesh.", Debug.LogLevel.Warning, false);
             return;
         }
 
+        var absPath = PathUtility.GetAbsolutePath(_objPath);
+
         try
         {
-            if (OBJModelLoader.LoadModel(Path, out var vertices, out var indices))
+            if (OBJModelLoader.LoadModel(absPath, out var vertices, out var indices))
             {
-                Mesh = new Mesh(vertices, indices);
+                _mesh = new Mesh(vertices, indices);
                 Debug.Log(
-                    $"MeshRenderer: Successfully loaded mesh from '{Path}' with {vertices.Length} vertices and {indices.Length} indices.",
+                    $"MeshRenderer: Loaded mesh from '{_objPath}' (abs: '{absPath}') V={vertices.Length} I={indices.Length}.",
                     Debug.LogLevel.Info, true);
 
                 RegisterRenderer();
             }
             else
             {
-                Debug.Log($"MeshRenderer: Failed to load mesh from '{Path}'. OBJModelLoader returned false.",
-                    Debug.LogLevel.Error, false);
+                Debug.Log($"MeshRenderer: Failed to load mesh from '{absPath}'.", Debug.LogLevel.Error, false);
             }
         }
         catch (Exception ex)
         {
-            Debug.Log($"MeshRenderer: Exception while loading mesh from '{Path}': {ex.Message}", Debug.LogLevel.Error);
+            Debug.Log($"MeshRenderer: Exception while loading mesh from '{absPath}': {ex.Message}",
+                Debug.LogLevel.Error);
         }
     }
 
     private void RegisterRenderer()
     {
-        if (!_isRegistered && Mesh != null)
-        {
-            SceneManager.AddRenderer(this);
-            _isRegistered = true;
-        }
+        if (_isRegistered || _mesh == null) return;
+        SceneManager.AddRenderer(this);
+        _isRegistered = true;
     }
 
     private void UnregisterRenderer()
@@ -100,55 +97,36 @@ public class MeshRenderer : MonoBehaviour
         _isRegistered = false;
     }
 
+    public Mesh? GetMesh() => _mesh;
+
     public void SetMesh(Mesh? mesh)
     {
-        Mesh = mesh;
-        if (mesh != null)
-        {
-            Debug.Log(
-                $"MeshRenderer: Mesh set directly with {mesh.Vertices.Length} vertices and {mesh.Indices.Length} indices.",
-                Debug.LogLevel.Info, true);
-            RegisterRenderer();
-        }
-        else
-        {
-            Debug.Log("MeshRenderer: Mesh set to null.", Debug.LogLevel.Info, true);
-            UnregisterRenderer();
-        }
-    }
+        _mesh = mesh;
 
+        if (_mesh != null) RegisterRenderer();
+        else UnregisterRenderer();
+    }
 
     private void OnEnable()
     {
-        if (Mesh == null && !string.IsNullOrEmpty(Path)) LoadMeshFromPath();
-
-        else if (Mesh != null) RegisterRenderer();
+        EnsureLoaded();
+        if (_mesh != null) RegisterRenderer();
     }
 
     private void OnDisable() => UnregisterRenderer();
-    public int GetVertexCount() => Mesh?.Vertices?.Length ?? 0;
-    public int GetIndexCount() => Mesh?.Indices?.Length ?? 0;
 
-    public override string ToString() =>
-        $"MeshRenderer [Vertices: {GetVertexCount()}, Indices: {GetIndexCount()}] (Path: {Path ?? "Direct"})";
+    public int GetVertexCount() => _mesh?.Vertices?.Length ?? 0;
+    public int GetIndexCount() => _mesh?.Indices?.Length ?? 0;
+
+    public override string ToString() => $"MeshRenderer [V:{GetVertexCount()}, I:{GetIndexCount()}] (ObjPath: {_objPath ?? "Direct"})";
 }
 
-public class Mesh : Component
+public class Mesh(float[] vertices, uint[] indices) : Component
 {
-    [JsonIgnore] public float[] Vertices { get; }
-    [JsonIgnore] public uint[] Indices { get; }
+    [JsonIgnore] public float[] Vertices { get; } = vertices ?? throw new ArgumentNullException(nameof(vertices));
+    [JsonIgnore] public uint[] Indices { get; } = indices ?? throw new ArgumentNullException(nameof(indices));
 
     [JsonIgnore] public int TriangleCount => Indices.Length / 3;
-
-   public bool IsValid() => Vertices.Length > 0 && Indices.Length > 0;
-
-
-    public Mesh(float[] vertices, uint[] indices)
-    {
-        Vertices = vertices ?? throw new ArgumentNullException(nameof(vertices));
-        Indices = indices ?? throw new ArgumentNullException(nameof(indices));
-    }
-
 
     public override string ToString()
     {

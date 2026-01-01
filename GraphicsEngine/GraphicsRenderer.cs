@@ -338,7 +338,7 @@ public class GraphicsRenderer(
         }
 
         meshRenderer.EnsureLoaded();
-        var mesh = meshRenderer.Mesh;
+        var mesh = meshRenderer.GetMesh();
 
         if (mesh == null || mesh.Vertices.Length == 0 || mesh.Indices.Length == 0)
         {
