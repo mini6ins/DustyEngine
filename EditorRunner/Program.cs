@@ -5,13 +5,13 @@ using GraphicsEngine;
 
 namespace EditorRunner;
 
-internal static class Program
+public static class Program
 {
     private static string _projectPath = null!;
     private static RenderMode _renderMode = RenderMode.EditorStop;
 
     [STAThread]
-    private static int Main(string[] args)
+    public static int Main(string[] args)
     {
         if (args.Length == 0)
         {
@@ -60,6 +60,7 @@ internal static class Program
 
     private static (string path, RenderMode mode)? ShowProjectSelectorGui()
     {
+      
         var builder = AppBuilder.Configure<ProjectSelectorApp>().UsePlatformDetect().WithInterFont().LogToTrace();
         builder.StartWithClassicDesktopLifetime([], ShutdownMode.OnMainWindowClose);
 

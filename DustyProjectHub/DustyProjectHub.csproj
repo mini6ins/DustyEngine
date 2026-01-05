@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Avalonia" Version="11.3.10" />
+      <PackageReference Include="Avalonia.Desktop" Version="11.3.10" />
+      <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.10" />
+      <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.10" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\EditorRunner\EditorRunner.csproj" />
+      <ProjectReference Include="..\GraphicsEngine\GraphicsEngine.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Remove="Program.cs" />
+    </ItemGroup>
+
+</Project>

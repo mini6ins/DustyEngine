@@ -10,6 +10,7 @@ public class ProjectSettings
 {
     public string ProjectName { get; set; }
     public float Version { get; set; }
+    public double DustyEngineVersion { get; set; }
 
     public List<string>? PathToScenes { get; set; } = [];
     public string PathToFragShader { get; set; }

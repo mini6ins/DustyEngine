@@ -1,4 +1,7 @@
-﻿using DustyEngine.Components;
+﻿using System.Globalization;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using DustyEngine.Components;
 using DustyEngine.Scene;
 using Editor;
 using Editor.Panels.ConsolePanel;
@@ -14,25 +17,36 @@ namespace DustyEngine;
 
 public sealed class DustyEngine : IDisposable
 {
+    private const double EngineVersion = 0.1;
+
     public static string ProjectFolderPath { get; set; } = null!;
     private static ProjectSettings? _settings;
     private static Window _window = null!;
 
-    private static readonly Action<MeshRenderer> AddRenderer = meshRenderer => _window.Renderer?.AddRenderer(meshRenderer);
-    private static readonly Action<MeshRenderer> RemoveRenderer = meshRenderer => _window.Renderer?.RemoveRendererByComponent(meshRenderer);
+    private static readonly Action<MeshRenderer> AddRenderer = meshRenderer =>
+        _window.Renderer?.AddRenderer(meshRenderer);
+
+    private static readonly Action<MeshRenderer> RemoveRenderer =
+        meshRenderer => _window.Renderer?.RemoveRendererByComponent(meshRenderer);
 
     public static void StartEngine(string path, RenderMode renderMode)
     {
+        ProjectFolderPath = path;
+        
+        SaveProjectVersion();
         Debug.ClearLogs();
 
         _settings = ProjectSettings.LoadProject(path);
+        
         if (_settings == null)
         {
             Debug.Log("Can't load project settings", Debug.LogLevel.FatalError, true);
             return;
         }
+        
+        _settings.DustyEngineVersion = EngineVersion;
+        SaveEngineVersionToProjectSettings();
 
-        ProjectFolderPath = path;
         SceneManager.ProjectPath = ProjectFolderPath;
         SetupDebug(renderMode);
 
@@ -44,6 +58,28 @@ public sealed class DustyEngine : IDisposable
         CreateWindow(renderMode);
     }
 
+    private static void SaveProjectVersion()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "engine_version.txt");
+        File.WriteAllText(path, EngineVersion.ToString(CultureInfo.InvariantCulture));
+        Console.WriteLine("Saving engine_version.txt to: " + path);
+
+    }
+
+    private static void SaveEngineVersionToProjectSettings()
+    {
+        var settingsPath = Path.Combine(ProjectFolderPath, "Settings", "project_settings.json");
+
+        var node = JsonNode.Parse(File.ReadAllText(settingsPath)) ?? throw new Exception("project_settings.json is empty/invalid");
+
+        node["DustyEngineVersion"] = EngineVersion;
+
+        File.WriteAllText(
+            settingsPath,
+            node.ToJsonString(new JsonSerializerOptions { WriteIndented = true })
+        );
+    }
+    
     private static void CreateWindow(RenderMode renderMode)
     {
         SceneManager.AddRenderer += AddRenderer;
@@ -79,9 +115,11 @@ public sealed class DustyEngine : IDisposable
             ProjectFilePanel.OnSceneOpened += OpenScene;
             ViewportPanel.OnPlayModeChanged += ChangePlayMode;
 
-            ProjectFileManager.OnSceneMoved += (oldPath, newPath) => ProjectSettings.UpdateScenePath(_settings, oldPath, newPath);
+            ProjectFileManager.OnSceneMoved += (oldPath, newPath) =>
+                ProjectSettings.UpdateScenePath(_settings, oldPath, newPath);
 
-            ExportProjectPanel.OnExportProject += outPath =>  ProjectCompiler.ProjectCompiler.Compile(ProjectFolderPath, outPath, _settings);
+            ExportProjectPanel.OnExportProject += outPath =>
+                ProjectCompiler.ProjectCompiler.Compile(ProjectFolderPath, outPath, _settings);
         }
 
         Debug.Log("Project settings loaded");
@@ -155,6 +193,7 @@ public sealed class DustyEngine : IDisposable
         ProjectFilePanel.OnSceneOpened -= OpenScene;
         ViewportPanel.OnPlayModeChanged -= ChangePlayMode;
 
-        ProjectFileManager.OnSceneMoved -= (oldPath, newPath) => ProjectSettings.UpdateScenePath(_settings, oldPath, newPath);
+        ProjectFileManager.OnSceneMoved -=
+            (oldPath, newPath) => ProjectSettings.UpdateScenePath(_settings, oldPath, newPath);
     }
 }
