@@ -2,11 +2,14 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Themes.Fluent;
+using DustyProjectHub.UI.Windows;
 
 namespace DustyProjectHub;
 
 public class App : Application
-{
+{    
+    public static App? Instance { get; private set; }
+    
     [STAThread]
     private static void Main(string[] args)
     {
@@ -17,10 +20,7 @@ public class App : Application
             .LogToTrace()
             .StartWithClassicDesktopLifetime(args, ShutdownMode.OnMainWindowClose);
     }
-
-    public static App? Instance { get; private set; }
-
-
+    
     public override void Initialize()
     {
         Instance = this;

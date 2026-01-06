@@ -1,12 +1,13 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using DustyProjectHub.UI.Windows;
 
 namespace DustyProjectHub;
 
 public class CreateNewProject
 {
-    public static async Task<string?> Show(Window owner)
+    public static async Task<string?> Show()
     {
         var projectPathBox = new TextBox
         {
@@ -28,7 +29,7 @@ public class CreateNewProject
                 Title = "Select Project Folder"
             };
 
-            var folder = await dialog.ShowAsync(owner);
+            var folder = await dialog.ShowAsync(MainWindow.Instance!);
             if (!string.IsNullOrWhiteSpace(folder))
                 projectPathBox.Text = folder;
         };
@@ -116,7 +117,7 @@ public class CreateNewProject
             }
         };
 
-        await window.ShowDialog(owner);
+        await window.ShowDialog(MainWindow.Instance!);
         return result;
     }
 }

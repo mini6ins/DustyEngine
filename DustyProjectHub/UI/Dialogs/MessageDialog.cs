@@ -1,12 +1,13 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using DustyProjectHub.UI.Windows;
 
 namespace DustyProjectHub;
 
 public static class MessageDialog
 {
-    public static async Task Show(Window owner, string title, string message)
+    public static async Task Show(string title, string message)
     {
         var okBtn = new Button
         {
@@ -52,6 +53,6 @@ public static class MessageDialog
             }
         };
 
-        await window.ShowDialog(owner);
+        await window.ShowDialog(MainWindow.Instance!);
     }
 }

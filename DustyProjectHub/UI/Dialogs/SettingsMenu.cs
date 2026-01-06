@@ -1,18 +1,17 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using DustyProjectHub.UI.Windows;
 
 namespace DustyProjectHub;
 
 public static class SettingsMenu
 {
-    public static async Task Show(Window owner)
+    public static async Task Show()
     {
-        var settings = HubSettingsLoader.Load();
-
         var enginePathBox = new TextBox
         {
-            Text = settings.EnginePath,
+            Text = HubSettingsLoader.HubSettings.EnginePath,
             MinWidth = 0,
             HorizontalAlignment = HorizontalAlignment.Stretch
         };
@@ -39,7 +38,7 @@ public static class SettingsMenu
                 }
             };
 
-            var files = await dialog.ShowAsync(owner);
+            var files = await dialog.ShowAsync(MainWindow.Instance!);
             if (files != null && files.Length > 0)
                 enginePathBox.Text = files[0];
         };
@@ -71,8 +70,8 @@ public static class SettingsMenu
 
         saveBtn.Click += (_, _) =>
         {
-            settings.EnginePath = enginePathBox.Text?.Trim() ?? "";
-            HubSettingsLoader.Save(settings);
+            HubSettingsLoader.HubSettings.EnginePath = enginePathBox.Text?.Trim() ?? "";
+            HubSettingsLoader.Save();
             window.Close();
         };
 
@@ -122,6 +121,6 @@ public static class SettingsMenu
             }
         };
 
-        await window.ShowDialog(owner);
+        await window.ShowDialog(MainWindow.Instance!);
     }
 }

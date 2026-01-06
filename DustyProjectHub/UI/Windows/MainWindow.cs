@@ -1,18 +1,22 @@
-using System.Collections.ObjectModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
 using Avalonia.Layout;
 
-namespace DustyProjectHub;
+namespace DustyProjectHub.UI.Windows;
 
 public class MainWindow : Window
 {
-    private readonly ObservableCollection<ProjectInfo> _projects = [];
+    public static MainWindow? Instance { get; private set; }
+    private readonly ProjectService _projectService;
 
     public MainWindow()
     {
+        Instance = this;
+        HubSettingsLoader.Load();
+        _projectService = new ProjectService();
+        
         Title = "DustyProjectHub";
         Width = 1024;
         Height = 600;
@@ -57,9 +61,9 @@ public class MainWindow : Window
         var addButton = new Button { Content = "Add project" };
         var settingButton = new Button { Content = "Settings" };
 
-        createButton.Click += (_, _) => CreateProject();
-        addButton.Click += (_, _) => AddProject();
-        settingButton.Click += (_, _) => SettingsMenu.Show(this);
+        createButton.Click += (_, _) => _ = _projectService.CreateProject();
+        addButton.Click += (_, _) => _ = _projectService.AddProject();
+        settingButton.Click += (_, _) => _ = SettingsMenu.Show();
 
         panel.Children.Add(createButton);
         panel.Children.Add(addButton);
@@ -72,14 +76,13 @@ public class MainWindow : Window
     {
         var items = new ItemsControl
         {
-            ItemsSource = _projects,
+            ItemsSource = _projectService.Projects,
             ItemsPanel = new FuncTemplate<Panel>(() => new StackPanel
             {
                 Orientation = Orientation.Vertical,
                 Spacing = 8
             })!,
-            ItemTemplate = new FuncDataTemplate<ProjectInfo>((p, _) =>
-                ProjectUIFactory.CreateProjectButton(p, OnProjectClicked))
+            ItemTemplate = new FuncDataTemplate<ProjectInfo>((p, _) => ProjectUIFactory.CreateProjectButton(p, ProjectService.OnProjectClicked))
         };
 
         return new ScrollViewer
@@ -90,77 +93,7 @@ public class MainWindow : Window
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto
         };
     }
-
-    private async Task AddProject()
-    {
-        var projectPath = await AddProjectDialog.Show(this);
-
-        if (string.IsNullOrWhiteSpace(projectPath))
-            return;
-
-        if (!ProjectService.ValidateProjectPath(projectPath, out var errorMessage))
-        {
-            await MessageDialog.Show(this, "Error", errorMessage!);
-            return;
-        }
-
-        await AddProjectToList(projectPath);
-    }
-
-    private async Task CreateProject()
-    {
-        var projectPath = await CreateNewProject.Show(this);
-
-        if (string.IsNullOrWhiteSpace(projectPath))
-            return;
-
-        await AddProjectToList(projectPath);
-    }
-
-    private async Task AddProjectToList(string projectPath)
-    {
-        try
-        {
-            var projectInfo = ProjectService.GetProjectInfo(projectPath);
-
-            if (_projects.Any(p => p.Path == projectPath))
-            {
-                await MessageDialog.Show(this, "Info", "This project is already in the list.");
-                return;
-            }
-
-            _projects.Add(projectInfo);
-        }
-        catch (Exception ex)
-        {
-            await MessageDialog.Show(this, "Error", $"Failed to load project:\n{ex.Message}");
-        }
-    }
-
-    private async void OnProjectClicked(ProjectInfo projectInfo)
-    {
-        var settings = HubSettingsLoader.Load();
-        var enginePath = settings.EnginePath;
-
-        if (!ProjectLauncher.ValidateEnginePath(enginePath, out var errorMessage))
-        {
-            await MessageDialog.Show(this, "Error", errorMessage!);
-            return;
-        }
-
-        var engineVersion = ProjectService.LoadEngineVersionFromFile(enginePath);
-        
-        if (!ProjectLauncher.IsVersionCompatible(engineVersion, projectInfo.EngineVersion))
-        {
-            var ok = await ConfirmDialog.Show(
-                this,
-                "Confirm",
-                $"Project '{projectInfo.Name}' was created with another engine version.\nContinue anyway?"
-            );
-
-            if (!ok) return;
-        }
-
-        ProjectLauncher.LaunchProject(projectInfo, enginePath);
-    }
+    
+    public static Task ShowErrorDialog(string title, string message) => MessageDialog.Show(title, message);
+    public static Task ShowInfoDialog(string title, string message) => MessageDialog.Show(title, message);
 }

@@ -2,10 +2,12 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using DustyProjectHub;
+using DustyProjectHub.UI.Windows;
 
 public static class ConfirmDialog
 {
-    public static async Task<bool> Show(Window owner, string title, string message)
+    public static async Task<bool> Show( string title, string message)
     {
         var result = false;
 
@@ -51,7 +53,7 @@ public static class ConfirmDialog
             }
         };
 
-        await dialog.ShowDialog(owner);
+        await dialog.ShowDialog(MainWindow.Instance!);
         return result;
     }
 }
