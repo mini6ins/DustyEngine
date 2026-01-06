@@ -7,7 +7,7 @@ public sealed class HubSettings
     public string EnginePath { get; set; } = "";
 }
 
-public class HubSettingsLoader
+public static class HubSettingsLoader
 {
     private static readonly string SettingsPath =
         Path.Combine(AppContext.BaseDirectory, "hub_settings.json");
