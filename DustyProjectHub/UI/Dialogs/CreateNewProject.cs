@@ -5,13 +5,20 @@ using DustyProjectHub.UI.Windows;
 
 namespace DustyProjectHub;
 
+public sealed record CreateProjectResult(string Name, string Path);
+
 public class CreateNewProject
 {
-    public static async Task<string?> Show()
+    public static async Task<CreateProjectResult?> Show()
     {
+        var projectNameBox = new TextBox
+        {
+            Watermark = "Project name",
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+
         var projectPathBox = new TextBox
         {
-            MinWidth = 0,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             Watermark = "Select project folder..."
         };
@@ -50,25 +57,27 @@ public class CreateNewProject
 
         var window = new Window
         {
-            Title = "Add Project",
+            Title = "Create Project",
             Width = 520,
-            Height = 200,
+            Height = 260,
             CanResize = false,
             SystemDecorations = SystemDecorations.Full,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             ShowInTaskbar = false
         };
 
-        string? result = null;
+        CreateProjectResult? result = null;
 
         okBtn.Click += (_, _) =>
         {
+            var name = projectNameBox.Text?.Trim();
             var path = projectPathBox.Text?.Trim();
-            if (!string.IsNullOrWhiteSpace(path))
-            {
-                result = path;
-                window.Close();
-            }
+
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(path))
+                return;
+
+            result = new CreateProjectResult(name, path);
+            window.Close();
         };
 
         cancelBtn.Click += (_, _) => window.Close();
@@ -95,12 +104,10 @@ public class CreateNewProject
             Spacing = 12,
             Children =
             {
-                new TextBlock
-                {
-                    Text = "Project folder path",
-                    FontSize = 14
-                },
+                new TextBlock { Text = "Project name", FontSize = 14 },
+                projectNameBox,
 
+                new TextBlock { Text = "Project folder path", FontSize = 14 },
                 pathRow,
 
                 new StackPanel

@@ -7,7 +7,10 @@ namespace DustyProjectHub;
 
 public static class ProjectUIFactory
 {
-    public static Button CreateProjectButton(ProjectInfo project, Action<ProjectInfo> onClick)
+    public static Button CreateProjectButton(
+        ProjectInfo project,
+        Action<ProjectInfo> onClick,
+        Action<ProjectInfo> onRemove)
     {
         var btn = new Button
         {
@@ -20,6 +23,17 @@ public static class ProjectUIFactory
         };
 
         btn.Click += (_, _) => onClick(project);
+
+        var removeItem = new MenuItem { Header = "Remove from list" };
+        removeItem.Click += (_, _) => onRemove(project);
+
+        btn.ContextMenu = new ContextMenu
+        {
+            Items =
+            {
+                removeItem
+            }
+        };
 
         return btn;
     }

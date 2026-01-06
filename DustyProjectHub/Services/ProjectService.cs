@@ -30,7 +30,9 @@ public class ProjectService
 
     public async Task CreateProject()
     {
-        var projectPath = await CreateNewProject.Show();
+        var projectInfo = await CreateNewProject.Show();
+        var projectPath = Path.Combine(projectInfo!.Path, projectInfo.Name);
+        
         await TryAddProjectAsync(projectPath, MainWindow.ShowErrorDialog, MainWindow.ShowInfoDialog);
     }
 
@@ -40,6 +42,18 @@ public class ProjectService
         await TryAddProjectAsync(projectPath, MainWindow.ShowErrorDialog, MainWindow.ShowInfoDialog);
     }
 
+    public async Task RemoveProject(ProjectInfo projectInfo)
+    {
+        var ok = await ConfirmDialog.Show("Confirm", $"Remove '{projectInfo.Name}' from list?\n\n(It will NOT delete files from disk.)");
+        if (!ok) return;
+
+        Projects.Remove(projectInfo);
+
+        HubSettingsLoader.HubSettings.ProjectsPath.RemoveAll(p => string.Equals(p, projectInfo.Path, StringComparison.OrdinalIgnoreCase));
+        HubSettingsLoader.Save();
+    }
+
+    
     public static async void OnProjectClicked(ProjectInfo projectInfo)
     {
         var enginePath = HubSettingsLoader.HubSettings.EnginePath;

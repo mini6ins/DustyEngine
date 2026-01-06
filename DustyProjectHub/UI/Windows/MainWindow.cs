@@ -61,9 +61,9 @@ public class MainWindow : Window
         var addButton = new Button { Content = "Add project" };
         var settingButton = new Button { Content = "Settings" };
 
-        createButton.Click += (_, _) => _ = _projectService.CreateProject();
-        addButton.Click += (_, _) => _ = _projectService.AddProject();
-        settingButton.Click += (_, _) => _ = SettingsMenu.Show();
+        createButton.Click += async (_, _) => await _projectService.CreateProject();
+        addButton.Click += async (_, _) => await _projectService.AddProject();
+        settingButton.Click += async (_, _) => await SettingsMenu.Show();
 
         panel.Children.Add(createButton);
         panel.Children.Add(addButton);
@@ -82,7 +82,13 @@ public class MainWindow : Window
                 Orientation = Orientation.Vertical,
                 Spacing = 8
             })!,
-            ItemTemplate = new FuncDataTemplate<ProjectInfo>((p, _) => ProjectUIFactory.CreateProjectButton(p, ProjectService.OnProjectClicked))
+            ItemTemplate = new FuncDataTemplate<ProjectInfo>((p, _) =>
+                ProjectUIFactory.CreateProjectButton(
+                    p,
+                    ProjectService.OnProjectClicked,
+                    RemoveProjectHandler
+                ))
+
         };
 
         return new ScrollViewer
@@ -93,6 +99,8 @@ public class MainWindow : Window
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto
         };
     }
+
+    private async void RemoveProjectHandler(ProjectInfo proj) => await _projectService.RemoveProject(proj);
     
     public static Task ShowErrorDialog(string title, string message) => MessageDialog.Show(title, message);
     public static Task ShowInfoDialog(string title, string message) => MessageDialog.Show(title, message);
