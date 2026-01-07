@@ -34,7 +34,6 @@ public static class ProjectUIFactory
                 removeItem
             }
         };
-
         return btn;
     }
 
