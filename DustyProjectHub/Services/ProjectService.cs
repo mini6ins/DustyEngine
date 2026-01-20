@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using DustyProjectHub.UI.Windows;
 
-namespace DustyProjectHub;
+namespace DustyProjectHub.Services;
 
 public sealed record ProjectInfo(
     string Name,
@@ -31,10 +31,17 @@ public class ProjectService
     public async Task CreateProject()
     {
         var projectInfo = await CreateNewProject.Show();
-        var projectPath = Path.Combine(projectInfo!.Path, projectInfo.Name);
+
+        if (projectInfo.Item1 is null )
+            return; 
+
+        var projectPath = Path.Combine( projectInfo.Item1.Path, projectInfo.Item1.Name);
+        
         
         await TryAddProjectAsync(projectPath, MainWindow.ShowErrorDialog, MainWindow.ShowInfoDialog);
     }
+    
+
 
     public async Task AddProject()
     {
@@ -56,27 +63,52 @@ public class ProjectService
     
     public static async void OnProjectClicked(ProjectInfo projectInfo)
     {
-        var enginePath = HubSettingsLoader.HubSettings.EnginePath;
+        var enginePaths = HubSettingsLoader.HubSettings.EnginePaths;
 
-        if (!ProjectLauncher.ValidateEnginePath(enginePath, out var errorMessage))
+        if (enginePaths.Count == 0)
         {
-            await MessageDialog.Show("Error", errorMessage!);
+            await MessageDialog.Show("Error", "No engines installed.");
             return;
         }
 
-        var engineVersion = HubSettingsLoader.LoadEngineVersionFromFile(enginePath);
+        var engines = enginePaths
+            .Select(p => new
+            {
+                Path = p,
+                Version = HubSettingsLoader.LoadEngineVersionFromFile(p)
+            })
+            .Where(e => e.Version > 0)
+            .ToList();
 
-        if (!ProjectLauncher.IsVersionCompatible(engineVersion, projectInfo.EngineVersion))
+        if (engines.Count == 0)
         {
-            var ok = await ConfirmDialog.Show("Confirm",
-                $"Project '{projectInfo.Name}' was created with another engine version.\nContinue anyway?"
-            );
-
-            if (!ok) return;
+            await MessageDialog.Show("Error", "No valid engines found.");
+            return;
         }
 
-        ProjectLauncher.LaunchProject(projectInfo, enginePath);
+        var exact = engines.FirstOrDefault(e => e.Version == projectInfo.EngineVersion);
+
+        if (exact != null)
+        {
+            ProjectLauncher.LaunchProject(projectInfo, exact.Path);
+            return;
+        }
+
+        var closest = engines.OrderBy(e => System.Math.Abs(e.Version - projectInfo.EngineVersion))
+            .First();
+
+        var ok = await ConfirmDialog.Show(
+            "Engine not found",
+            $"Exact engine version {projectInfo.EngineVersion} not found.\n" +
+            $"Closest available: {closest.Version}\n\n" +
+            $"Use it?"
+        );
+
+        if (!ok) return;
+        
+        ProjectLauncher.LaunchProject(projectInfo, closest.Path);
     }
+
 
 
     private async Task TryAddProjectAsync(string projectPath, Func<string, string, Task> showError,

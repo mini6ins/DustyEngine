@@ -6,13 +6,12 @@ namespace DustyProjectHub;
 
 public sealed class HubSettings
 {
-    public string EnginePath { get; set; } = "";
+    public List<string> EnginePaths { get; set; } = [];
     public List<string> ProjectsPath { get; set; } = [];
 }
 
 public static class HubSettingsLoader
 {
-
     public static HubSettings HubSettings { get; set; } = new();
     private static readonly string SettingsPath = Path.Combine(AppContext.BaseDirectory, "hub_settings.json");
 

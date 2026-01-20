@@ -1,15 +1,22 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using DustyProjectHub.Services;
 using DustyProjectHub.UI.Windows;
 
 namespace DustyProjectHub;
 
-public sealed record CreateProjectResult(string Name, string Path);
-
-public class CreateNewProject
+public enum ProjectTemplates
 {
-    public static async Task<CreateProjectResult?> Show()
+    Empty3D,
+    Empty2D,
+}
+
+public static class CreateNewProject
+{
+    private static ProjectTemplates _selectedTemplate = ProjectTemplates.Empty3D;
+
+    public static async Task<(ProjectInfo?, ProjectTemplates)> Show()
     {
         var projectNameBox = new TextBox
         {
@@ -41,6 +48,26 @@ public class CreateNewProject
                 projectPathBox.Text = folder;
         };
 
+        var projectTemplate = new ComboBox
+        {
+            ItemsSource = Enum.GetValues<ProjectTemplates>(),
+            SelectedIndex = 0,
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+
+        var enginePaths = HubSettingsLoader.HubSettings.EnginePaths;
+
+        var engineVersions = enginePaths
+            .Select(HubSettingsLoader.LoadEngineVersionFromFile)
+            .ToList();
+
+        var engineVersion = new ComboBox
+        {
+            ItemsSource = engineVersions,
+            SelectedIndex = engineVersions.Count > 0 ? 0 : -1,
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+
         var okBtn = new Button
         {
             Content = "OK",
@@ -58,15 +85,15 @@ public class CreateNewProject
         var window = new Window
         {
             Title = "Create Project",
-            Width = 520,
-            Height = 260,
+            Width = 560,
+            Height = 320,
             CanResize = false,
             SystemDecorations = SystemDecorations.Full,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             ShowInTaskbar = false
         };
 
-        CreateProjectResult? result = null;
+        ProjectInfo? result = null;
 
         okBtn.Click += (_, _) =>
         {
@@ -76,7 +103,13 @@ public class CreateNewProject
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(path))
                 return;
 
-            result = new CreateProjectResult(name, path);
+            if (engineVersion.SelectedItem is not double version)
+                return;
+
+            if (projectTemplate.SelectedItem is ProjectTemplates template)
+                _selectedTemplate = template;
+
+            result = new ProjectInfo(name, version, path, DateTime.Now);
             window.Close();
         };
 
@@ -89,14 +122,59 @@ public class CreateNewProject
                 new ColumnDefinition(GridLength.Star),
                 new ColumnDefinition(GridLength.Auto)
             },
-            ColumnSpacing = 8,
+            ColumnSpacing = 8
+        };
+
+        pathRow.Children.Add(projectPathBox);
+        pathRow.Children.Add(browseBtn);
+        Grid.SetColumn(browseBtn, 1);
+
+        // Используем две отдельные строки для лучшего выравнивания
+        var templateRow = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
             Children =
             {
-                projectPathBox,
-                browseBtn
+                new TextBlock
+                {
+                    Text = "Template:",
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Width = 100
+                },
+                projectTemplate
             }
         };
-        Grid.SetColumn(browseBtn, 1);
+
+        var engineRow = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+            Children =
+            {
+                new TextBlock
+                {
+                    Text = "Engine version:",
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Width = 100
+                },
+                engineVersion
+            }
+        };
+
+        var settingsGrid = new Grid
+        {
+            ColumnDefinitions =
+            {
+                new ColumnDefinition(GridLength.Star),
+                new ColumnDefinition(new GridLength(16)),
+                new ColumnDefinition(GridLength.Star)
+            }
+        };
+
+        settingsGrid.Children.Add(templateRow);
+        settingsGrid.Children.Add(engineRow);
+        Grid.SetColumn(engineRow, 2);
 
         window.Content = new StackPanel
         {
@@ -109,6 +187,10 @@ public class CreateNewProject
 
                 new TextBlock { Text = "Project folder path", FontSize = 14 },
                 pathRow,
+
+                new TextBlock { Text = "Project settings", FontSize = 14 },
+
+                settingsGrid,
 
                 new StackPanel
                 {
@@ -125,6 +207,6 @@ public class CreateNewProject
         };
 
         await window.ShowDialog(MainWindow.Instance!);
-        return result;
+        return (result, _selectedTemplate);
     }
 }

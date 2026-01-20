@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Templates;
 using Avalonia.Layout;
+using Avalonia.Media;
 using DustyProjectHub.UI.Windows;
 
 namespace DustyProjectHub;
@@ -9,38 +11,79 @@ public static class SettingsMenu
 {
     public static async Task Show()
     {
-        var enginePathBox = new TextBox
+        var engines = new ListBox
         {
-            Text = HubSettingsLoader.HubSettings.EnginePath,
-            MinWidth = 0,
-            HorizontalAlignment = HorizontalAlignment.Stretch
+            ItemsSource = HubSettingsLoader.HubSettings.EnginePaths,
+            MinHeight = 120,
+            ItemTemplate = new FuncDataTemplate<string>((path, _) =>
+            {
+                var version = HubSettingsLoader.LoadEngineVersionFromFile(path);
+
+                return new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Spacing = 10,
+                    Children =
+                    {
+                        new TextBlock
+                        {
+                            Text = path,
+                            Width = 420,
+                            TextTrimming = TextTrimming.CharacterEllipsis
+                        },
+
+                        new TextBlock
+                        {
+                            Text = $"v{version}",
+                            FontWeight = FontWeight.Bold
+                        }
+                    }
+                };
+            })
         };
 
-        var browseBtn = new Button
+
+        var addBtn = new Button
         {
-            Content = "Browse…",
-            MinWidth = 90
+            Content = "Add engine",
+            MinWidth = 120
         };
 
-        browseBtn.Click += async (_, _) =>
+        var removeBtn = new Button
+        {
+            Content = "Remove",
+            MinWidth = 120
+        };
+
+        addBtn.Click += async (_, _) =>
         {
             var dialog = new OpenFileDialog
             {
-                Title = "Select Engine Executable (linux executable or exe)",
-                AllowMultiple = false,
-                Filters = new List<FileDialogFilter>
-                {
-                    new FileDialogFilter
-                    {
-                        Name = "All Files",
-                        Extensions = new List<string> { "*" }
-                    }
-                }
+                Title = "Select Engine Executable",
+                AllowMultiple = false
             };
 
+
             var files = await dialog.ShowAsync(MainWindow.Instance!);
-            if (files != null && files.Length > 0)
-                enginePathBox.Text = files[0];
+            if (files == null || files.Length == 0) return;
+
+            var path = files[0];
+
+            if (!HubSettingsLoader.HubSettings.EnginePaths.Contains(path))
+            {
+                HubSettingsLoader.HubSettings.EnginePaths.Add(path);
+                engines.ItemsSource = null;
+                engines.ItemsSource = HubSettingsLoader.HubSettings.EnginePaths;
+            }
+        };
+
+        removeBtn.Click += (_, _) =>
+        {
+            if (engines.SelectedItem is not string path) return;
+
+            HubSettingsLoader.HubSettings.EnginePaths.Remove(path);
+            engines.ItemsSource = null;
+            engines.ItemsSource = HubSettingsLoader.HubSettings.EnginePaths;
         };
 
         var saveBtn = new Button
@@ -60,52 +103,44 @@ public static class SettingsMenu
         var window = new Window
         {
             Title = "Settings",
-            Width = 520,
-            Height = 220,
+            Width = 640,
+            Height = 360,
             CanResize = false,
-            SystemDecorations = SystemDecorations.Full,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            ShowInTaskbar = false
+            WindowStartupLocation = WindowStartupLocation.CenterOwner
         };
 
         saveBtn.Click += (_, _) =>
         {
-            HubSettingsLoader.HubSettings.EnginePath = enginePathBox.Text?.Trim() ?? "";
             HubSettingsLoader.Save();
             window.Close();
         };
 
         cancelBtn.Click += (_, _) => window.Close();
 
-        var pathRow = new Grid
-        {
-            ColumnDefinitions =
-            {
-                new ColumnDefinition(GridLength.Star),
-                new ColumnDefinition(GridLength.Auto)
-            },
-            ColumnSpacing = 8,
-            Children =
-            {
-                enginePathBox,
-                browseBtn
-            }
-        };
-        Grid.SetColumn(browseBtn, 1);
-
         window.Content = new StackPanel
         {
-            Margin = new Thickness(16),
+            Margin = new(16),
             Spacing = 12,
             Children =
             {
                 new TextBlock
                 {
-                    Text = "Engine executable path",
+                    Text = "Installed engines",
                     FontSize = 14
                 },
 
-                pathRow,
+                engines,
+
+                new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Spacing = 8,
+                    Children =
+                    {
+                        addBtn,
+                        removeBtn
+                    }
+                },
 
                 new StackPanel
                 {

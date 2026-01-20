@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
 using Avalonia.Layout;
+using DustyProjectHub.Services;
 
 namespace DustyProjectHub.UI.Windows;
 
