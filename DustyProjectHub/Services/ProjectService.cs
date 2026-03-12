@@ -1,7 +1,11 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Text.Json;
+using DustyEngine;
+using DustyEngine.Engine.Math.Vectors;
+using DustyEngine.Scene;
 using DustyProjectHub.UI.Windows;
+using OpenTK.Graphics.Vulkan;
 
 namespace DustyProjectHub.Services;
 
@@ -23,7 +27,7 @@ public class ProjectService
         foreach (var projectPath in paths.Distinct())
         {
             if (string.IsNullOrWhiteSpace(projectPath)) continue;
-            if (!Directory.Exists(projectPath)) continue; 
+            if (!Directory.Exists(projectPath)) continue;
             Projects.Add(GetProjectInfo(projectPath));
         }
     }
@@ -32,15 +36,125 @@ public class ProjectService
     {
         var projectInfo = await CreateNewProject.Show();
 
-        if (projectInfo.Item1 is null )
-            return; 
+        if (projectInfo.Item1 is null)
+            return;
 
-        var projectPath = Path.Combine( projectInfo.Item1.Path, projectInfo.Item1.Name);
+        var projectPath = "";
         
-        
+        switch (projectInfo.Item2)
+        {
+            case ProjectTemplates.Empty3D: 
+                projectPath = CreateEmpty3DProject(projectInfo);
+                break;
+
+            case ProjectTemplates.Empty2D:
+                break;
+        }
+
         await TryAddProjectAsync(projectPath, MainWindow.ShowErrorDialog, MainWindow.ShowInfoDialog);
     }
-    
+
+    private string CreateEmpty3DProject((ProjectInfo?, ProjectTemplates) projectInfo)
+    {
+        var projectPath = Path.Combine(projectInfo.Item1.Path, projectInfo.Item1.Name);
+        
+        Directory.CreateDirectory(projectPath);
+
+        File.WriteAllText(
+            Path.Combine(projectPath, $"{projectInfo.Item1.Name}.csproj"),
+            $"""
+             <Project Sdk="Microsoft.NET.Sdk">
+               <PropertyGroup>
+                 <OutputType>Library</OutputType>
+                 <TargetFramework>{HubSettingsLoader.DetectTargetFramework(HubSettingsLoader.FindEnginePathByVersion(projectInfo.Item1.EngineVersion))}</TargetFramework>
+                 <ImplicitUsings>enable</ImplicitUsings>
+                 <Nullable>enable</Nullable>
+               </PropertyGroup>
+             </Project>
+             """
+        );
+
+        var assetsDir = Path.Combine(projectPath, "Assets");
+        Directory.CreateDirectory(assetsDir);
+        
+        var sceneDir = Path.Combine(assetsDir, "Scene");
+        Directory.CreateDirectory(sceneDir);
+        
+        var scenePath = Path.Combine(sceneDir, "ExampleScene.json");
+        var scene = new Scene
+        {
+            Name = "ExampleScene"
+        };
+
+        File.WriteAllText(scenePath,  SceneSerializer.SerializeSceneToJson(scene));
+            
+        var shadersDir = Path.Combine(assetsDir, "shaders");
+        Directory.CreateDirectory(shadersDir);
+        
+        var vertPath = Path.Combine(shadersDir, "shader.vert");
+        var fragPath = Path.Combine(shadersDir, "shader.frag");
+        
+        File.WriteAllText(vertPath,
+     """
+     #version 330
+     layout(location = 0) in vec3 aPosition;
+     layout(location = 1) in vec4 aColor;
+     
+     uniform mat4 uModel;
+     uniform mat4 uView;
+     uniform mat4 uProjection;
+     
+     out vec4 vColor;
+     
+     void main()
+     {
+         gl_Position = uProjection * uView * uModel * vec4(aPosition, 1.0);
+         vColor = aColor;
+     }
+     """
+        );
+        
+        File.WriteAllText(fragPath,
+            """
+            #version 330
+            
+            in vec4 vColor;
+            out vec4 outColor;
+            
+            void main()
+            {
+                outColor = vColor;
+            }
+            """
+        );
+        
+        var settingsDir = Path.Combine(projectPath, "Settings");
+        Directory.CreateDirectory(settingsDir);
+
+        
+        
+        
+        var projectSettings = new ProjectSettings
+        {
+            ProjectName = projectInfo.Item1.Name,
+            Version = 1,
+            DustyEngineVersion = projectInfo.Item1.EngineVersion,
+            PathToScenes = [scenePath],
+            PathToFragShader = fragPath,
+            PathToVertShader = vertPath,
+            Debug = false,
+            LogLevel = 0,
+            LogToConsole = false,
+            LogToFile = true,
+            ScreenSize = new Vector2i(800,600),
+            Vsync = true
+        };
+        ProjectSettings.SerializeProjectSettings(projectSettings,projectPath);
+        
+   
+
+        return projectPath;
+    }
 
 
     public async Task AddProject()
@@ -51,16 +165,18 @@ public class ProjectService
 
     public async Task RemoveProject(ProjectInfo projectInfo)
     {
-        var ok = await ConfirmDialog.Show("Confirm", $"Remove '{projectInfo.Name}' from list?\n\n(It will NOT delete files from disk.)");
+        var ok = await ConfirmDialog.Show("Confirm",
+            $"Remove '{projectInfo.Name}' from list?\n\n(It will NOT delete files from disk.)");
         if (!ok) return;
 
         Projects.Remove(projectInfo);
 
-        HubSettingsLoader.HubSettings.ProjectsPath.RemoveAll(p => string.Equals(p, projectInfo.Path, StringComparison.OrdinalIgnoreCase));
+        HubSettingsLoader.HubSettings.ProjectsPath.RemoveAll(p =>
+            string.Equals(p, projectInfo.Path, StringComparison.OrdinalIgnoreCase));
         HubSettingsLoader.Save();
     }
 
-    
+
     public static async void OnProjectClicked(ProjectInfo projectInfo)
     {
         var enginePaths = HubSettingsLoader.HubSettings.EnginePaths;
@@ -105,10 +221,9 @@ public class ProjectService
         );
 
         if (!ok) return;
-        
+
         ProjectLauncher.LaunchProject(projectInfo, closest.Path);
     }
-
 
 
     private async Task TryAddProjectAsync(string projectPath, Func<string, string, Task> showError,
@@ -201,5 +316,6 @@ internal static class ProjectLauncher
         return true;
     }
 
-    public static bool IsVersionCompatible(double engineVersion, double projectVersion) => System.Math.Abs(engineVersion - projectVersion) <= 0.0001;
+    public static bool IsVersionCompatible(double engineVersion, double projectVersion) =>
+        System.Math.Abs(engineVersion - projectVersion) <= 0.0001;
 }

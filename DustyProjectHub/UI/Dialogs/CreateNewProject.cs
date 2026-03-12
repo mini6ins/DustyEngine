@@ -129,7 +129,6 @@ public static class CreateNewProject
         pathRow.Children.Add(browseBtn);
         Grid.SetColumn(browseBtn, 1);
 
-        // Используем две отдельные строки для лучшего выравнивания
         var templateRow = new StackPanel
         {
             Orientation = Orientation.Horizontal,
