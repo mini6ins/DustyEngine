@@ -36,7 +36,6 @@
             },
             {
               "Type": "MeshRenderer",
-              "ObjPath": "Assets/cube.obj",
               "Enabled": true,
               "Name": "ChildCube"
             }
@@ -110,7 +109,6 @@
         },
         {
           "Type": "MeshRenderer",
-          "ObjPath": "Assets/TeddyBear.obj",
           "Enabled": true,
           "Name": "TestGameObject1"
         }
