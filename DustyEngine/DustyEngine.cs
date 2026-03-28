@@ -11,6 +11,7 @@ using Editor.Panels.ProjectFilePanel;
 using Editor.Panels.ProjectSetiingPanel;
 using Editor.Panels.ViewPortPanel;
 using GraphicsEngine;
+using SceneSystem.Converters;
 using WindowEngine;
 
 namespace DustyEngine;
@@ -49,13 +50,37 @@ public sealed class DustyEngine : IDisposable
 
         SceneManager.ProjectPath = ProjectFolderPath;
         SetupDebug(renderMode);
-
+        
+        PrepareProjectScripts();
+        
         if (!SceneManager.LoadSceneByPath(_settings.PathToScenes.FirstOrDefault())) return;
 
         if (renderMode == RenderMode.Standalone)
             GameLoop.StartLifeCycle();
 
         CreateWindow(renderMode);
+    }
+    
+    private static void PrepareProjectScripts()
+    {
+        var dllPath = Path.Combine(ProjectFolderPath, "Settings", "Dlls", "UserScripts.dll");
+
+        var ok = ProjectScriptCompiler.CompileAllScripts(
+            ProjectFolderPath,
+            dllPath,
+            out var errors);
+
+        if (!ok)
+        {
+            foreach (var error in errors)
+                Debug.Log(error, Debug.LogLevel.Error, true);
+
+            throw new Exception("Script compilation failed.");
+        }
+
+        ScriptAssemblyManager.Load(dllPath);
+
+        Debug.Log($"Loaded project scripts: {dllPath}", Debug.LogLevel.Info, true);
     }
 
     private static void SaveProjectVersion()
@@ -137,6 +162,7 @@ public sealed class DustyEngine : IDisposable
     {
         if (renderMode == RenderMode.EditorRun)
         {
+            PrepareProjectScripts();
             _sceneSnapshot = SceneManager.CloneScene(SceneManager.CurrentScene!);
             _window.ChangePlayMode(RenderMode.EditorRun);
 
@@ -176,6 +202,7 @@ public sealed class DustyEngine : IDisposable
 
     private static void OpenScene(string scenePath)
     {
+        PrepareProjectScripts();
         SceneManager.LoadSceneByPath(scenePath);
         _window.LoadScene?.Invoke();
         HierarchyPanel.OnChangeScene?.Invoke();

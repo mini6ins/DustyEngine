@@ -36,6 +36,7 @@
             },
             {
               "Type": "MeshRenderer",
+              "ObjPath": "Assets/cube.obj",
               "Enabled": true,
               "Name": "ChildCube"
             }
@@ -70,8 +71,8 @@
           "Name": "TestGameObject0"
         },
         {
-          "Type": "MoveBoxCode",
-          "SourcePath": "Assets/MoveBoxCode.cs",
+          "Type": "Script",
+          "ScriptClass": "MoveBoxCode",
           "Enabled": true,
           "Name": "TestGameObject0"
         }
@@ -109,6 +110,7 @@
         },
         {
           "Type": "MeshRenderer",
+          "ObjPath": "Assets/cube.obj",
           "Enabled": true,
           "Name": "TestGameObject1"
         }
@@ -169,14 +171,14 @@
               "Length": 1.7320508,
               "LengthSquared": 3
             },
-            "Name": "\u003CNo GameObject\u003E"
+            "Name": "<No GameObject>"
           },
           "Enabled": true,
           "Name": "Camera"
         },
         {
-          "Type": "Player",
-          "SourcePath": "Assets/Player.cs",
+          "Type": "Script",
+          "ScriptClass": "Player",
           "Enabled": true,
           "Name": "Camera"
         }

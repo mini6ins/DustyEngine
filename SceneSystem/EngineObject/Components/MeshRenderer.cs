@@ -9,6 +9,7 @@ public class MeshRenderer : MonoBehaviour
 {
     public string? ObjPath
     {
+        get => _objPath;
         set
         {
             var normalized = string.IsNullOrWhiteSpace(value) ? null : PathUtility.GetRelativePath(value);

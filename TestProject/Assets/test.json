@@ -1,0 +1,118 @@
+{
+  "Name": null,
+  "Path": "Assets/test.json",
+  "GameObjects": [
+    {
+      "ActiveSelf": true,
+      "Children": [],
+      "Components": [
+        {
+          "Type": "Transform",
+          "LocalPosition": {
+            "X": 0,
+            "Y": 1.9,
+            "Z": 0,
+            "Length": 1.9,
+            "LengthSquared": 3.61
+          },
+          "LocalRotation": {
+            "X": 0,
+            "Y": 0,
+            "Z": 0,
+            "Length": 0,
+            "LengthSquared": 0
+          },
+          "LocalScale": {
+            "X": 1,
+            "Y": 1,
+            "Z": 1,
+            "Length": 1.7320508,
+            "LengthSquared": 3
+          },
+          "Name": "Player"
+        },
+        {
+          "Type": "MeshRenderer",
+          "Enabled": true,
+          "Name": "Player"
+        },
+        {
+          "Type": "Script",
+          "ScriptClass": "Player",
+          "Enabled": true,
+          "Name": "Player"
+        },
+        {
+          "Type": "Camera",
+          "AspectRatio": 1.7777778,
+          "InternalTransform": {
+            "LocalPosition": {
+              "X": 0,
+              "Y": 2.5,
+              "Z": 5,
+              "Length": 5.59017,
+              "LengthSquared": 31.25
+            },
+            "LocalRotation": {
+              "X": 0,
+              "Y": 0,
+              "Z": 0,
+              "Length": 0,
+              "LengthSquared": 0
+            },
+            "LocalScale": {
+              "X": 1,
+              "Y": 1,
+              "Z": 1,
+              "Length": 1.7320508,
+              "LengthSquared": 3
+            },
+            "Name": "\u003CNo GameObject\u003E"
+          },
+          "Enabled": true,
+          "Name": "Player"
+        }
+      ],
+      "Name": "Player"
+    },
+    {
+      "ActiveSelf": true,
+      "Children": [],
+      "Components": [
+        {
+          "Type": "Transform",
+          "LocalPosition": {
+            "X": 0,
+            "Y": 0,
+            "Z": 0,
+            "Length": 0,
+            "LengthSquared": 0
+          },
+          "LocalRotation": {
+            "X": 0,
+            "Y": 0,
+            "Z": 0,
+            "Length": 0,
+            "LengthSquared": 0
+          },
+          "LocalScale": {
+            "X": 1,
+            "Y": 1,
+            "Z": 1,
+            "Length": 1.7320508,
+            "LengthSquared": 3
+          },
+          "Name": "Empty GameObject"
+        },
+        {
+          "Type": "MeshRenderer",
+          "Path": "Assets/cube1.obj",
+          "Enabled": true,
+          "Name": "Empty GameObject"
+        }
+      ],
+      "Name": "Empty GameObject"
+    }
+  ],
+  "Components": []
+}

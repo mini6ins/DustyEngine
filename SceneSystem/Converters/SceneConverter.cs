@@ -1,37 +1,35 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using DustyEngine;
 using DustyEngine.Components;
 using DustyEngine.Core;
+using DustyEngine.Scene;
 using SceneSystem.EngineObject.GameObject;
 
-namespace DustyEngine.Core.Converters;
+namespace SceneSystem.Converters;
 
-public class SceneConverter : JsonConverter<Scene.Scene>
+public class SceneConverter : JsonConverter<Scene>
 {
-    public override Scene.Scene Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override Scene Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         using JsonDocument doc = JsonDocument.ParseValue(ref reader);
-        var scene = new Scene.Scene();
+
+        var scene = new Scene();
 
         if (doc.RootElement.TryGetProperty("Name", out var nameElement))
-        {
             scene.Name = nameElement.GetString();
-        }
 
         if (doc.RootElement.TryGetProperty("Path", out var pathElement))
-        {
-            var pathValue = pathElement.GetString() ?? string.Empty;
-            scene.Path = pathValue;
-        }
+            scene.Path = pathElement.GetString() ?? string.Empty;
 
         if (doc.RootElement.TryGetProperty("GameObjects", out var gameObjectsElement))
-        {
             scene.GameObjects = DeserializeGameObjects(gameObjectsElement, null, options);
-        }
 
         if (doc.RootElement.TryGetProperty("Components", out var componentsElement))
         {
-            scene.Components = JsonSerializer.Deserialize<List<Component>>(componentsElement.GetRawText(), options);
+            scene.Components = JsonSerializer.Deserialize<List<Component>>(
+                componentsElement.GetRawText(),
+                options) ?? [];
         }
 
         return scene;
@@ -47,30 +45,32 @@ public class SceneConverter : JsonConverter<Scene.Scene>
             var gameObject = new GameObject();
 
             if (objElement.TryGetProperty("Name", out var nameElement))
-            {
                 gameObject.Name = nameElement.GetString();
-            }
 
             if (objElement.TryGetProperty("ActiveSelf", out var isActiveElement))
-            {
                 gameObject.ActiveSelf = isActiveElement.GetBoolean();
-            }
 
             gameObject.Parent = parent;
 
             if (objElement.TryGetProperty("Components", out var componentsElement))
             {
                 var components = JsonSerializer.Deserialize<List<Component>>(componentsElement.GetRawText(), options);
-                foreach (var component in components)
-                {
-                    gameObject.AddComponent(component);
-                }
+
+                Debug.Log($"GameObject {gameObject.Name}: components count = {components?.Count ?? 0}",
+                    Debug.LogLevel.Info, true);
+
+                if (components != null)
+                    foreach (var component in components)
+                    {
+                        Debug.Log($"Add component {component.GetType().FullName} to {gameObject.Name}",
+                            Debug.LogLevel.Info, true);
+
+                        gameObject.AddComponent(component);
+                    }
             }
 
             if (objElement.TryGetProperty("Children", out var childrenElement))
-            {
                 gameObject.Children = DeserializeGameObjects(childrenElement, gameObject, options);
-            }
 
             gameObjects.Add(gameObject);
         }
@@ -78,15 +78,12 @@ public class SceneConverter : JsonConverter<Scene.Scene>
         return gameObjects;
     }
 
-
-    public override void Write(Utf8JsonWriter writer, Scene.Scene value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, Scene value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
 
         writer.WriteString("Name", value.Name);
-
-        var relativePath = PathUtility.GetRelativePath(value.Path);
-        writer.WriteString("Path", relativePath);
+        writer.WriteString("Path", PathUtility.GetRelativePath(value.Path));
 
         writer.WritePropertyName("GameObjects");
         JsonSerializer.Serialize(writer, value.GameObjects, options);

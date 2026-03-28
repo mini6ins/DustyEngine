@@ -1,7 +1,7 @@
 {
   "ProjectName": "My Game",
   "Version": 1,
-  "DustyEngineVersion": 0,
+  "DustyEngineVersion": 0.1,
   "PathToScenes": [
     "Assets/Scene/DustyEngineTestScene.json",
     "Assets/Scene/test2.json"

@@ -30,6 +30,11 @@
             "LengthSquared": 3
           },
           "Name": "Empty GameObject"
+        },
+        {
+          "Type": "MeshRenderer",
+          "Enabled": true,
+          "Name": "Empty GameObject"
         }
       ],
       "Name": "Empty GameObject"
