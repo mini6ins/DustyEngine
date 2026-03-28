@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using DustyEngine.Components;
+using DustyEngine.Core.Scripting;
 using DustyEngine.Scene;
 using Editor;
 using Editor.Panels.ConsolePanel;
@@ -51,7 +52,7 @@ public sealed class DustyEngine : IDisposable
         SceneManager.ProjectPath = ProjectFolderPath;
         SetupDebug(renderMode);
         
-        PrepareProjectScripts();
+        ProjectScriptService.Reload(ProjectFolderPath, throwOnError: true);
         
         if (!SceneManager.LoadSceneByPath(_settings.PathToScenes.FirstOrDefault())) return;
 
@@ -61,28 +62,6 @@ public sealed class DustyEngine : IDisposable
         CreateWindow(renderMode);
     }
     
-    private static void PrepareProjectScripts()
-    {
-        var dllPath = Path.Combine(ProjectFolderPath, "Settings", "Dlls", "UserScripts.dll");
-
-        var ok = ProjectScriptCompiler.CompileAllScripts(
-            ProjectFolderPath,
-            dllPath,
-            out var errors);
-
-        if (!ok)
-        {
-            foreach (var error in errors)
-                Debug.Log(error, Debug.LogLevel.Error, true);
-
-            throw new Exception("Script compilation failed.");
-        }
-
-        ScriptAssemblyManager.Load(dllPath);
-
-        Debug.Log($"Loaded project scripts: {dllPath}", Debug.LogLevel.Info, true);
-    }
-
     private static void SaveProjectVersion()
     {
         var path = Path.Combine(AppContext.BaseDirectory, "engine_version.txt");
@@ -162,7 +141,7 @@ public sealed class DustyEngine : IDisposable
     {
         if (renderMode == RenderMode.EditorRun)
         {
-            PrepareProjectScripts();
+            ProjectScriptService.Reload(ProjectFolderPath, throwOnError: true);
             _sceneSnapshot = SceneManager.CloneScene(SceneManager.CurrentScene!);
             _window.ChangePlayMode(RenderMode.EditorRun);
 
@@ -202,7 +181,7 @@ public sealed class DustyEngine : IDisposable
 
     private static void OpenScene(string scenePath)
     {
-        PrepareProjectScripts();
+        ProjectScriptService.Reload(ProjectFolderPath, throwOnError: true);
         SceneManager.LoadSceneByPath(scenePath);
         _window.LoadScene?.Invoke();
         HierarchyPanel.OnChangeScene?.Invoke();

@@ -1,5 +1,6 @@
 using DustyEngine;
 using DustyEngine.Core;
+using DustyEngine.Core.Scripting;
 using DustyEngine.Scene;
 
 namespace Editor.Panels.ProjectFilePanel;
@@ -93,6 +94,10 @@ public class ProjectFileManager
                 }
 
                 File.Move(oldPath, newPath);
+                if (newPath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
+                {
+                    UpdateClassNameInScript(newPath);
+                }
             }
 
             Console.WriteLine($"Renamed: {oldPath} -> {newPath}");
@@ -117,6 +122,25 @@ public class ProjectFileManager
         }
     }
 
+    private static void UpdateClassNameInScript(string filePath)
+    {
+        try
+        {
+            var className = MakeValidClassName(Path.GetFileNameWithoutExtension(filePath));
+            var text = File.ReadAllText(filePath);
+
+            var updated = System.Text.RegularExpressions.Regex.Replace(
+                text,
+                @"public\s+class\s+\w+",
+                $"public class {className}");
+
+            File.WriteAllText(filePath, updated);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to update class name: {ex.Message}");
+        }
+    }
     public void DeleteItem(string path)
     {
         try
@@ -318,12 +342,45 @@ public class ProjectFileManager
 
     public string CreateNewScript()
     {
-        const string baseName = "New Script";
+        const string baseName = "NewScript";
         const string ext = ".cs";
         var newPath = GenerateUniquePath(CurrentPath, baseName + ext);
 
-        File.WriteAllText(newPath, "using System;\n\npublic class NewClass\n{\n}\n");
+        var rawClassName = Path.GetFileNameWithoutExtension(newPath);
+        var className = MakeValidClassName(rawClassName);
+        
+        var content = $$"""
+                        using DustyEngine;
+
+                        public class {{className}} : MonoBehaviour
+                        {
+                        }
+                        """;
+
+        File.WriteAllText(newPath, content);
+        
+        var projectPath = Directory.GetParent(_rootAssets)!.FullName;
+        Console.WriteLine("TEST" + projectPath);
+        ProjectScriptService.Reload(projectPath, throwOnError: false);
+        
         return newPath;
+    }
+    
+    private static string MakeValidClassName(string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
+            return "NewClass";
+
+        var chars = fileName
+            .Select(c => char.IsLetterOrDigit(c) ? c : '_')
+            .ToArray();
+
+        var result = new string(chars);
+
+        if (!char.IsLetter(result[0]) && result[0] != '_')
+            result = "_" + result;
+
+        return result;
     }
 
     private static string GenerateUniquePath(string directory, string fileName)

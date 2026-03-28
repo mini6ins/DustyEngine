@@ -13,7 +13,7 @@ public static class ProjectScriptCompiler
     {
         errors = [];
 
-        var assetsPath = Path.Combine(projectRoot, "Assets");
+         var assetsPath = Path.Combine(projectRoot, "Assets");
         if (!Directory.Exists(assetsPath))
         {
             errors.Add($"Assets folder not found: {assetsPath}");

@@ -3,18 +3,33 @@ using DustyEngine.Components;
 
 namespace SceneSystem.Converters;
 
-public static class ScriptAssemblyManager
+public static class ScriptAssembly
 {
-    private static Assembly? _scriptAssembly;
     private static readonly Dictionary<string, Type> ScriptTypesByName = new();
     private static readonly Dictionary<string, Type> ScriptTypesByFullName = new();
+    
+    private static ScriptLoadContext? _currentContext;
+    private static Assembly? _scriptAssembly;
 
     public static void Load(string dllPath)
     {
         if (!File.Exists(dllPath))
             throw new FileNotFoundException($"Script DLL not found: {dllPath}");
 
-        _scriptAssembly = Assembly.LoadFrom(dllPath);
+        if (_currentContext != null)
+        {
+            _currentContext.Unload();
+            _currentContext = null;
+            _scriptAssembly = null;
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+        }
+
+        _currentContext = new ScriptLoadContext(dllPath);
+
+        _scriptAssembly = _currentContext.LoadFromAssemblyPath(dllPath);
 
         ScriptTypesByName.Clear();
         ScriptTypesByFullName.Clear();

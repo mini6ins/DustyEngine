@@ -1,5 +1,6 @@
-using System;
+using DustyEngine;
 
-public class NewClass
+public class test : MonoBehaviour
 {
+    public int i = 2;
 }

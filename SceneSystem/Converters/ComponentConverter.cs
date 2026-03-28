@@ -44,7 +44,7 @@ public class ComponentConverter : JsonConverter<Component>
             throw new JsonException("Script component requires 'ScriptClass'.");
 
         var scriptClass = scriptClassElement.GetString() ?? string.Empty;
-        var scriptType = ScriptAssemblyManager.ResolveScriptType(scriptClass);
+        var scriptType = ScriptAssembly.ResolveScriptType(scriptClass);
 
         if (scriptType == null)
             throw new JsonException($"Unknown script class '{scriptClass}'.");
