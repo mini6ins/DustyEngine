@@ -97,16 +97,16 @@
             "Length": 1.7320508,
             "LengthSquared": 3
           },
-          "Name": "Cube"
+          "Name": "Generator"
         },
         {
-          "Type": "MeshRenderer",
-          "ObjPath": "Assets/cube.obj",
+          "Type": "Script",
+          "ScriptClass": "WorldGenerator",
           "Enabled": true,
-          "Name": "Cube"
+          "Name": "Generator"
         }
       ],
-      "Name": "Cube"
+      "Name": "Generator"
     }
   ],
   "Components": []
