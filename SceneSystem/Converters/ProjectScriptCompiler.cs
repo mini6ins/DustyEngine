@@ -13,7 +13,7 @@ public static class ProjectScriptCompiler
     {
         errors = [];
 
-         var assetsPath = Path.Combine(projectRoot, "Assets");
+        var assetsPath = Path.Combine(projectRoot, "Assets");
         if (!Directory.Exists(assetsPath))
         {
             errors.Add($"Assets folder not found: {assetsPath}");
@@ -42,21 +42,36 @@ public static class ProjectScriptCompiler
                 optimizationLevel: OptimizationLevel.Debug,
                 platform: Platform.AnyCpu));
 
-        var outputDir = Path.GetDirectoryName(outputDllPath);
-        if (!string.IsNullOrWhiteSpace(outputDir))
-            Directory.CreateDirectory(outputDir);
+        var outputDir = Path.GetDirectoryName(outputDllPath)!;
+        Directory.CreateDirectory(outputDir);
 
-        using var dllStream = new FileStream(outputDllPath, FileMode.Create, FileAccess.Write);
-        var emitResult = compilation.Emit(dllStream);
+        var tempDllPath = Path.Combine(outputDir, $"UserScripts_{Guid.NewGuid():N}.tmp.dll");
 
-        if (emitResult.Success) return true;
-        errors.AddRange(
-            emitResult.Diagnostics
-                .Where(d => d.Severity == DiagnosticSeverity.Error)
-                .Select(d => d.ToString()));
+        try
+        {
+            using (var dllStream = new FileStream(tempDllPath, FileMode.Create, FileAccess.Write))
+            {
+                var emitResult = compilation.Emit(dllStream);
 
-        return false;
+                if (!emitResult.Success)
+                {
+                    errors.AddRange(
+                        emitResult.Diagnostics
+                            .Where(d => d.Severity == DiagnosticSeverity.Error)
+                            .Select(d => d.ToString()));
+                    return false;
+                }
+            }
 
+            File.Move(tempDllPath, outputDllPath, overwrite: true);
+            return true;
+        }
+        catch
+        {
+            if (File.Exists(tempDllPath))
+                File.Delete(tempDllPath);
+            throw;
+        }
     }
 
     private static List<MetadataReference> CollectReferences()

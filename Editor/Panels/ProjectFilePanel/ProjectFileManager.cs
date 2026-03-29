@@ -94,6 +94,7 @@ public class ProjectFileManager
                 }
 
                 File.Move(oldPath, newPath);
+
                 if (newPath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
                 {
                     UpdateClassNameInScript(newPath);
@@ -114,6 +115,16 @@ public class ProjectFileManager
                 }
 
                 OnSceneMoved?.Invoke(oldPath, newPath);
+            }
+
+            var needsReload = !isFolder &&
+                              (oldPath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
+                               newPath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase));
+
+            if (needsReload)
+            {
+                var projectPath = Directory.GetParent(_rootAssets)!.FullName;
+                ProjectScriptService.Reload(projectPath, throwOnError: false);
             }
         }
         catch (Exception ex)
@@ -141,10 +152,14 @@ public class ProjectFileManager
             Console.WriteLine($"Failed to update class name: {ex.Message}");
         }
     }
+
     public void DeleteItem(string path)
     {
         try
         {
+            var isScript = !Directory.Exists(path) &&
+                           path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase);
+
             if (Directory.Exists(path))
             {
                 Directory.Delete(path, true);
@@ -161,6 +176,12 @@ public class ProjectFileManager
 
             if (ClipboardPath == path)
                 ClipboardPath = null;
+
+            if (isScript)
+            {
+                var projectPath = Directory.GetParent(_rootAssets)!.FullName;
+                ProjectScriptService.Reload(projectPath, throwOnError: false);
+            }
         }
         catch (Exception ex)
         {
@@ -292,13 +313,16 @@ public class ProjectFileManager
                 ClipboardPath = destPath;
 
             if (movedCurrentScene)
-            {
                 SceneManager.CurrentScene!.Path = PathUtility.GetRelativePath(destPath);
-            }
 
             if (destPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
-            {
                 OnSceneMoved?.Invoke(sourceFull, destPath);
+
+            if (destPath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
+                sourceFull.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
+            {
+                var projectPath = Directory.GetParent(_rootAssets)!.FullName;
+                ProjectScriptService.Reload(projectPath, throwOnError: false);
             }
 
             Console.WriteLine($"Moved: {sourceFull} -> {destPath}");
@@ -348,7 +372,7 @@ public class ProjectFileManager
 
         var rawClassName = Path.GetFileNameWithoutExtension(newPath);
         var className = MakeValidClassName(rawClassName);
-        
+
         var content = $$"""
                         using DustyEngine;
 
@@ -358,14 +382,13 @@ public class ProjectFileManager
                         """;
 
         File.WriteAllText(newPath, content);
-        
+
         var projectPath = Directory.GetParent(_rootAssets)!.FullName;
-        Console.WriteLine("TEST" + projectPath);
         ProjectScriptService.Reload(projectPath, throwOnError: false);
-        
+
         return newPath;
     }
-    
+
     private static string MakeValidClassName(string fileName)
     {
         if (string.IsNullOrWhiteSpace(fileName))

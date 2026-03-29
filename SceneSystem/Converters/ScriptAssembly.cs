@@ -11,25 +11,40 @@ public static class ScriptAssembly
     private static ScriptLoadContext? _currentContext;
     private static Assembly? _scriptAssembly;
 
+    public static event Action? OnAssemblyReloaded;
+    
+    public static IEnumerable<Type> GetLoadedTypes()
+    {
+        if (_scriptAssembly == null) return [];
+
+        try { return _scriptAssembly.GetTypes(); }
+        catch (ReflectionTypeLoadException e) { return e.Types.Where(t => t != null)!; }
+        catch { return []; }
+    }
+    
     public static void Load(string dllPath)
     {
         if (!File.Exists(dllPath))
             throw new FileNotFoundException($"Script DLL not found: {dllPath}");
+
+        var shadowPath = Path.Combine(
+            Path.GetDirectoryName(dllPath)!,
+            $"UserScripts_shadow_{Guid.NewGuid():N}.dll");
+
+        File.Copy(dllPath, shadowPath, overwrite: true);
 
         if (_currentContext != null)
         {
             _currentContext.Unload();
             _currentContext = null;
             _scriptAssembly = null;
-
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
         }
 
-        _currentContext = new ScriptLoadContext(dllPath);
-
-        _scriptAssembly = _currentContext.LoadFromAssemblyPath(dllPath);
+        _currentContext = new ScriptLoadContext(shadowPath);
+        _scriptAssembly = _currentContext.LoadFromAssemblyPath(shadowPath);
 
         ScriptTypesByName.Clear();
         ScriptTypesByFullName.Clear();
@@ -47,6 +62,8 @@ public static class ScriptAssembly
 
             ScriptTypesByName.TryAdd(type.Name, type);
         }
+        
+        OnAssemblyReloaded?.Invoke();
     }
 
     public static Type? ResolveScriptType(string scriptClass)

@@ -14,9 +14,7 @@ namespace Editor.Panels.InspectorPanel;
 internal class InspectorPanel : IRenderablePanel
 {
     private static GameObject? _selectedGameObject;
-
     private static string _addCompSearch = "";
-    private static readonly IReadOnlyList<Type> Types = ComponentTypeCache.GetAll();
 
     public static void SetSelectedGameObject(GameObject selectedGameObject) => _selectedGameObject = selectedGameObject;
 
@@ -47,7 +45,6 @@ internal class InspectorPanel : IRenderablePanel
         ImGui.End();
     }
 
-
     private static void DrawGameObjectInfo()
     {
         if (_selectedGameObject == null) return;
@@ -63,7 +60,6 @@ internal class InspectorPanel : IRenderablePanel
         if (ImGui.InputText("##name", ref objectName, 256))
             _selectedGameObject.Name = objectName;
     }
-
 
     private static void DrawObjectComponents(GameObject gameObject)
     {
@@ -107,7 +103,6 @@ internal class InspectorPanel : IRenderablePanel
         if (toRemove != null)
             gameObject.RemoveComponent(toRemove.Id);
     }
-
 
     private static void DrawComponentProperties(object component)
     {
@@ -153,7 +148,6 @@ internal class InspectorPanel : IRenderablePanel
         }
     }
 
-
     private static void DrawValue(string label, Type valueType, Func<object?> get, Action<object?> set, bool canWrite,
         bool readOnlyUi = false)
     {
@@ -186,7 +180,6 @@ internal class InspectorPanel : IRenderablePanel
             return;
         }
 
-
         ImGui.Text(label);
         ImGui.SameLine(120);
         ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
@@ -215,7 +208,6 @@ internal class InspectorPanel : IRenderablePanel
                     dv.Z = tmp.Z;
                     set(dv);
                 }
-
                 break;
             }
 
@@ -226,12 +218,12 @@ internal class InspectorPanel : IRenderablePanel
                     set(str);
                 break;
             }
+
             case Mesh mesh:
             {
                 ImGui.TextDisabled($"Mesh: {mesh}");
                 break;
             }
-
 
             case null when valueType == typeof(string):
             {
@@ -249,7 +241,6 @@ internal class InspectorPanel : IRenderablePanel
         if (readOnlyUi) ImGui.EndDisabled();
     }
 
-
     private static void DrawAddComponent()
     {
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (ImGui.GetContentRegionAvail().X - 200f) * 0.5f);
@@ -257,10 +248,8 @@ internal class InspectorPanel : IRenderablePanel
         if (ImGui.Button("Add Component", new Vector2(200f, 25f)))
             ImGui.OpenPopup("add_component_popup");
 
-
         var popupPos = ImGui.GetCursorScreenPos();
         ImGui.SetNextWindowPos(popupPos, ImGuiCond.Always);
-
         ImGui.SetNextWindowSize(new Vector2(340, 420), ImGuiCond.Always);
 
         if (!ImGui.BeginPopup("add_component_popup")) return;
@@ -276,7 +265,7 @@ internal class InspectorPanel : IRenderablePanel
 
         if (ImGui.BeginChild("##list", new Vector2(0, 0)))
         {
-            var result = Types
+            var result = ComponentTypeCache.GetAll()
                 .Where(t => t.Name.Contains(_addCompSearch, StringComparison.OrdinalIgnoreCase))
                 .OrderBy(t => GetScore(t.Name, _addCompSearch))
                 .ThenBy(t => t.Name)
@@ -302,7 +291,6 @@ internal class InspectorPanel : IRenderablePanel
         ImGui.EndPopup();
     }
 
-
     private static int GetScore(string text, string query)
     {
         text = text.ToLower();
@@ -319,10 +307,8 @@ internal class InspectorPanel : IRenderablePanel
         return score;
     }
 
-
     private static bool HasAttribute<T>(MemberInfo member) where T : Attribute =>
         Attribute.IsDefined(member, typeof(T));
-
 
     private static bool ShouldDraw(FieldInfo field)
     {
