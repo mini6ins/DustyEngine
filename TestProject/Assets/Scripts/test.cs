@@ -2,5 +2,5 @@ using DustyEngine;
 
 public class test : MonoBehaviour
 {
-    public int a = 2;
+    public int a = 10;
 }

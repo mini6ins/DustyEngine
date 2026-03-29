@@ -31,29 +31,56 @@ public sealed class DustyEngine : IDisposable
     private static readonly Action<MeshRenderer> RemoveRenderer =
         meshRenderer => _window.Renderer?.RemoveRendererByComponent(meshRenderer);
 
+    public static volatile bool PendingScriptReload = false;
+
+    private static void SetupScriptHotReload()
+    {
+        ScriptAssembly.OnAssemblyReloaded += () => { ScriptReloadBridge.PendingReload = true; };
+
+        ScriptReloadBridge.OnReload += HotReloadScene;
+    }
+    
+    public static void HotReloadScene()
+    {
+        if (_window.RenderMode == RenderMode.EditorRun) return;
+
+        if (SceneManager.CurrentScene == null) return;
+        var scenePath = SceneManager.CurrentScene.Path;
+        if (string.IsNullOrWhiteSpace(scenePath)) return;
+
+        GameLoop.ClearMethodCaches();
+
+        SceneManager.LoadSceneByPath(scenePath);
+        _window.LoadScene?.Invoke();
+        HierarchyPanel.OnChangeScene?.Invoke();
+        Debug.Log("Hot reload: scene reloaded after script change", Debug.LogLevel.Info, true);
+    }
+    
+    
+    
     public static void StartEngine(string path, RenderMode renderMode)
     {
         ProjectFolderPath = path;
-        
+
         SaveProjectVersion();
         Debug.ClearLogs();
 
         _settings = ProjectSettings.LoadProject(path);
-        
+
         if (_settings == null)
         {
             Debug.Log("Can't load project settings", Debug.LogLevel.FatalError, true);
             return;
         }
-        
+
         _settings.DustyEngineVersion = EngineVersion;
         SaveEngineVersionToProjectSettings();
 
         SceneManager.ProjectPath = ProjectFolderPath;
         SetupDebug(renderMode);
-        
+
         ProjectScriptService.Reload(ProjectFolderPath, throwOnError: true);
-        
+
         if (!SceneManager.LoadSceneByPath(_settings.PathToScenes.FirstOrDefault())) return;
 
         if (renderMode == RenderMode.Standalone)
@@ -61,20 +88,20 @@ public sealed class DustyEngine : IDisposable
 
         CreateWindow(renderMode);
     }
-    
+
     private static void SaveProjectVersion()
     {
         var path = Path.Combine(AppContext.BaseDirectory, "engine_version.txt");
         File.WriteAllText(path, EngineVersion.ToString(CultureInfo.InvariantCulture));
         Console.WriteLine("Saving engine_version.txt to: " + path);
-
     }
 
     private static void SaveEngineVersionToProjectSettings()
     {
         var settingsPath = Path.Combine(ProjectFolderPath, "Settings", "project_settings.json");
 
-        var node = JsonNode.Parse(File.ReadAllText(settingsPath)) ?? throw new Exception("project_settings.json is empty/invalid");
+        var node = JsonNode.Parse(File.ReadAllText(settingsPath)) ??
+                   throw new Exception("project_settings.json is empty/invalid");
 
         node["DustyEngineVersion"] = EngineVersion;
 
@@ -83,7 +110,7 @@ public sealed class DustyEngine : IDisposable
             node.ToJsonString(new JsonSerializerOptions { WriteIndented = true })
         );
     }
-    
+
     private static void CreateWindow(RenderMode renderMode)
     {
         SceneManager.AddRenderer += AddRenderer;
@@ -124,6 +151,7 @@ public sealed class DustyEngine : IDisposable
 
             ExportProjectPanel.OnExportProject += outPath =>
                 ProjectCompiler.ProjectCompiler.Compile(ProjectFolderPath, outPath, _settings);
+            SetupScriptHotReload();
         }
 
         Debug.Log("Project settings loaded");

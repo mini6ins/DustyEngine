@@ -41,13 +41,19 @@ public class EditorWindow : GameWindow
     protected override void OnUpdateFrame(FrameEventArgs args)
     {
         base.OnUpdateFrame(args);
-
+    
+        if (ScriptReloadBridge.PendingReload)
+        {
+            ScriptReloadBridge.PendingReload = false;
+            ScriptReloadBridge.OnReload?.Invoke();
+        }
+    
         if (Input.IsRpcInputActive && ViewportPanel.IsScenePanelActive)
         {
             EditorInputHandler.UpdateKeyboardInput(KeyboardState);
             EditorInputHandler.UpdateMouseInput(MouseState);
         }
-
+    
         GraphicsRenderer?.Update((float)args.Time, KeyboardState, MouseState);
     }
 

@@ -7,6 +7,8 @@ namespace Editor.Panels.ProjectFilePanel;
 
 public class ProjectFileManager
 {
+    private FileSystemWatcher? _scriptWatcher;
+
     private readonly string _rootAssets;
 
     public string CurrentPath { get; private set; }
@@ -20,8 +22,34 @@ public class ProjectFileManager
         _rootAssets = Path.Combine(projectPath ?? ".", "Assets");
         Directory.CreateDirectory(_rootAssets);
         CurrentPath = _rootAssets;
+
+        InitScriptWatcher();
+    }
+    
+    private void InitScriptWatcher()
+    {
+        _scriptWatcher = new FileSystemWatcher(_rootAssets, "*.cs")
+        {
+            IncludeSubdirectories = true,
+            NotifyFilter = NotifyFilters.LastWrite,
+            EnableRaisingEvents = true
+        };
+
+        _scriptWatcher.Changed += OnScriptChanged;
     }
 
+    private DateTime _lastReloadTime = DateTime.MinValue;
+
+    private void OnScriptChanged(object sender, FileSystemEventArgs e)
+    {
+        var now = DateTime.UtcNow;
+        if ((now - _lastReloadTime).TotalMilliseconds < 500) return;
+        _lastReloadTime = now;
+
+        var projectPath = Directory.GetParent(_rootAssets)!.FullName;
+        ProjectScriptService.Reload(projectPath, throwOnError: false);
+    }
+    
     public bool CanNavigateUp()
     {
         var parent = Directory.GetParent(CurrentPath)?.FullName;
@@ -442,5 +470,10 @@ public class ProjectFileManager
             var destSubDir = Path.Combine(destDir, Path.GetFileName(dir));
             CopyDirectory(dir, destSubDir);
         }
+    }
+    
+    ~ProjectFileManager()
+    {
+        _scriptWatcher?.Dispose();
     }
 }

@@ -213,6 +213,13 @@
             "LengthSquared": 3
           },
           "Name": "Empty GameObject"
+        },
+        {
+          "Type": "Script",
+          "ScriptClass": "test",
+          "Enabled": true,
+          "Name": "Empty GameObject",
+          "a": 4
         }
       ],
       "Name": "Empty GameObject"
