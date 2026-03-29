@@ -1,0 +1,113 @@
+{
+  "Name": null,
+  "Path": "Assets/Scene/Game.json",
+  "GameObjects": [
+    {
+      "ActiveSelf": true,
+      "Children": [],
+      "Components": [
+        {
+          "Type": "Transform",
+          "LocalPosition": {
+            "X": 0,
+            "Y": 0,
+            "Z": 15,
+            "Length": 15,
+            "LengthSquared": 225
+          },
+          "LocalRotation": {
+            "X": 0,
+            "Y": 0,
+            "Z": 0,
+            "Length": 0,
+            "LengthSquared": 0
+          },
+          "LocalScale": {
+            "X": 1,
+            "Y": 1,
+            "Z": 1,
+            "Length": 1.7320508,
+            "LengthSquared": 3
+          },
+          "Name": "Camera"
+        },
+        {
+          "Type": "Script",
+          "ScriptClass": "Player",
+          "Enabled": true,
+          "Name": "Camera"
+        },
+        {
+          "Type": "Camera",
+          "AspectRatio": 1.7777778,
+          "InternalTransform": {
+            "LocalPosition": {
+              "X": 0,
+              "Y": 2.5,
+              "Z": 5,
+              "Length": 5.59017,
+              "LengthSquared": 31.25
+            },
+            "LocalRotation": {
+              "X": 0,
+              "Y": 0,
+              "Z": 0,
+              "Length": 0,
+              "LengthSquared": 0
+            },
+            "LocalScale": {
+              "X": 1,
+              "Y": 1,
+              "Z": 1,
+              "Length": 1.7320508,
+              "LengthSquared": 3
+            },
+            "Name": "\u003CNo GameObject\u003E"
+          },
+          "Enabled": true,
+          "Name": "Camera"
+        }
+      ],
+      "Name": "Camera"
+    },
+    {
+      "ActiveSelf": true,
+      "Children": [],
+      "Components": [
+        {
+          "Type": "Transform",
+          "LocalPosition": {
+            "X": 0,
+            "Y": 0,
+            "Z": 0,
+            "Length": 0,
+            "LengthSquared": 0
+          },
+          "LocalRotation": {
+            "X": 0,
+            "Y": 0,
+            "Z": 0,
+            "Length": 0,
+            "LengthSquared": 0
+          },
+          "LocalScale": {
+            "X": 1,
+            "Y": 1,
+            "Z": 1,
+            "Length": 1.7320508,
+            "LengthSquared": 3
+          },
+          "Name": "Cube"
+        },
+        {
+          "Type": "MeshRenderer",
+          "ObjPath": "Assets/cube.obj",
+          "Enabled": true,
+          "Name": "Cube"
+        }
+      ],
+      "Name": "Cube"
+    }
+  ],
+  "Components": []
+}

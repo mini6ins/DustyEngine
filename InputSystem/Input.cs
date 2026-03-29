@@ -158,7 +158,12 @@ public static class Input
         _lastY = y;
     }
 
-    public static void ResetMouse() => _currentDelta = (0, 0);
+    public static void ResetMouse()
+    {
+        _currentDelta = (0, 0);
+        _firstMove = true;
+        _rpcMouseDelta = (0f, 0f);
+    }
 
     public static bool HasMouseMoved() => Math.Abs(_currentDelta.X) > 0.001f || Math.Abs(_currentDelta.Y) > 0.001f;
 

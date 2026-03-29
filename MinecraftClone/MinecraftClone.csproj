@@ -8,4 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="..\DustyEngine\DustyEngine.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Assets\Scene\" />
+  </ItemGroup>
 </Project>

@@ -47,7 +47,7 @@ public class Window : IDisposable
 
         var cursorState = renderMode == RenderMode.EditorStop
             ? CursorState.Normal
-            : CursorState.Hidden;
+            : CursorState.Grabbed;
 
         _window = renderMode == RenderMode.EditorStop
             ? new EditorWindow(GameWindowSettings.Default, nativeWindowSettings, vsync, _renderer, projectPath)

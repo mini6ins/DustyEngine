@@ -3,7 +3,7 @@
   "Version": 1,
   "DustyEngineVersion": 0.1,
   "PathToScenes": [
-    "Assets/Scene/ExampleScene.json"
+    "Assets/Scene/Game.json"
   ],
   "PathToFragShader": "Assets/shaders/shader.frag",
   "PathToVertShader": "Assets/shaders/shader.vert",
