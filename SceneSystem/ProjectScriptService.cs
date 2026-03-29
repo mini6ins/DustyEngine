@@ -25,7 +25,9 @@ public static class ProjectScriptService
                 return throwOnError ? throw new Exception("Script compilation failed.") : false;
             }
 
-            ScriptAssembly.Load(dllPath);
+            if (File.Exists(dllPath))
+                ScriptAssembly.Load(dllPath);
+            
             Debug.Log($"Loaded project scripts: {dllPath}", Debug.LogLevel.Info, true);
             return true;
         }

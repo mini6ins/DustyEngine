@@ -23,6 +23,20 @@ public static class ProjectScriptCompiler
         var scriptFiles = Directory.GetFiles(assetsPath, "*.cs", SearchOption.AllDirectories);
         if (scriptFiles.Length == 0)
         {
+            var directoryName = Path.GetDirectoryName(outputDllPath)!;
+            Directory.CreateDirectory(directoryName);
+
+            var sharpCompilation = CSharpCompilation.Create(
+                assemblyName: Path.GetFileNameWithoutExtension(outputDllPath),
+                syntaxTrees: [],
+                references: CollectReferences(),
+                options: new CSharpCompilationOptions(
+                    OutputKind.DynamicallyLinkedLibrary,
+                    optimizationLevel: OptimizationLevel.Debug,
+                    platform: Platform.AnyCpu));
+
+            using var dllStream = new FileStream(outputDllPath, FileMode.Create, FileAccess.Write);
+            sharpCompilation.Emit(dllStream);
             return true;
         }
 
