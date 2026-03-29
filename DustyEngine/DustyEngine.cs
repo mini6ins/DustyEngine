@@ -2,7 +2,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using DustyEngine.Components;
-using DustyEngine.Core.Scripting;
 using DustyEngine.Scene;
 using Editor;
 using Editor.Panels.ConsolePanel;
@@ -12,6 +11,7 @@ using Editor.Panels.ProjectFilePanel;
 using Editor.Panels.ProjectSetiingPanel;
 using Editor.Panels.ViewPortPanel;
 using GraphicsEngine;
+using SceneSystem;
 using SceneSystem.Converters;
 using WindowEngine;
 

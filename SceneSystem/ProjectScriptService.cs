@@ -1,6 +1,7 @@
+using DustyEngine;
 using SceneSystem.Converters;
 
-namespace DustyEngine.Core.Scripting;
+namespace SceneSystem;
 
 public static class ProjectScriptService
 {
@@ -9,7 +10,8 @@ public static class ProjectScriptService
         try
         {
             var dllPath = Path.Combine(projectPath, "Settings", "Dlls", "UserScripts.dll");
-
+            Directory.CreateDirectory(Path.GetDirectoryName(dllPath)!);
+            
             var ok = ProjectScriptCompiler.CompileAllScripts(
                 projectPath,
                 dllPath,
@@ -20,10 +22,7 @@ public static class ProjectScriptService
                 foreach (var error in errors)
                     Debug.Log(error, Debug.LogLevel.Error, true);
 
-                if (throwOnError)
-                    throw new Exception("Script compilation failed.");
-
-                return false;
+                return throwOnError ? throw new Exception("Script compilation failed.") : false;
             }
 
             ScriptAssembly.Load(dllPath);

@@ -1,7 +1,7 @@
 using DustyEngine;
 using DustyEngine.Core;
-using DustyEngine.Core.Scripting;
 using DustyEngine.Scene;
+using SceneSystem;
 
 namespace Editor.Panels.ProjectFilePanel;
 

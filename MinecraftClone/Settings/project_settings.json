@@ -1,0 +1,19 @@
+{
+  "ProjectName": "MinecraftClone",
+  "Version": 1,
+  "DustyEngineVersion": 0.1,
+  "PathToScenes": [
+    "Assets/Scene/ExampleScene.json"
+  ],
+  "PathToFragShader": "Assets/shaders/shader.frag",
+  "PathToVertShader": "Assets/shaders/shader.vert",
+  "Debug": false,
+  "LogLevel": 0,
+  "LogToConsole": false,
+  "LogToFile": true,
+  "ScreenSize": {
+    "X": 800,
+    "Y": 600
+  },
+  "Vsync": true
+}

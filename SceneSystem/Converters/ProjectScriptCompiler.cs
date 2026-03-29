@@ -23,8 +23,7 @@ public static class ProjectScriptCompiler
         var scriptFiles = Directory.GetFiles(assetsPath, "*.cs", SearchOption.AllDirectories);
         if (scriptFiles.Length == 0)
         {
-            errors.Add("No .cs files found in Assets/");
-            return false;
+            return true;
         }
 
         var syntaxTrees = scriptFiles
