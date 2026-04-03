@@ -102,15 +102,13 @@ public sealed class VAOManager(ShaderProgram shaderProgram) : IDisposable
 
     private void Dispose(bool disposing)
     {
-        if (!_disposed)
+        if (_disposed) return;
+        if (disposing)
         {
-            if (disposing)
-            {
-                DeleteVAOs();
-            }
-
-            _disposed = true;
+            DeleteVAOs();
         }
+
+        _disposed = true;
     }
 
     public void Dispose()

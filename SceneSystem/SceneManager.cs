@@ -393,12 +393,9 @@ public abstract class SceneManager
 
     public static void InvokeRecursive(GameObject gameObject, string methodName)
     {
-        if (gameObject.ActiveInHierarchy)
-        {
-            gameObject.InvokeMethodInComponents(methodName);
-        }
+        gameObject.InvokeMethodInComponents(methodName);
 
-        foreach (var child in gameObject.Children)
+        foreach (var child in gameObject.Children.ToList()) 
         {
             InvokeRecursive(child, methodName);
         }

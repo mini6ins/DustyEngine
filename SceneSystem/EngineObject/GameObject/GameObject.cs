@@ -54,7 +54,11 @@ public sealed class GameObject : DustyEngine.EngineObject
         if (component == null) throw new ArgumentNullException(nameof(component));
 
         Components.Add(component);
-        component.Parent = this;
+        component.Parent = this; 
+
+        if (component is MeshRenderer meshRenderer)
+            SceneManager.AddRenderer?.Invoke(meshRenderer); 
+
         Debug.Log($"Added component [{component.GetType().Name}] to GameObject [{Name}]", Debug.LogLevel.Info, true);
     }
 
@@ -123,7 +127,7 @@ public sealed class GameObject : DustyEngine.EngineObject
             return;
         }
 
-        foreach (var component in Components)
+        foreach (var component in Components.ToList())
         {
             component.Parent = this;
 

@@ -13,13 +13,14 @@ public static class Program
     [STAThread]
     public static int Main(string[] args)
     {
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+
         if (args.Length == 0)
         {
             var result = ShowProjectSelectorGui();
             if (!result.HasValue)
-            {
                 return 2;
-            }
 
             (_projectPath, _renderMode) = result.Value;
         }
@@ -42,12 +43,14 @@ public static class Program
             }
         }
 
+        Console.SetOut(originalOut);
+        Console.SetError(originalError);
+
         Console.CancelKeyPress += (_, e) => e.Cancel = true;
 
         try
         {
             var engine = new DustyEngine.DustyEngine();
-
             DustyEngine.DustyEngine.StartEngine(_projectPath, _renderMode);
             return 0;
         }
@@ -60,7 +63,6 @@ public static class Program
 
     private static (string path, RenderMode mode)? ShowProjectSelectorGui()
     {
-      
         var builder = AppBuilder.Configure<ProjectSelectorApp>().UsePlatformDetect().WithInterFont().LogToTrace();
         builder.StartWithClassicDesktopLifetime([], ShutdownMode.OnMainWindowClose);
 

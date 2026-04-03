@@ -9,7 +9,7 @@
   "PathToVertShader": "Assets/shaders/shader.vert",
   "Debug": false,
   "LogLevel": 0,
-  "LogToConsole": false,
+  "LogToConsole": true,
   "LogToFile": true,
   "ScreenSize": {
     "X": 800,

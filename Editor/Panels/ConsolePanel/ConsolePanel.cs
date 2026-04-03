@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Numerics;
 using DustyEngine;
 using ImGuiNET;
@@ -13,7 +12,7 @@ public class ConsolePanel : IRenderablePanel
         public Debug.LogLevel Level { get; } = level;
     }
 
-    private static readonly ConcurrentQueue<LogEntry> Lines = new();
+    private static readonly List<LogEntry> Lines = [];
     private const bool AutoScroll = true;
     private static ConsoleInterceptor? _interceptor;
 
@@ -32,8 +31,7 @@ public class ConsolePanel : IRenderablePanel
         Console.WriteLine("[Editor] Console interceptor initialized");
     }
 
-    private static void OnConsoleLineWritten(string line) =>
-        Lines.Enqueue(new LogEntry(line, DetectLogLevel(line)));
+    private static void OnConsoleLineWritten(string line) => Lines.Add(new LogEntry(line, DetectLogLevel(line)));
 
     public void Render()
     {
@@ -47,14 +45,15 @@ public class ConsolePanel : IRenderablePanel
         }
 
         if (ImGui.Button("Clear"))
-        {
-            while (Lines.TryDequeue(out _)) { }
-        }
+            Lines.Clear();
 
         ImGui.SameLine();
 
+
         if (ImGui.Checkbox("Debug", ref DebugEnabled))
+        {
             _onDebugModeChanged?.Invoke(DebugEnabled);
+        }
 
         ImGui.SameLine();
         ImGui.TextDisabled($"Lines: {Lines.Count}");
@@ -64,7 +63,7 @@ public class ConsolePanel : IRenderablePanel
         ImGui.BeginChild("ConsoleScroll", new Vector2(0, 0), ImGuiChildFlags.None,
             ImGuiWindowFlags.HorizontalScrollbar);
 
-        foreach (var entry in Lines.ToArray())
+        foreach (var entry in Lines)
         {
             ImGui.PushStyleColor(ImGuiCol.Text, GetColorForLevel(entry.Level));
             ImGui.TextUnformatted(entry.Text);
@@ -104,6 +103,7 @@ public class ConsolePanel : IRenderablePanel
     public static void Shutdown()
     {
         if (_interceptor == null) return;
+
         Console.SetOut(Console.Out);
         _interceptor = null;
     }

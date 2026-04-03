@@ -1,5 +1,4 @@
 ﻿using System.Reflection;
-using DustyEngine.Components;
 using DustyEngine.Scene;
 using GraphicsEngine;
 using SceneSystem.EngineObject.GameObject;
@@ -21,12 +20,12 @@ public static class GameLoop
         Initialize(SceneManager.CurrentScene!);
         Time.Init();
 
-        foreach (var gameObject in SceneManager.CurrentScene!.GameObjects)
+        foreach (var gameObject in SceneManager.CurrentScene!.GameObjects.ToList())
         {
             SceneManager.InvokeRecursive(gameObject, "OnEnable");
         }
 
-        foreach (var gameObject in SceneManager.CurrentScene!.GameObjects)
+        foreach (var gameObject in SceneManager.CurrentScene!.GameObjects.ToList())
         {
             SceneManager.InvokeRecursive(gameObject, "Start");
         }
@@ -41,8 +40,6 @@ public static class GameLoop
     }
 
 
-
-    
     private static List<GameObject> TraverseGameObjects(IEnumerable<GameObject> rootObjects)
     {
         var result = new List<GameObject>();
@@ -57,7 +54,7 @@ public static class GameLoop
         foreach (var obj in objects)
         {
             result.Add(obj);
-            
+
             var children = obj.Children?.ToList() ?? new List<GameObject>();
             TraverseGameObjectsRecursive(children, result);
         }
@@ -67,7 +64,9 @@ public static class GameLoop
     {
         var gameObjectsSnapshot = TraverseGameObjects(scene.GameObjects?.ToList() ?? []);
 
-        foreach (var component in gameObjectsSnapshot.Where(gameObject => gameObject.ActiveInHierarchy).Select(gameObject => gameObject.Components?.ToList() ?? []).SelectMany(componentsSnapshot => componentsSnapshot))
+        foreach (var component in gameObjectsSnapshot.Where(gameObject => gameObject.ActiveInHierarchy)
+                     .Select(gameObject => gameObject.Components?.ToList() ?? [])
+                     .SelectMany(componentsSnapshot => componentsSnapshot))
         {
             if (component is not MonoBehaviour { Enabled: true }) continue;
             var componentType = component.GetType();
@@ -85,7 +84,8 @@ public static class GameLoop
             }
             catch (Exception ex)
             {
-                Debug.Log($"[GameLoop] Error in Update for {componentType.Name}: {ex.Message}", Debug.LogLevel.Error, false);
+                Debug.Log($"[GameLoop] Error in Update for {componentType.Name}: {ex.Message}", Debug.LogLevel.Error,
+                    false);
             }
         }
     }
@@ -101,8 +101,10 @@ public static class GameLoop
         while (accumulator >= TargetElapsedTime)
         {
             var gameObjectsSnapshot = TraverseGameObjects(scene.GameObjects?.ToList() ?? []);
-            
-            foreach (var component in gameObjectsSnapshot.Where(gameObject => gameObject.ActiveInHierarchy).Select(gameObject => gameObject.Components?.ToList() ?? []).SelectMany(componentsSnapshot => componentsSnapshot))
+
+            foreach (var component in gameObjectsSnapshot.Where(gameObject => gameObject.ActiveInHierarchy)
+                         .Select(gameObject => gameObject.Components?.ToList() ?? [])
+                         .SelectMany(componentsSnapshot => componentsSnapshot))
             {
                 if (component is not MonoBehaviour { Enabled: true }) continue;
                 var componentType = component.GetType();
@@ -120,7 +122,8 @@ public static class GameLoop
                 }
                 catch (Exception ex)
                 {
-                    Debug.Log($"[GameLoop] Error in FixedUpdate for {componentType.Name}: {ex.Message}", Debug.LogLevel.Error, false);
+                    Debug.Log($"[GameLoop] Error in FixedUpdate for {componentType.Name}: {ex.Message}",
+                        Debug.LogLevel.Error, false);
                 }
             }
 

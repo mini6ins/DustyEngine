@@ -64,6 +64,8 @@ public class Component : EngineObject
         Debug.Log(
             $"[Component: {Name}] Before Instantiate with Transform: GameObjects={SceneManager.GetTotalObjectsCount()}",
             Debug.LogLevel.Info, true);
+        
+        SceneManager.AddGameObjectRecursively(gameObject, null);
 
         var targetTransform = gameObject.GetComponent<Transform>();
         if (targetTransform != null)
@@ -78,9 +80,7 @@ public class Component : EngineObject
                 $"[Component: {Name}] [WARNING] GameObject [{gameObject.Name}] has no Transform component! Transform values ignored.",
                 Debug.LogLevel.Warning, false);
         }
-
-        SceneManager.AddGameObjectRecursively(gameObject, null);
-
+        
         Debug.Log(
             $"[Component: {Name}] After Instantiate with Transform: GameObjects={SceneManager.GetTotalObjectsCount()}",
             Debug.LogLevel.Info, true);
@@ -98,6 +98,9 @@ public class Component : EngineObject
             $"[Component: {Name}] Before Instantiate with Quaternion Transform: GameObjects={SceneManager.GetTotalObjectsCount()}",
             Debug.LogLevel.Info, true);
 
+        SceneManager.AddGameObjectRecursively(gameObject, null);
+        
+        
         var targetTransform = gameObject.GetComponent<Transform>();
         if (targetTransform != null)
         {
@@ -112,7 +115,7 @@ public class Component : EngineObject
                 Debug.LogLevel.Warning, false);
         }
 
-        SceneManager.AddGameObjectRecursively(gameObject, null);
+      
 
         Debug.Log(
             $"[Component: {Name}] After Instantiate with Quaternion Transform: GameObjects={SceneManager.GetTotalObjectsCount()}",
@@ -162,6 +165,8 @@ public class Component : EngineObject
             $"[Component: {Name}] Before Instantiate with Parent and Transform: GameObjects={SceneManager.GetTotalObjectsCount()}",
             Debug.LogLevel.Info, true);
 
+        SceneManager.AddGameObjectRecursively(gameObject, parent);
+        
         var targetTransform = gameObject.GetComponent<Transform>();
         if (targetTransform != null)
         {
@@ -176,7 +181,7 @@ public class Component : EngineObject
                 Debug.LogLevel.Warning, false);
         }
 
-        SceneManager.AddGameObjectRecursively(gameObject, parent);
+     
 
         Debug.Log(
             $"[Component: {Name}] After Instantiate with Parent and Transform: GameObjects={SceneManager.GetTotalObjectsCount()}",
@@ -196,6 +201,8 @@ public class Component : EngineObject
             $"[Component: {Name}] Before Instantiate with Parent and Quaternion Transform: GameObjects={SceneManager.GetTotalObjectsCount()}",
             Debug.LogLevel.Info, true);
 
+        SceneManager.AddGameObjectRecursively(gameObject, parent);
+        
         var targetTransform = gameObject.GetComponent<Transform>();
         if (targetTransform != null)
         {
@@ -210,7 +217,7 @@ public class Component : EngineObject
                 Debug.LogLevel.Warning, false);
         }
 
-        SceneManager.AddGameObjectRecursively(gameObject, parent);
+       
 
         Debug.Log(
             $"[Component: {Name}] After Instantiate with Parent and Quaternion Transform: GameObjects={SceneManager.GetTotalObjectsCount()}",

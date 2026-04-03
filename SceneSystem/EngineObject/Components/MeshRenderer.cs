@@ -38,7 +38,6 @@ public class MeshRenderer : MonoBehaviour
         if (mesh != null)
         {
             _mesh = mesh;
-            RegisterRenderer();
             return;
         }
 

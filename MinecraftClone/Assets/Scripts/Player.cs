@@ -6,8 +6,8 @@ using SceneSystem.EngineObject.GameObject;
 
 public class Player : MonoBehaviour
 {
-    private float _movementSpeed = 8f;
-    private float _mouseSensitivity = 0.15f;
+    private readonly float _movementSpeed = 8f;
+    private readonly float _mouseSensitivity = 0.15f;
 
     private float _pitch = 0f;
     private float _yaw = 0f;
@@ -17,31 +17,17 @@ public class Player : MonoBehaviour
     private Transform _cameraTransform;
     private float _deltaX, _deltaY;
 
-    private GameObject _testObject;
-
     public void OnEnable()
     {
         _cameraTransform = GetComponent<Camera>().transform;
-
-        _testObject = new GameObject("testObject");
-        _testObject.AddComponent(new Transform(new Vector3(5f, 5f, 0f)));
-        _testObject.AddComponent(
-            new MeshRenderer(null, "/home/maksym/Projects/DustyEngine/TestProject/Assets/cube.obj")
-        );
     }
 
-    private void Update()
+    public void Update()
     {
         ReadMouse();
         RotateCamera();
         ReadMovementInput();
         MoveCamera();
-
-        if (Input.IsKeyJustActivatedOnce(KeyCode.E))
-            Instantiate(_testObject);
-
-        if (Input.IsKeyJustActivatedOnce(KeyCode.F))
-            Destroy(_testObject);
 
         Input.ResetMouse();
     }
@@ -49,8 +35,6 @@ public class Player : MonoBehaviour
     private void ReadMouse()
     {
         (_deltaX, _deltaY) = Input.Delta;
-        if (_deltaX != 0f || _deltaY != 0f)
-            Debug.Log($"Delta: {_deltaX}, {_deltaY}", Debug.LogLevel.Info, false);
         const float deadZone = 0.0001f;
         if (Math.Math.Abs(_deltaX) < deadZone) _deltaX = 0f;
         if (Math.Math.Abs(_deltaY) < deadZone) _deltaY = 0f;

@@ -1,11 +1,10 @@
-﻿using System.Collections.Concurrent;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 
 namespace DustyEngine;
 
 public static class Debug
 {
-    private static readonly ConcurrentQueue<string> LogMessages = new();
+    private static readonly List<string> LogMessages = [];
     private const string LogFilePath = "debug.log";
 
     private static LogLevel _currentLogLevel = LogLevel.Info;
@@ -44,12 +43,13 @@ public static class Debug
 
         if ((int)level < (int)GetLogLevel()) return;
 
-        LogMessages.Enqueue(formattedMessage);
+        LogMessages.Add(formattedMessage);
 
         if (!_isDebugMode && isDebugMessage) return;
         if (!_writeToConsole) return;
 
         Console.WriteLine(formattedMessage);
+
         Console.Out.Flush();
     }
 
@@ -61,13 +61,11 @@ public static class Debug
     public static void EnableConsoleLogging(bool enabled) => _writeToConsole = enabled;
     public static void EnableFileLogging(bool enabled) => _writeToFile = enabled;
     public static void EnableDebugMode(bool enabled) => _isDebugMode = enabled;
-    public static void ShowLogs() => LogMessages.ToList().ForEach(Console.WriteLine);
-
-    public static IReadOnlyList<string> GetMessages() => LogMessages.ToArray();
+    public static void ShowLogs() => LogMessages.ForEach(Console.WriteLine);
 
     public static void ClearLogs()
     {
-        while (LogMessages.TryDequeue(out _)) { }
+        LogMessages.Clear();
         File.WriteAllText(LogFilePath, string.Empty);
     }
 }
