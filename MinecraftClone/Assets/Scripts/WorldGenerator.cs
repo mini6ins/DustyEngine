@@ -15,97 +15,67 @@ using System.Linq;
 
 public class WorldGenerator : MonoBehaviour
 {
+    public int seed;
+
     public Transform player;
     public Vector3 spawn;
-    
+
     public BlockType[] blocktypes;
 
     Chunk[,] chunks = new Chunk[VoxelData.WorldSizeInChunks, VoxelData.WorldSizeInChunks];
+
     List<ChunkCoord> activeChunks = new List<ChunkCoord>();
+    ChunkCoord playerChunkCoord;
     ChunkCoord playerLastChunkCoord;
-    
+
     private void Start()
     {
-        // var chunkPosition = new Vector3(0, 0, 0);
-        // var chunk = new GameObject("Chunk:" + chunkPosition.X + "," + chunkPosition.Y + "," + chunkPosition.Z);
-        // chunk.AddComponent(new Chunk());
-        // Instantiate(chunk, GameObject, chunkPosition, new Quaternion(), new Vector3(1, 1, 1));
-        //
-        //
+        seed = Guid.NewGuid().GetHashCode();
+        
         blocktypes = new BlockType[]
         {
-            new BlockType { blockName = "Air",   isSolid = false },
-            new BlockType { blockName = "Bedrock", isSolid = true },
-            new BlockType { blockName = "Stone", isSolid = true },
-            new BlockType { blockName = "Grass", isSolid = true },
+            new BlockType { blockName = "Air",     isSolid = false }, // 0
+            new BlockType { blockName = "Bedrock", isSolid = true  }, // 1
+            new BlockType { blockName = "Stone",   isSolid = true  }, // 2
+            new BlockType { blockName = "Grass",   isSolid = true  }, // 3
+            new BlockType { blockName = "Sand",    isSolid = true  }, // 4  
+            new BlockType { blockName = "Dirt",    isSolid = true  }, // 5  
         };
+
         player = SceneManager.FindCameras().FirstOrDefault().GameObject.GetComponent<Transform>();
-        
+
         GenerateWorld();
         playerLastChunkCoord = GetChunkCoordFromVector3(player.LocalPosition);
-
     }
-    
-    private void Update() {
+
+    private void Update()
+    {
+        playerChunkCoord = GetChunkCoordFromVector3(player.LocalPosition);
+
 
         if (!GetChunkCoordFromVector3(player.LocalPosition).Equals(playerLastChunkCoord))
             CheckViewDistance();
-
     }
-    
-    private void GenerateWorld () {
 
-        for (int x = VoxelData.WorldSizeInChunks / 2 - VoxelData.ViewDistanceInChunks / 2; x < VoxelData.WorldSizeInChunks / 2 + VoxelData.ViewDistanceInChunks / 2; x++) {
-            for (int z = VoxelData.WorldSizeInChunks / 2 - VoxelData.ViewDistanceInChunks / 2; z < VoxelData.WorldSizeInChunks / 2 + VoxelData.ViewDistanceInChunks / 2; z++) {
-
-                CreateChunk(new ChunkCoord(x, z));
-
+    private void GenerateWorld()
+    {
+        for (int x = VoxelData.WorldSizeInChunks / 2 - VoxelData.ViewDistanceInChunks / 2;
+             x < VoxelData.WorldSizeInChunks / 2 + VoxelData.ViewDistanceInChunks / 2;
+             x++)
+        {
+            for (int z = VoxelData.WorldSizeInChunks / 2 - VoxelData.ViewDistanceInChunks / 2;
+                 z < VoxelData.WorldSizeInChunks / 2 + VoxelData.ViewDistanceInChunks / 2;
+                 z++)
+            {
+                CreateNewChunk(x, z);
             }
         }
 
-        spawn = new Vector3(VoxelData.WorldSizeInBlocks / 2, VoxelData.ChunkHeight + 2, VoxelData.WorldSizeInBlocks / 2);
+        spawn = new Vector3(VoxelData.WorldSizeInBlocks / 2, VoxelData.ChunkHeight + 2,
+            VoxelData.WorldSizeInBlocks / 2);
         player.LocalPosition = spawn;
-
     }
 
-    private void CheckViewDistance () {
-        int chunkX = (int)System.Math.Floor(player.LocalPosition.X / VoxelData.ChunkWidth);
-        int chunkZ = (int)System.Math.Floor(player.LocalPosition.Z / VoxelData.ChunkWidth);
-
-        List<ChunkCoord> previouslyActiveChunks = new List<ChunkCoord>(activeChunks);
-
-        for (int x = chunkX - VoxelData.ViewDistanceInChunks / 2; x < chunkX + VoxelData.ViewDistanceInChunks / 2; x++) {
-            for (int z = chunkZ - VoxelData.ViewDistanceInChunks / 2; z < chunkZ + VoxelData.ViewDistanceInChunks / 2; z++) {
-
-                if (IsChunkInWorld(x, z)) {
-
-                    ChunkCoord thisChunk = new ChunkCoord(x, z);
-
-                    if (chunks[x, z] == null)
-                        CreateChunk(thisChunk);
-                    else if (!chunks[x, z].isActive) {
-                        chunks[x, z].isActive = true;
-                        activeChunks.Add(thisChunk);
-                    }
-                    for (int i = 0; i < previouslyActiveChunks.Count; i++) {
-
-                        if (previouslyActiveChunks[i].x == x && previouslyActiveChunks[i].z == z)
-                            previouslyActiveChunks.RemoveAt(i);
-
-                    }
-
-                }
-            }
-        }
-
-        foreach (ChunkCoord coord in previouslyActiveChunks)
-            chunks[coord.x, coord.z].isActive = false;
-
-    }
-    
-    
-    
-    
     ChunkCoord GetChunkCoordFromVector3(Vector3 pos)
     {
         int x = (int)System.Math.Floor(pos.X / VoxelData.ChunkWidth);
@@ -113,60 +83,105 @@ public class WorldGenerator : MonoBehaviour
         return new ChunkCoord(x, z);
     }
     
-    bool IsChunkInWorld(int x, int z) {
 
-        if (x > 0 && x < VoxelData.WorldSizeInChunks - 1 && z > 0 && z < VoxelData.WorldSizeInChunks - 1)
-            return true;
-        else
-            return false;
+    void CheckViewDistance()
+    {
+        ChunkCoord coord = GetChunkCoordFromVector3(player.LocalPosition);
 
+        List<ChunkCoord> previouslyActiveChunks = new List<ChunkCoord>(activeChunks);
+
+        for (int x = coord.X - VoxelData.ViewDistanceInChunks; x < coord.X + VoxelData.ViewDistanceInChunks; x++)
+        {
+            for (int z = coord.Z - VoxelData.ViewDistanceInChunks; z < coord.Z + VoxelData.ViewDistanceInChunks; z++)
+            {
+                if (IsChunkInWorld(new ChunkCoord(x, z)))
+                {
+                    if (chunks[x, z] == null)
+                        CreateNewChunk(x, z);
+                    else if (!chunks[x, z].IsActive)
+                    {
+                        chunks[x, z].IsActive = true;
+                        activeChunks.Add(new ChunkCoord(x, z));
+                    }
+                }
+
+                for (int i = 0; i < previouslyActiveChunks.Count; i++)
+                {
+                    if (previouslyActiveChunks[i].Equals(new ChunkCoord(x, z)))
+                        previouslyActiveChunks.RemoveAt(i);
+                }
+            }
+        }
+
+        foreach (ChunkCoord c in previouslyActiveChunks)
+            chunks[c.X, c.Z].IsActive = false;
     }
 
-    private void CreateChunk (ChunkCoord coord) {
+    public byte GetVoxel(Vector3 pos)
+    {
+        var yPos = (int)System.Math.Floor(pos.Y);
 
-        chunks[coord.x, coord.z] = new Chunk(new ChunkCoord(coord.x, coord.z), this);
-        activeChunks.Add(new ChunkCoord(coord.x, coord.z));
-
-
-    }
-
-    public byte GetVoxel (Vector3 pos) {
-
-        if (pos.X < 0 || pos.X > VoxelData.WorldSizeInBlocks - 1 || pos.Y < 0 || pos.Y > VoxelData.ChunkHeight - 1 || pos.Z < 0 || pos.Z > VoxelData.WorldSizeInBlocks - 1)
+        if (!IsVoxelInWorld(pos))
             return 0;
-        if (pos.Y < 1)
+
+        if (yPos == 0)
             return 1;
-        else if (pos.Y == VoxelData.ChunkHeight - 1)
-            return 3;
+        
+        
+        float rawNoise = Noise.Get2DPerlin(new Vector2(pos.X, pos.Z), 0, 0.05f);
+        int terrainHeight = (int)System.Math.Floor(20 * rawNoise) + 10;
+        byte voxelValue = 0;
+        
+        if (pos.X < 1 && pos.Z < 1)
+            Debug.Log($"pos=({pos.X},{pos.Z}) noise={rawNoise:F4} terrainHeight={terrainHeight}");
+
+        if (yPos == terrainHeight)
+            voxelValue = 3;
+        else if (yPos < terrainHeight && yPos > terrainHeight - 4)
+            voxelValue = 5;
+        else if (yPos > terrainHeight)
+            return 0;
         else
-            return 2;
+            voxelValue = 2;
+
+        return voxelValue;
+    }
+
+    void CreateNewChunk (int x, int z) {
+
+        chunks[x, z] = new Chunk(new ChunkCoord(x, z), this);
+        activeChunks.Add(new ChunkCoord(x, z));
 
     }
-}
+    
+    bool IsChunkInWorld (ChunkCoord coord) {
 
+        if (coord.X > 0 && coord.X < VoxelData.WorldSizeInChunks - 1 && coord.Z > 0 && coord.Z < VoxelData.WorldSizeInChunks - 1)
+            return true;
+        else
+            return
+                false;
 
-public class ChunkCoord(int x, int z)
-{
-    public int x = x;
-    public int z = z;
+    }
+    
+    
+    bool IsVoxelInWorld (Vector3 pos) {
 
-    public bool Equals(ChunkCoord other) {
-
-        if (other == null)
-            return false;
-        else if (other.x == x && other.z == z)
+        if (pos.X >= 0 && pos.X < VoxelData.WorldSizeInBlocks && pos.Y >= 0 && pos.Y < VoxelData.ChunkHeight && pos.Z >= 0 && pos.Z < VoxelData.WorldSizeInBlocks)
             return true;
         else
             return false;
 
     }
-
 }
+
+
+
 
 
 [Serializable]
-public class BlockType {
-
+public class BlockType
+{
     public string blockName;
     public bool isSolid;
 
@@ -178,10 +193,10 @@ public class BlockType {
     public int rightFaceTexture;
 
     // Back, Front, Top, Bottom, Left, Right
-    public int GetTextureID (int faceIndex) {
-
-        switch (faceIndex) {
-
+    public int GetTextureID(int faceIndex)
+    {
+        switch (faceIndex)
+        {
             case 0:
                 return backFaceTexture;
             case 1:
@@ -197,10 +212,6 @@ public class BlockType {
             default:
                 Debug.Log("Error in GetTextureID; invalid face index");
                 return 0;
-
-
         }
-
     }
-
 }
