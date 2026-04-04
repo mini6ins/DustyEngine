@@ -103,7 +103,14 @@
           "Type": "Script",
           "ScriptClass": "WorldGenerator",
           "Enabled": true,
-          "Name": "Generator"
+          "Name": "Generator",
+          "spawn": {
+            "X": 0,
+            "Y": 0,
+            "Z": 0,
+            "Length": 0,
+            "LengthSquared": 0
+          }
         }
       ],
       "Name": "Generator"

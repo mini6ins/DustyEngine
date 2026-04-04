@@ -22,7 +22,7 @@ public static class ProjectScriptService
                 foreach (var error in errors)
                     Debug.Log(error, Debug.LogLevel.Error, true);
 
-                return throwOnError ? throw new Exception("Script compilation failed.") : false;
+                return throwOnError ? throw new Exception("Script compilation failed.\n" + string.Join("\n", errors)) : false;
             }
 
             if (File.Exists(dllPath))

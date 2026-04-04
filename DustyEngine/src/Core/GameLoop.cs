@@ -84,8 +84,8 @@ public static class GameLoop
             }
             catch (Exception ex)
             {
-                Debug.Log($"[GameLoop] Error in Update for {componentType.Name}: {ex.Message}", Debug.LogLevel.Error,
-                    false);
+                var inner = ex.InnerException ?? ex;
+                Debug.Log($"[GameLoop] Error in Update for {componentType.Name}: {inner.Message}\n{inner.StackTrace}", Debug.LogLevel.Error, false);
             }
         }
     }
