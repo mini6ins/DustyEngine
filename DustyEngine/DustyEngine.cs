@@ -143,7 +143,7 @@ public sealed class DustyEngine : IDisposable
             ConsolePanel.InitializeConsoleInterceptor(onDebugEnabled, _settings.Debug);
             RendererUI.OnProjectSave += () => ProjectSettings.SaveProject(_settings);
             ProjectSetiingPanel.OnSaveProjectSettings += () => ProjectSettings.SaveProjectSettings(_settings);
-            ProjectFilePanel.OnSceneOpened += OpenScene;
+            ProjectFilePanel.OnSceneOpened += (path) => SceneManager.OpenScene(path, _window.LoadScene, HierarchyPanel.OnChangeScene);
             ViewportPanel.OnPlayModeChanged += ChangePlayMode;
 
             ProjectFileManager.OnSceneMoved += (oldPath, newPath) =>
@@ -207,14 +207,7 @@ public sealed class DustyEngine : IDisposable
     }
 
 
-    private static void OpenScene(string scenePath)
-    {
-        ProjectScriptService.Reload(ProjectFolderPath, throwOnError: true);
-        SceneManager.LoadSceneByPath(scenePath);
-        _window.LoadScene?.Invoke();
-        HierarchyPanel.OnChangeScene?.Invoke();
-        Debug.Log($"Open scene: {scenePath}", Debug.LogLevel.Info, true);
-    }
+
 
     public void Dispose()
     {
@@ -224,7 +217,7 @@ public sealed class DustyEngine : IDisposable
         RendererUI.OnProjectSave -= () => ProjectSettings.SaveProject(_settings);
         ProjectSetiingPanel.OnSaveProjectSettings -= () => ProjectSettings.SaveProjectSettings(_settings);
 
-        ProjectFilePanel.OnSceneOpened -= OpenScene;
+        // ProjectFilePanel.OnSceneOpened -= (path) => SceneManager.OpenScene(path, _window.LoadScene, HierarchyPanel.OnChangeScene);;
         ViewportPanel.OnPlayModeChanged -= ChangePlayMode;
 
         ProjectFileManager.OnSceneMoved -=

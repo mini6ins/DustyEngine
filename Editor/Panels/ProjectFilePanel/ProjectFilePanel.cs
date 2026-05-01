@@ -20,7 +20,7 @@ public class ProjectFilePanel : IRenderablePanel
 
     private bool _isFileCopied;
 
-    public static Action<string>? OnSceneOpened;
+    public static event Action<string>? OnSceneOpened;
 
     public ProjectFilePanel()
     {

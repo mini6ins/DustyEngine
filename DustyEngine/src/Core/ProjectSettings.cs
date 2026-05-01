@@ -26,7 +26,7 @@ public class ProjectSettings
 
     public static void SaveProject(ProjectSettings settings)
     {
-        SceneSerializer.SaveScene(SceneManager.CurrentScene, SceneManager.GetCurrentScenePath());
+        SceneManager.SaveSceneToFile(SceneManager.CurrentScene, SceneManager.GetCurrentScenePath());
         SaveProjectSettings(settings);
     }
 

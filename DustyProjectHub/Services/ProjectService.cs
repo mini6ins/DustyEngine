@@ -86,7 +86,7 @@ public class ProjectService
             Name = "ExampleScene"
         };
 
-        File.WriteAllText(scenePath,  SceneSerializer.SerializeSceneToJson(scene));
+        SceneManager.SaveSceneToFile(scene, scenePath);
             
         var shadersDir = Path.Combine(assetsDir, "shaders");
         Directory.CreateDirectory(shadersDir);

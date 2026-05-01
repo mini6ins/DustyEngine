@@ -1,5 +1,6 @@
 ﻿using DustyEngine.Components;
 using DustyEngine.Core;
+using SceneSystem;
 using SceneSystem.EngineObject.GameObject;
 
 namespace DustyEngine.Scene;
@@ -18,16 +19,104 @@ public abstract class SceneManager
 
     public static string? ProjectPath;
 
+    
+    public static Scene? CurrentScene
+    {
+        get
+        {
+            if (currentScene == null && sceneList.Count > 0)
+            {
+                currentScene = sceneList[0];
+                Debug.Log($"[SceneManager] Auto-set current scene to: {currentScene.Name}", Debug.LogLevel.FatalError,
+                    true);
+            }
+
+            return currentScene;
+        }
+        set => currentScene = value;
+    }
+    
+    public static Scene? LoadSceneFromFile(string scenePath)
+    {
+        try
+        {
+            Debug.Log($"Starting scene loading from: {scenePath}", Debug.LogLevel.Info, true);
+
+            string absolutePath = PathUtility.GetAbsolutePath(scenePath);
+
+            if (!File.Exists(absolutePath))
+            {
+                Debug.Log($"Scene file not found: {absolutePath}", Debug.LogLevel.FatalError);
+                return null;
+            }
+
+            string json = File.ReadAllText(absolutePath);
+            var scene = SceneSerializer.DeserializeScene(json);
+
+            if (scene != null)
+            {
+                scene.Path = PathUtility.GetRelativePath(absolutePath);
+                Debug.Log($"Scene successfully loaded! Path: {scene.Path}");
+            }
+
+            return scene;
+        }
+        catch (Exception ex)
+        {
+            Debug.Log($"Error loading scene: {ex.Message}", Debug.LogLevel.FatalError);
+            return null;
+        }
+    }
+    public static bool SaveSceneToFile(Scene sceneToSave, string scenePath)
+    {
+        try
+        {
+            Debug.Log($"Saving scene to: {scenePath}", Debug.LogLevel.Info, true);
+
+            string absolutePath = PathUtility.GetAbsolutePath(scenePath);
+
+            string json = SceneSerializer.SerializeScene(sceneToSave);
+
+            string? directory = Path.GetDirectoryName(absolutePath);
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            File.WriteAllText(absolutePath, json);
+
+            Debug.Log($"Scene successfully saved to: {scenePath}");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Debug.Log($"Error saving scene: {ex.Message}", Debug.LogLevel.FatalError);
+            return false;
+        }
+    }
+    
+    
+    public static void OpenScene(string scenePath, Action LoadSceneWindow, Action OnChangeSceneHierarchyPanel)
+    {
+        ProjectScriptService.Reload(ProjectPath, throwOnError: true);
+        SceneManager.LoadSceneByPath(scenePath);
+        LoadSceneWindow?.Invoke();
+        OnChangeSceneHierarchyPanel?.Invoke();
+        Debug.Log($"Open scene: {scenePath}", Debug.LogLevel.Info, true);
+    }
+    
+    
+    
     public static Scene? CloneScene(Scene original)
     {
-        var json = SceneSerializer.SerializeSceneToJson(original);
+        var json = SceneSerializer.SerializeScene(original);
         if (string.IsNullOrEmpty(json))
         {
             Debug.Log("Failed to serialize scene for snapshot", Debug.LogLevel.Error);
             return null;
         }
 
-        var clonedScene = SceneSerializer.DeserializeSceneFromJson(json);
+        var clonedScene = SceneSerializer.DeserializeScene(json);
         if (clonedScene != null)
         {
             clonedScene.Path = original.Path;
@@ -52,21 +141,7 @@ public abstract class SceneManager
         }
     }
 
-    public static Scene? CurrentScene
-    {
-        get
-        {
-            if (currentScene == null && sceneList.Count > 0)
-            {
-                currentScene = sceneList[0];
-                Debug.Log($"[SceneManager] Auto-set current scene to: {currentScene.Name}", Debug.LogLevel.FatalError,
-                    true);
-            }
 
-            return currentScene;
-        }
-        set => currentScene = value;
-    }
 
     public static void AddGameObjectRecursively(GameObject gameObject, GameObject? parent)
     {
@@ -259,18 +334,7 @@ public abstract class SceneManager
         return count;
     }
 
-    public static void LoadSceneByName(string sceneName)
-    {
-        ArgumentNullException.ThrowIfNull(sceneName);
-        CurrentScene = FindScene(sceneName);
-        Debug.Log($"[SceneManager] Current scene set to: {CurrentScene.Name}", Debug.LogLevel.Info, true);
-    }
 
-    public static void LoadSceneByIndex(uint index)
-    {
-        CurrentScene = FindScene(index);
-        Debug.Log($"[SceneManager] Current scene set to: {CurrentScene.Name}", Debug.LogLevel.Info, true);
-    }
 
     public static bool LoadSceneByPath(string? scenePath)
     {
@@ -312,7 +376,8 @@ public abstract class SceneManager
             }
         }
 
-        if (SceneSerializer.LoadScene(out var loadedScene, scenePath) == null)
+        var loadedScene = LoadSceneFromFile(scenePath);
+        if (loadedScene == null)
         {
             Debug.Log("Scene deserialize error", Debug.LogLevel.Error);
             return false;
