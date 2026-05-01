@@ -215,6 +215,7 @@ public class GraphicsRenderer(
             case RenderMode.Standalone:
                 Input.Update(keyboardState);
                 Input.UpdateMouseState(mouseState);
+                Input.UpdateMouseDelta(mouseState.Delta.X, mouseState.Delta.Y); 
                 break;
 
             case RenderMode.EditorStop:
@@ -227,12 +228,7 @@ public class GraphicsRenderer(
 
         HandleDebugInput();
     }
-
-    public void OnMouseMove(float x, float y)
-    {
-        if (_currentRenderMode is RenderMode.EditorRun or RenderMode.Standalone)
-            Input.UpdateMouse(x, y);
-    }
+    
 
     private void UpdateEditorCamera(float deltaTime)
     {

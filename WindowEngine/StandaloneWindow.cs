@@ -44,11 +44,7 @@ public class StandaloneWindow : GameWindow
         _renderer.Update((float)args.Time, KeyboardState, MouseState);
     }
 
-    protected override void OnMouseMove(MouseMoveEventArgs e)
-    {
-        base.OnMouseMove(e);
-        _renderer.OnMouseMove(e.X, e.Y);
-    }
+
 
     protected override void OnRenderFrame(FrameEventArgs args)
     {

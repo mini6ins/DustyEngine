@@ -142,6 +142,11 @@ public static class Input
         };
     }
 
+    public static void UpdateMouseDelta(float dx, float dy)
+    {
+        _currentDelta = (dx, dy);
+    }
+    
     public static void UpdateMouse(float x, float y)
     {
         if (_firstMove)
@@ -161,7 +166,7 @@ public static class Input
     public static void ResetMouse()
     {
         _currentDelta = (0, 0);
-        _firstMove = true;
+        // _firstMove = true;
         _rpcMouseDelta = (0f, 0f);
     }
 
