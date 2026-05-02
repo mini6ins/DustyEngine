@@ -3,6 +3,7 @@ using DustyEngine.Engine.Math.Vectors;
 using DustyEngine.Scene;
 using SceneSystem.Attributes;
 using SceneSystem.EngineObject.GameObject;
+using SceneSystem.Scene;
 
 namespace DustyEngine.Components;
 
@@ -27,7 +28,7 @@ public class Component : EngineObject
 
     protected Component()
     {
-        Id = SceneManager.GenerateComponentId();
+        Id = IdGenerator.GenerateComponentId();
         Debug.Log("Set Id for component: " + Id, Debug.LogLevel.Info, true);
     }
 
@@ -44,12 +45,12 @@ public class Component : EngineObject
             return;
         }
 
-        Debug.Log($"[Component: {Name}] Before Instantiate: GameObjects={SceneManager.GetTotalObjectsCount()}",
+        Debug.Log($"[Component: {Name}] Before Instantiate: GameObjects={GameObjectHierarchyService.Count(SceneManager.CurrentScene.GameObjects)}",
             Debug.LogLevel.Info, true);
 
-        SceneManager.AddGameObjectRecursively(gameObject, null);
+        GameObjectHierarchyService.Add(SceneManager.CurrentScene,gameObject, null);
 
-        Debug.Log($"[Component: {Name}] After Instantiate: GameObjects={SceneManager.GetTotalObjectsCount()}",
+        Debug.Log($"[Component: {Name}] After Instantiate: GameObjects={GameObjectHierarchyService.Count(SceneManager.CurrentScene.GameObjects)}",
             Debug.LogLevel.Info, true);
     }
 
@@ -62,10 +63,10 @@ public class Component : EngineObject
         }
 
         Debug.Log(
-            $"[Component: {Name}] Before Instantiate with Transform: GameObjects={SceneManager.GetTotalObjectsCount()}",
+            $"[Component: {Name}] Before Instantiate with Transform: GameObjects={GameObjectHierarchyService.Count(SceneManager.CurrentScene.GameObjects)}",
             Debug.LogLevel.Info, true);
         
-        SceneManager.AddGameObjectRecursively(gameObject, null);
+        GameObjectHierarchyService.Add(SceneManager.CurrentScene, gameObject, null);
 
         var targetTransform = gameObject.GetComponent<Transform>();
         if (targetTransform != null)
@@ -82,7 +83,7 @@ public class Component : EngineObject
         }
         
         Debug.Log(
-            $"[Component: {Name}] After Instantiate with Transform: GameObjects={SceneManager.GetTotalObjectsCount()}",
+            $"[Component: {Name}] After Instantiate with Transform: GameObjects={GameObjectHierarchyService.Count(SceneManager.CurrentScene.GameObjects)}",
             Debug.LogLevel.Info, true);
     }
 
@@ -95,10 +96,10 @@ public class Component : EngineObject
         }
 
         Debug.Log(
-            $"[Component: {Name}] Before Instantiate with Quaternion Transform: GameObjects={SceneManager.GetTotalObjectsCount()}",
+            $"[Component: {Name}] Before Instantiate with Quaternion Transform: GameObjects={GameObjectHierarchyService.Count(SceneManager.CurrentScene.GameObjects)}",
             Debug.LogLevel.Info, true);
 
-        SceneManager.AddGameObjectRecursively(gameObject, null);
+        GameObjectHierarchyService.Add(SceneManager.CurrentScene, gameObject, null);
         
         
         var targetTransform = gameObject.GetComponent<Transform>();
@@ -118,7 +119,7 @@ public class Component : EngineObject
       
 
         Debug.Log(
-            $"[Component: {Name}] After Instantiate with Quaternion Transform: GameObjects={SceneManager.GetTotalObjectsCount()}",
+            $"[Component: {Name}] After Instantiate with Quaternion Transform: GameObjects={GameObjectHierarchyService.Count(SceneManager.CurrentScene.GameObjects)}",
             Debug.LogLevel.Info, true);
     }
 
@@ -142,13 +143,13 @@ public class Component : EngineObject
         }
 
         Debug.Log(
-            $"[Component: {Name}] Before Instantiate with Parent: GameObjects={SceneManager.GetTotalObjectsCount()}",
+            $"[Component: {Name}] Before Instantiate with Parent: GameObjects={GameObjectHierarchyService.Count(SceneManager.CurrentScene.GameObjects)}",
             Debug.LogLevel.Info, true);
 
-        SceneManager.AddGameObjectRecursively(gameObject, parent);
+        GameObjectHierarchyService.Add(SceneManager.CurrentScene,gameObject, parent);
 
         Debug.Log(
-            $"[Component: {Name}] After Instantiate with Parent: GameObjects={SceneManager.GetTotalObjectsCount()}",
+            $"[Component: {Name}] After Instantiate with Parent: GameObjects={GameObjectHierarchyService.Count(SceneManager.CurrentScene.GameObjects)}",
             Debug.LogLevel.Info, true);
     }
 
@@ -162,10 +163,10 @@ public class Component : EngineObject
         }
 
         Debug.Log(
-            $"[Component: {Name}] Before Instantiate with Parent and Transform: GameObjects={SceneManager.GetTotalObjectsCount()}",
+            $"[Component: {Name}] Before Instantiate with Parent and Transform: GameObjects={GameObjectHierarchyService.Count(SceneManager.CurrentScene.GameObjects)}",
             Debug.LogLevel.Info, true);
 
-        SceneManager.AddGameObjectRecursively(gameObject, parent);
+        GameObjectHierarchyService.Add(SceneManager.CurrentScene,gameObject, parent);
         
         var targetTransform = gameObject.GetComponent<Transform>();
         if (targetTransform != null)
@@ -184,7 +185,7 @@ public class Component : EngineObject
      
 
         Debug.Log(
-            $"[Component: {Name}] After Instantiate with Parent and Transform: GameObjects={SceneManager.GetTotalObjectsCount()}",
+            $"[Component: {Name}] After Instantiate with Parent and Transform: GameObjects={GameObjectHierarchyService.Count(SceneManager.CurrentScene.GameObjects)}",
             Debug.LogLevel.Info, true);
     }
 
@@ -198,10 +199,10 @@ public class Component : EngineObject
         }
 
         Debug.Log(
-            $"[Component: {Name}] Before Instantiate with Parent and Quaternion Transform: GameObjects={SceneManager.GetTotalObjectsCount()}",
+            $"[Component: {Name}] Before Instantiate with Parent and Quaternion Transform: GameObjects={GameObjectHierarchyService.Count(SceneManager.CurrentScene.GameObjects)}",
             Debug.LogLevel.Info, true);
 
-        SceneManager.AddGameObjectRecursively(gameObject, parent);
+        GameObjectHierarchyService.Add(SceneManager.CurrentScene,gameObject, parent);
         
         var targetTransform = gameObject.GetComponent<Transform>();
         if (targetTransform != null)
@@ -220,7 +221,7 @@ public class Component : EngineObject
        
 
         Debug.Log(
-            $"[Component: {Name}] After Instantiate with Parent and Quaternion Transform: GameObjects={SceneManager.GetTotalObjectsCount()}",
+            $"[Component: {Name}] After Instantiate with Parent and Quaternion Transform: GameObjects={GameObjectHierarchyService.Count(SceneManager.CurrentScene.GameObjects)}",
             Debug.LogLevel.Info, true);
     }
 
@@ -233,12 +234,12 @@ public class Component : EngineObject
             return;
         }
 
-        Debug.Log($"[Component: {Name}] Before Destroy: GameObjects={SceneManager.GetTotalObjectsCount()}",
+        Debug.Log($"[Component: {Name}] Before Destroy: GameObjects={GameObjectHierarchyService.Count(SceneManager.CurrentScene.GameObjects)}",
             Debug.LogLevel.Info, true);
 
-        SceneManager.RemoveGameObjectRecursively(gameObject);
+        GameObjectHierarchyService.Remove(SceneManager.CurrentScene, gameObject);
 
-        Debug.Log($"[Component: {Name}] After Destroy: GameObjects={SceneManager.GetTotalObjectsCount()}",
+        Debug.Log($"[Component: {Name}] After Destroy: GameObjects={GameObjectHierarchyService.Count(SceneManager.CurrentScene.GameObjects)}",
             Debug.LogLevel.Info, true);
     }
 
@@ -254,6 +255,6 @@ public class Component : EngineObject
         Debug.Log($"[Component: {Name}] Destroying GameObject [{gameObject.Name}] immediately", Debug.LogLevel.Info,
             true);
 
-        SceneManager.RemoveGameObjectRecursively(gameObject);
+        GameObjectHierarchyService.Remove(SceneManager.CurrentScene, gameObject);
     }
 }

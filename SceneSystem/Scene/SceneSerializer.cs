@@ -1,8 +1,8 @@
 ﻿using System.Text.Json;
-using DustyEngine.Core;
+using DustyEngine;
 using SceneSystem.Converters;
 
-namespace DustyEngine;
+namespace SceneSystem;
 
 public static class SceneSerializer
 {
@@ -18,13 +18,13 @@ public static class SceneSerializer
     };
 
 
-    public static string SerializeScene(Scene.Scene scene) => JsonSerializer.Serialize(scene, _options);
+    public static string SerializeScene(DustyEngine.Scene.Scene scene) => JsonSerializer.Serialize(scene, _options);
 
-    public static Scene.Scene? DeserializeScene(string json)
+    public static DustyEngine.Scene.Scene? DeserializeScene(string json)
     {
         try
         {
-            return JsonSerializer.Deserialize<Scene.Scene>(json, _options);
+            return JsonSerializer.Deserialize<DustyEngine.Scene.Scene>(json, _options);
         }
         catch (Exception ex)
         {

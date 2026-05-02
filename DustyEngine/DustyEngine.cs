@@ -13,6 +13,7 @@ using Editor.Panels.ViewPortPanel;
 using GraphicsEngine;
 using SceneSystem;
 using SceneSystem.Converters;
+using SceneSystem.Scene;
 using WindowEngine;
 
 namespace DustyEngine;
@@ -51,8 +52,6 @@ public sealed class DustyEngine : IDisposable
         GameLoop.ClearMethodCaches();
 
         SceneManager.LoadSceneByPath(scenePath);
-        _window.LoadScene?.Invoke();
-        HierarchyPanel.OnChangeScene?.Invoke();
         Debug.Log("Hot reload: scene reloaded after script change", Debug.LogLevel.Info, true);
     }
     
@@ -143,7 +142,7 @@ public sealed class DustyEngine : IDisposable
             ConsolePanel.InitializeConsoleInterceptor(onDebugEnabled, _settings.Debug);
             RendererUI.OnProjectSave += () => ProjectSettings.SaveProject(_settings);
             ProjectSetiingPanel.OnSaveProjectSettings += () => ProjectSettings.SaveProjectSettings(_settings);
-            ProjectFilePanel.OnSceneOpened += (path) => SceneManager.OpenScene(path, _window.LoadScene, HierarchyPanel.OnChangeScene);
+            ProjectFilePanel.OnSceneOpened += (path) => SceneManager.OpenScene(path);
             ViewportPanel.OnPlayModeChanged += ChangePlayMode;
 
             ProjectFileManager.OnSceneMoved += (oldPath, newPath) =>
@@ -170,7 +169,7 @@ public sealed class DustyEngine : IDisposable
         if (renderMode == RenderMode.EditorRun)
         {
             ProjectScriptService.Reload(ProjectFolderPath, throwOnError: true);
-            _sceneSnapshot = SceneManager.CloneScene(SceneManager.CurrentScene!);
+            _sceneSnapshot = SceneManager.CloneViaSerialization(SceneManager.CurrentScene!);
             _window.ChangePlayMode(RenderMode.EditorRun);
 
             if (_window.Renderer?._sceneCameras is { Count: > 0 })
@@ -195,14 +194,10 @@ public sealed class DustyEngine : IDisposable
                 _sceneSnapshot = null;
             }
 
-            if (_window.Renderer?.EditorCamera != null)
-            {
-                _window.Renderer.ActiveCamera = _window.Renderer.EditorCamera;
-                Debug.Log("Switched to editor camera", Debug.LogLevel.Info, true);
-            }
-
-            _window.LoadScene?.Invoke();
-            HierarchyPanel.OnChangeScene?.Invoke();
+            if (_window.Renderer?.EditorCamera == null) return;
+            _window.Renderer.ActiveCamera = _window.Renderer.EditorCamera;
+            
+            Debug.Log("Switched to editor camera", Debug.LogLevel.Info, true);
         }
     }
 

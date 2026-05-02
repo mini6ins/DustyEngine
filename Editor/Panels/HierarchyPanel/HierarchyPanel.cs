@@ -3,6 +3,7 @@ using DustyEngine;
 using DustyEngine.Scene;
 using ImGuiNET;
 using SceneSystem.EngineObject.GameObject;
+using SceneSystem.Scene;
 
 namespace Editor.Panels.HierarchyPanel;
 
@@ -13,20 +14,18 @@ public class HierarchyPanel : IRenderablePanel, IDisposable
 
     private readonly Queue<Action> _deferredActions = new();
     private bool _anyItemHovered;
-
-    public static Action? OnChangeScene;
-
+    
     public HierarchyPanel()
     {
-        OnChangeScene += HandleSceneChange;
+        SceneManager.OnSceneChanged += HandleSceneChange;
     }
 
     public void Dispose()
     {
-        OnChangeScene -= HandleSceneChange;
+        SceneManager.OnSceneChanged -= HandleSceneChange;
     }
 
-    private void HandleSceneChange()
+    private void HandleSceneChange(Scene scene)
     {
         _selected = null;
         InspectorPanel.InspectorPanel.SetSelectedGameObject(null);
@@ -40,7 +39,7 @@ public class HierarchyPanel : IRenderablePanel, IDisposable
         ImGui.SetNextWindowPos(new Vector2(10, 10), ImGuiCond.FirstUseEver);
 
         var scene = SceneManager.CurrentScene;
-        if(scene == null) return;
+        if (scene == null) return;
 
         if (ImGui.Begin("Hierarchy Panel"))
         {
@@ -65,7 +64,7 @@ public class HierarchyPanel : IRenderablePanel, IDisposable
                 {
                     _deferredActions.Enqueue(() =>
                     {
-                        SceneManager.AddGameObjectRecursively(new GameObject("Empty GameObject"), null);
+                        GameObjectHierarchyService.Add(scene, new GameObject("Empty GameObject"), null);
                     });
                     ImGui.CloseCurrentPopup();
                 }
@@ -102,7 +101,8 @@ public class HierarchyPanel : IRenderablePanel, IDisposable
                 ImGui.GetStyle().Colors[(int)ImGuiCol.Text] * new Vector4(1, 1, 1, 0.4f));
         }
 
-        DrawTreeNode(gameObject.Name, hasChildren ? () =>
+        DrawTreeNode(gameObject.Name, hasChildren
+                ? () =>
                 {
                     foreach (var child in gameObject.Children.ToList())
                         DrawGameObjectNode(child, activeInHierarchy);
@@ -152,7 +152,8 @@ public class HierarchyPanel : IRenderablePanel, IDisposable
 
                     _deferredActions.Enqueue(() =>
                     {
-                        SceneManager.AddGameObjectRecursively(new GameObject("Empty GameObject"), parent);
+                        GameObjectHierarchyService.Add(SceneManager.CurrentScene,
+                            new GameObject("Empty GameObject"), parent);
                     });
                     ImGui.CloseCurrentPopup();
                 }
@@ -166,7 +167,7 @@ public class HierarchyPanel : IRenderablePanel, IDisposable
                 _deferredActions.Enqueue(() =>
                 {
                     if (toDelete != null)
-                        SceneManager.RemoveGameObjectRecursively(toDelete);
+                        GameObjectHierarchyService.Remove(SceneManager.CurrentScene, toDelete);
                 });
             }
 

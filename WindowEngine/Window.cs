@@ -1,20 +1,23 @@
 ﻿using DustyEngine;
+using DustyEngine.Scene;
 using Editor;
 using GraphicsEngine;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
+using SceneSystem.Scene;
 using Vector2i = OpenTK.Mathematics.Vector2i;
 
 namespace WindowEngine;
 
 public class Window : IDisposable
 {
-    private GameWindow? _window;
-    private GraphicsRenderer? _renderer;
+    private readonly GameWindow _window;
+    private readonly GraphicsRenderer _renderer;
 
-    public GraphicsRenderer? Renderer => _renderer;
+    public GraphicsRenderer Renderer => _renderer;
     public RenderMode RenderMode { get; private set; }
-    public Action? LoadScene;
+    
+    private readonly Action<Scene> _sceneChangedHandler;
 
     public Window(
         Action<RenderMode> updateCallback,
@@ -43,7 +46,16 @@ public class Window : IDisposable
             nativeWindowSettings.ClientSize.Y,
             renderMode);
 
-        LoadScene += _renderer.LoadScene;
+        _sceneChangedHandler = scene => _renderer.LoadScene(scene);
+
+        var currentScene = SceneManager.CurrentScene;
+
+        SceneManager.OnSceneChanged += _sceneChangedHandler;
+
+        if (currentScene != null)
+        {
+            _renderer.LoadScene(currentScene);
+        }
 
         var cursorState = renderMode == RenderMode.EditorStop
             ? CursorState.Normal
@@ -53,24 +65,21 @@ public class Window : IDisposable
             ? new EditorWindow(GameWindowSettings.Default, nativeWindowSettings, vsync, _renderer, projectPath)
             : new StandaloneWindow(GameWindowSettings.Default, nativeWindowSettings, vsync, cursorState, _renderer);
 
-        _window.UpdateFrame += _ => updateCallback.Invoke(RenderMode);
+        _window.UpdateFrame += _ => updateCallback(RenderMode);
     }
 
-    public void Run() => _window?.Run();
+    public void Run() => _window.Run();
 
     public void ChangePlayMode(RenderMode renderMode)
     {
         RenderMode = renderMode;
-        _renderer?.SetRenderMode(renderMode);
+        _renderer.SetRenderMode(renderMode);
         Debug.Log($"Play mode changed to: {RenderMode}", Debug.LogLevel.Info, true);
     }
 
     public void Dispose()
     {
-        if (_renderer != null)
-        {
-            LoadScene -= _renderer.LoadScene;
-        }
-        _window?.Dispose();
+        SceneManager.OnSceneChanged -= _sceneChangedHandler;
+        _window.Dispose();
     }
 }

@@ -1,6 +1,6 @@
 {
   "Name": null,
-  "Path": "Assets/Scene/Game.json",
+  "Path": "Assets/Scene/test.json",
   "GameObjects": [
     {
       "ActiveSelf": true,
@@ -11,9 +11,9 @@
           "LocalPosition": {
             "X": 0,
             "Y": 0,
-            "Z": 15,
-            "Length": 15,
-            "LengthSquared": 225
+            "Z": 0,
+            "Length": 0,
+            "LengthSquared": 0
           },
           "LocalRotation": {
             "X": 0,
@@ -29,13 +29,7 @@
             "Length": 1.7320508,
             "LengthSquared": 3
           },
-          "Name": "Camera"
-        },
-        {
-          "Type": "Script",
-          "ScriptClass": "Player",
-          "Enabled": true,
-          "Name": "Camera"
+          "Name": "Empty GameObject"
         },
         {
           "Type": "Camera",
@@ -65,10 +59,16 @@
             "Name": "\u003CNo GameObject\u003E"
           },
           "Enabled": true,
-          "Name": "Camera"
+          "Name": "Empty GameObject"
+        },
+        {
+          "Type": "Script",
+          "ScriptClass": "Player",
+          "Enabled": true,
+          "Name": "Empty GameObject"
         }
       ],
-      "Name": "Camera"
+      "Name": "Empty GameObject"
     },
     {
       "ActiveSelf": true,
@@ -97,24 +97,16 @@
             "Length": 1.7320508,
             "LengthSquared": 3
           },
-          "Name": "Generator"
+          "Name": "Empty GameObject"
         },
         {
-          "Type": "Script",
-          "ScriptClass": "WorldGenerator",
+          "Type": "MeshRenderer",
+          "ObjPath": "Assets/cube.obj",
           "Enabled": true,
-          "Name": "Generator",
-          "seed": 0,
-          "spawn": {
-            "X": 0,
-            "Y": 0,
-            "Z": 0,
-            "Length": 0,
-            "LengthSquared": 0
-          }
+          "Name": "Empty GameObject"
         }
       ],
-      "Name": "Generator"
+      "Name": "Empty GameObject"
     }
   ],
   "Components": []

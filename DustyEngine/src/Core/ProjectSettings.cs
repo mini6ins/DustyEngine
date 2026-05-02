@@ -3,6 +3,7 @@ using DustyEngine.Core;
 using DustyEngine.Engine.Math.Vectors;
 using DustyEngine.Scene;
 using Editor.Panels.ProjectSetiingPanel;
+using SceneSystem.Scene;
 
 namespace DustyEngine;
 
@@ -26,7 +27,7 @@ public class ProjectSettings
 
     public static void SaveProject(ProjectSettings settings)
     {
-        SceneManager.SaveSceneToFile(SceneManager.CurrentScene, SceneManager.GetCurrentScenePath());
+        SceneLoader.SaveToFile(SceneManager.CurrentScene, SceneManager.CurrentScene.Path);
         SaveProjectSettings(settings);
     }
 

@@ -1,4 +1,5 @@
 using DustyEngine.Scene;
+using SceneSystem.Scene;
 
 namespace DustyEngine.Core;
 

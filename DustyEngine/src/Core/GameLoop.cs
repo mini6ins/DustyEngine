@@ -2,6 +2,7 @@
 using DustyEngine.Scene;
 using GraphicsEngine;
 using SceneSystem.EngineObject.GameObject;
+using SceneSystem.Scene;
 
 namespace DustyEngine;
 
@@ -20,14 +21,14 @@ public static class GameLoop
         Initialize(SceneManager.CurrentScene!);
         Time.Init();
 
-        foreach (var gameObject in SceneManager.CurrentScene!.GameObjects.ToList())
+        foreach (var gameObject in SceneManager.CurrentScene!.GameObjects)
         {
-            SceneManager.InvokeRecursive(gameObject, "OnEnable");
+            GameObjectHierarchyService.Traverse(gameObject, go => go.InvokeMethodInComponents("OnEnable"));
         }
 
-        foreach (var gameObject in SceneManager.CurrentScene!.GameObjects.ToList())
+        foreach (var gameObject in SceneManager.CurrentScene!.GameObjects)
         {
-            SceneManager.InvokeRecursive(gameObject, "Start");
+            GameObjectHierarchyService.Traverse(gameObject, go => go.InvokeMethodInComponents("Start"));
         }
     }
 

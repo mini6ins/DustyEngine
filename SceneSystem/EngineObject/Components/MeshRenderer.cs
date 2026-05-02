@@ -1,6 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 using DustyEngine.Core;
 using DustyEngine.Scene;
+using SceneSystem.Scene;
 using Utils;
 
 namespace DustyEngine.Components;

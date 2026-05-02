@@ -12,12 +12,13 @@ using DustyEngine.Scene;
 using MinecraftClone.Assets.Scripts;
 using SceneSystem.EngineObject.GameObject;
 using System.Linq;
+using SceneSystem.Scene;
 
 public class WorldGenerator : MonoBehaviour
 {
     public int seed;
 
-    public Transform player;
+    public Transform? player;
     public Vector3 spawn;
 
     public BlockType[] blocktypes;
@@ -42,7 +43,11 @@ public class WorldGenerator : MonoBehaviour
             new BlockType { blockName = "Dirt",    isSolid = true  }, // 5  
         };
 
-        player = SceneManager.FindCameras().FirstOrDefault().GameObject.GetComponent<Transform>();
+        var camera = ComponentQueryService
+            .Collect<Camera>(SceneManager.CurrentScene!.GameObjects)
+            .FirstOrDefault();
+
+        player = camera?.GameObject?.GetComponent<Transform>();
 
         GenerateWorld();
         playerLastChunkCoord = GetChunkCoordFromVector3(player.LocalPosition);

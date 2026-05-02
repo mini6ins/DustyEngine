@@ -2,6 +2,7 @@ using DustyEngine;
 using DustyEngine.Core;
 using DustyEngine.Scene;
 using SceneSystem;
+using SceneSystem.Scene;
 
 namespace Editor.Panels.ProjectFilePanel;
 

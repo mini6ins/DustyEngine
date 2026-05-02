@@ -6,6 +6,7 @@ using InputSystem;
 using OpenTK.Graphics.OpenGL.Compatibility;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.GraphicsLibraryFramework;
+using SceneSystem.Scene;
 using MouseButton = InputSystem.MouseButton;
 using Vector3 = DustyEngine.Engine.Math.Vectors.Vector3;
 
@@ -105,10 +106,10 @@ public class GraphicsRenderer(
         }
 
         CreateViewportFramebuffer();
-        LoadScene();
+        LoadScene(SceneManager.CurrentScene);
     }
 
-    public void LoadScene()
+    public void LoadScene(Scene scene)
     {
         Debug.Log("[LoadScene] Loading scene", Debug.LogLevel.Info, true);
 
@@ -120,7 +121,7 @@ public class GraphicsRenderer(
         _vaoList.Clear();
         _sceneObjects.Clear();
 
-        _sceneCameras = SceneManager.FindCameras();
+        _sceneCameras = ComponentQueryService.Collect<Camera>(scene.GameObjects);
         Debug.Log($"[LoadScene] Found {_sceneCameras?.Count ?? 0} cameras in scene", Debug.LogLevel.Info, true);
 
         if (EditorCamera != null || _sceneCameras is { Count: > 0 })
@@ -133,7 +134,7 @@ public class GraphicsRenderer(
             Debug.Log("No cameras found in scene!", Debug.LogLevel.Warning, true);
         }
 
-        LoadSceneRenderers();
+        LoadSceneRenderers(scene);
 
         Debug.Log($"[LoadScene] Scene loaded successfully. Total renderers: {_sceneObjects.Count}", Debug.LogLevel.Info, true);
     }
@@ -192,14 +193,12 @@ public class GraphicsRenderer(
         Debug.Log($"Viewport resized to: {width}x{height}", Debug.LogLevel.Info, true);
     }
 
-    private void LoadSceneRenderers()
+    private void LoadSceneRenderers(Scene scene)
     {
         var allRenderers = new List<MeshRenderer>();
 
-        if (SceneManager.CurrentScene == null) return;
-
-        foreach (var obj in SceneManager.CurrentScene.GameObjects)
-            SceneManager.CollectMeshRenderers(obj, allRenderers);
+        foreach (var obj in scene.GameObjects)
+            allRenderers.AddRange(ComponentQueryService.Collect<MeshRenderer>(obj));
 
         Debug.Log($"Total Meshes: {allRenderers.Count}", Debug.LogLevel.Info, true);
 

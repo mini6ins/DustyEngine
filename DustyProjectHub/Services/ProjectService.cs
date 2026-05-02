@@ -6,6 +6,7 @@ using DustyEngine.Engine.Math.Vectors;
 using DustyEngine.Scene;
 using DustyProjectHub.UI.Windows;
 using OpenTK.Graphics.Vulkan;
+using SceneSystem.Scene;
 
 namespace DustyProjectHub.Services;
 
@@ -86,7 +87,7 @@ public class ProjectService
             Name = "ExampleScene"
         };
 
-        SceneManager.SaveSceneToFile(scene, scenePath);
+        SceneLoader.SaveToFile(scene, scenePath);
             
         var shadersDir = Path.Combine(assetsDir, "shaders");
         Directory.CreateDirectory(shadersDir);

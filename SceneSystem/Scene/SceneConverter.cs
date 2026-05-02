@@ -8,13 +8,13 @@ using SceneSystem.EngineObject.GameObject;
 
 namespace SceneSystem.Converters;
 
-public class SceneConverter : JsonConverter<Scene>
+public class SceneConverter : JsonConverter<DustyEngine.Scene.Scene>
 {
-    public override Scene Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override DustyEngine.Scene.Scene Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         using JsonDocument doc = JsonDocument.ParseValue(ref reader);
 
-        var scene = new Scene();
+        var scene = new DustyEngine.Scene.Scene();
 
         if (doc.RootElement.TryGetProperty("Name", out var nameElement))
             scene.Name = nameElement.GetString();
@@ -34,7 +34,7 @@ public class SceneConverter : JsonConverter<Scene>
 
         return scene;
     }
-
+    
     private static List<GameObject> DeserializeGameObjects(JsonElement element, GameObject? parent,
         JsonSerializerOptions options)
     {
@@ -78,7 +78,7 @@ public class SceneConverter : JsonConverter<Scene>
         return gameObjects;
     }
 
-    public override void Write(Utf8JsonWriter writer, Scene value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, DustyEngine.Scene.Scene value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
 

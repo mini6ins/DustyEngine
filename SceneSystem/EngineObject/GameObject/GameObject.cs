@@ -4,6 +4,7 @@ using DustyEngine;
 using DustyEngine.Components;
 using DustyEngine.Scene;
 using SceneSystem.Attributes;
+using SceneSystem.Scene;
 
 namespace SceneSystem.EngineObject.GameObject;
 
@@ -22,7 +23,7 @@ public sealed class GameObject : DustyEngine.EngineObject
 
     public GameObject(string name = "New GameObject")
     {
-        Id = SceneManager.GenerateGameObjectId();
+        Id = IdGenerator.GenerateGameObjectId();
         Debug.Log("Set Id for GameObject: " + Id, Debug.LogLevel.Info, true);
         Name = name;
     }
