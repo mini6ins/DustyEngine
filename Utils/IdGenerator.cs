@@ -1,4 +1,4 @@
-namespace SceneSystem.Scene;
+namespace Utils;
 
 public static class IdGenerator
 {

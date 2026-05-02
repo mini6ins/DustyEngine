@@ -8,11 +8,6 @@ public static class SceneManager
 {
     public static event Action<DustyEngine.Scene.Scene>? OnSceneChanged;
     
-    
-    public static Action<MeshRenderer> AddRenderer = _ => { };
-    public static Action<MeshRenderer> RemoveRenderer = _ => { };
-
-
     private static readonly List<DustyEngine.Scene.Scene> SceneList = [];
     private static DustyEngine.Scene.Scene? _currentScene;
     public static string? ProjectPath;

@@ -1,20 +1,24 @@
 using DustyEngine;
 using DustyEngine.Components;
 using SceneSystem.EngineObject.GameObject;
-using static SceneSystem.Scene.SceneManager;
 
 namespace SceneSystem.Scene;
 
 public static class GameObjectHierarchyService
 {
-    
-    public static int Count(GameObject root)
+    public static event Action<MeshRenderer>? OnRendererAdded;
+    public static event Action<MeshRenderer>? OnRendererRemoved;
+
+    public static void NotifyRendererAdded(MeshRenderer renderer) => OnRendererAdded?.Invoke(renderer);
+    public static void NotifyRendererRemoved(MeshRenderer renderer) => OnRendererRemoved?.Invoke(renderer);
+
+    private static int Count(GameObject root)
     {
         var count = 0;
         Traverse(root, _ => count++);
         return count;
     }
-    
+
     public static void Traverse(GameObject root, Action<GameObject> action)
     {
         action(root);
@@ -24,11 +28,11 @@ public static class GameObjectHierarchyService
             Traverse(child, action);
         }
     }
-    
+
     public static void Add(DustyEngine.Scene.Scene scene, GameObject gameObject, GameObject? parent)
     {
         ArgumentNullException.ThrowIfNull(scene);
-        
+
         if (gameObject.GetComponent<Transform>() == null)
         {
             gameObject.AddComponent(new Transform());
@@ -66,15 +70,15 @@ public static class GameObjectHierarchyService
         {
             if (component is MeshRenderer meshRenderer)
             {
-                AddRenderer?.Invoke(meshRenderer);
+                OnRendererAdded?.Invoke(meshRenderer);
             }
         }
     }
-    
+
     public static void Remove(DustyEngine.Scene.Scene scene, GameObject gameObject)
     {
         ArgumentNullException.ThrowIfNull(scene);
-        
+
         var children = gameObject.Children.ToList();
         foreach (var child in children)
         {
@@ -87,7 +91,7 @@ public static class GameObjectHierarchyService
         {
             if (component is MeshRenderer meshRenderer)
             {
-                RemoveRenderer?.Invoke(meshRenderer);
+                OnRendererRemoved?.Invoke(meshRenderer);
             }
         }
 
@@ -121,7 +125,6 @@ public static class GameObjectHierarchyService
                 Debug.LogLevel.Warning, false);
         }
     }
-    
+
     public static int Count(IEnumerable<GameObject> roots) => roots.Sum(Count);
-    
 }

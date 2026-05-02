@@ -79,6 +79,10 @@ public class GraphicsRenderer(
 
     public void Load()
     {
+        GameObjectHierarchyService.OnRendererAdded += AddRenderer;
+        GameObjectHierarchyService.OnRendererRemoved += RemoveRenderer;
+        
+        
         GL.ClearColor(173 / 255f, 216 / 255f, 230 / 255f, 1.0f);
         GL.Enable(EnableCap.CullFace);
         GL.CullFace(TriangleFace.Back);
@@ -372,6 +376,11 @@ public class GraphicsRenderer(
             $"Added RenderableObject - GameObject ID: {renderableObject.GameObjectId}, MeshRenderer ID: {renderableObject.MeshRendererId}",
             Debug.LogLevel.Info, true);
     }
+    
+    public void RemoveRenderer(MeshRenderer meshRenderer)
+    {
+        RemoveRendererByComponent(meshRenderer);
+    }
 
     private int FindRenderableIndexByMeshRendererId(uint meshRendererId)
     {
@@ -413,6 +422,9 @@ public class GraphicsRenderer(
 
     public void Dispose()
     {
+        GameObjectHierarchyService.OnRendererAdded -= AddRenderer;
+        GameObjectHierarchyService.OnRendererRemoved -= RemoveRenderer;
+        
         if (_currentRenderMode == RenderMode.EditorStop)
             Input.DisableRpcInput();
 

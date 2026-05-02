@@ -4,6 +4,7 @@ using DustyEngine.Scene;
 using SceneSystem.Attributes;
 using SceneSystem.EngineObject.GameObject;
 using SceneSystem.Scene;
+using Utils;
 
 namespace DustyEngine.Components;
 

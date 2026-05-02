@@ -87,14 +87,14 @@ public class MeshRenderer : MonoBehaviour
     private void RegisterRenderer()
     {
         if (_isRegistered || _mesh == null) return;
-        SceneManager.AddRenderer(this);
+        GameObjectHierarchyService.NotifyRendererAdded(this);
         _isRegistered = true;
     }
 
     private void UnregisterRenderer()
     {
         if (!_isRegistered) return;
-        SceneManager.RemoveRenderer(this);
+        GameObjectHierarchyService.NotifyRendererRemoved(this);
         _isRegistered = false;
     }
 

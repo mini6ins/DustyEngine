@@ -5,6 +5,7 @@ using DustyEngine.Components;
 using DustyEngine.Scene;
 using SceneSystem.Attributes;
 using SceneSystem.Scene;
+using Utils;
 
 namespace SceneSystem.EngineObject.GameObject;
 
@@ -58,7 +59,7 @@ public sealed class GameObject : DustyEngine.EngineObject
         component.Parent = this; 
 
         if (component is MeshRenderer meshRenderer)
-            SceneManager.AddRenderer?.Invoke(meshRenderer); 
+            GameObjectHierarchyService.NotifyRendererAdded(meshRenderer);
 
         Debug.Log($"Added component [{component.GetType().Name}] to GameObject [{Name}]", Debug.LogLevel.Info, true);
     }

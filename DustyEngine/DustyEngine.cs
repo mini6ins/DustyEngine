@@ -26,22 +26,14 @@ public sealed class DustyEngine : IDisposable
     private static ProjectSettings? _settings;
     private static Window _window = null!;
 
-    private static readonly Action<MeshRenderer> AddRenderer = meshRenderer =>
-        _window.Renderer?.AddRenderer(meshRenderer);
-
-    private static readonly Action<MeshRenderer> RemoveRenderer =
-        meshRenderer => _window.Renderer?.RemoveRendererByComponent(meshRenderer);
-
-    public static volatile bool PendingScriptReload = false;
-
     private static void SetupScriptHotReload()
     {
         ScriptAssembly.OnAssemblyReloaded += () => { ScriptReloadBridge.PendingReload = true; };
 
         ScriptReloadBridge.OnReload += HotReloadScene;
     }
-    
-    public static void HotReloadScene()
+
+    private static void HotReloadScene()
     {
         if (_window.RenderMode == RenderMode.EditorRun) return;
 
@@ -112,9 +104,6 @@ public sealed class DustyEngine : IDisposable
 
     private static void CreateWindow(RenderMode renderMode)
     {
-        SceneManager.AddRenderer += AddRenderer;
-        SceneManager.RemoveRenderer += RemoveRenderer;
-
         _window = new Window(
             GameLoop.ExecuteLifeCycle,
             _settings.ScreenSize.ToOpenTK(),
@@ -206,9 +195,6 @@ public sealed class DustyEngine : IDisposable
 
     public void Dispose()
     {
-        SceneManager.AddRenderer -= AddRenderer;
-        SceneManager.RemoveRenderer -= RemoveRenderer;
-
         RendererUI.OnProjectSave -= () => ProjectSettings.SaveProject(_settings);
         ProjectSetiingPanel.OnSaveProjectSettings -= () => ProjectSettings.SaveProjectSettings(_settings);
 
